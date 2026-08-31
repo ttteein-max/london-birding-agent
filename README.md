@@ -4,7 +4,25 @@ An explainable, evidence-grounded planner for urban birdwatching expeditions in 
 
 The project is London-only, birds-first and English-only. It identifies areas with stronger historical occurrence evidence. It does not predict sightings, convert record counts into abundance or population estimates, guarantee access, or guarantee that a bird will be observed.
 
-Phase 0.1 hardens the real-data feasibility layer before the biodiversity backend rewrite. The incident-investigation LangGraph graph, state, tools, scripted models, checkpointer and application-owned streaming adapter remain unchanged and reusable. They are not yet the biodiversity agent.
+Phase 1 adds a strict, frontend-independent biodiversity backend with deterministic fixture/live repositories, seven typed services, safe aggregated map geometry and a fixed-order non-LLM orchestrator. The incident-investigation LangGraph graph, state, tools, scripted models, checkpointer and streaming adapter remain unchanged as a regression-protected reference. They are not the biodiversity agent.
+
+## Phase 1 quick start
+
+Fixture mode is the default and requires no network or API key:
+
+```bash
+python -m pytest -m 'not live' -q
+
+python -m scripts.run_expedition_backend \
+  --postcode 'SW11 4NJ' \
+  --bird 'Common woodpigeon' \
+  --date 2026-06-15 \
+  --duration-hours 2 \
+  --max-walking-km 3 \
+  --compact
+```
+
+The output separates London/taxonomy/source status, historical evidence outcome, safe aggregate cell count, candidate-site count, exact-date weather availability and unresolved routing constraints. See [the Phase 1 backend documentation](docs/phase-1-biodiversity-backend.md) for contracts, architecture, privacy, live mode and reproduction commands.
 
 ## What Phase 0.1 demonstrates
 
@@ -19,14 +37,14 @@ For example, the actual input `Common woodpigeon` is sent to GBIF and resolves t
 Occurrence outcomes are:
 
 - `strong_map_evidence`: at least 50 ranking-eligible records, five EPSG:27700 1 km cells and two datasets;
-- `limited_contextual_evidence`: some retained London evidence exists but the strong gate is not met;
-- `insufficient_evidence`: no retained London evidence in the bounded query;
+- `limited_contextual_evidence`: at least five retained London records exist but the strong gate is not met;
+- `insufficient_evidence`: no retained evidence, or only one to four isolated records, exists in the bounded query;
 - `human_selection_required`: taxonomy is ambiguous;
 - `taxon_not_found`: no safe accepted bird match.
 
 Only records with known coordinate uncertainty of at most 1,000 metres may contribute to 1 km ranking. Records at 1,001–5,000 metres are broad-zone evidence; those above 5,000 metres are historical context only; missing uncertainty stays auditable but cannot affect ranking. Fatal geospatial issues are rejected. Thresholds are never relaxed to make a taxon pass.
 
-Sparse or rare evidence is a first-class state. A few records may support carefully worded historical context, but never a hotspot claim, reliable site recommendation or sighting guarantee.
+Sparse or rare evidence is a first-class state. One to four records remain insufficient evidence; they may be reported as isolated historical records but never as meaningful limited evidence, a hotspot, a reliable site recommendation or a sighting guarantee.
 
 ## London geography and privacy
 
@@ -127,4 +145,4 @@ See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture
 
 ## Roadmap boundary
 
-Phase 0 and 0.1 data feasibility are implemented. Phase 1 biodiversity graph/state/tool replacement, frontend work, routing, HITL nodes, persistence expansion and MCP work are not implemented in this branch.
+Phase 0, Phase 0.1 and the Phase 1 deterministic biodiversity domain backend are implemented. The dynamic biodiversity LangGraph agent, frontend, routing, HITL nodes, persistence expansion and MCP remain deferred.

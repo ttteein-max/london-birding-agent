@@ -15,6 +15,7 @@ from app.feasibility.core import PROJECT_ROOT
 
 BOUNDARY_DIR = PROJECT_ROOT / "data" / "boundaries"
 _WGS84_TO_BNG = Transformer.from_crs("EPSG:4326", "EPSG:27700", always_xy=True)
+_BNG_TO_WGS84 = Transformer.from_crs("EPSG:27700", "EPSG:4326", always_xy=True)
 
 
 def location_quality_tier(uncertainty_metres: float | int | None) -> str:
@@ -98,6 +99,44 @@ def british_national_grid(longitude: float, latitude: float) -> tuple[float, flo
     if not math.isfinite(easting) or not math.isfinite(northing):
         raise ValueError("coordinate could not be projected to EPSG:27700")
     return easting, northing
+
+
+def wgs84_from_british_national_grid(easting: float, northing: float) -> tuple[float, float]:
+    """Transform a British National Grid position to WGS84 longitude/latitude."""
+
+    longitude, latitude = _BNG_TO_WGS84.transform(easting, northing)
+    if not math.isfinite(longitude) or not math.isfinite(latitude):
+        raise ValueError("EPSG:27700 coordinate could not be projected to WGS84")
+    return longitude, latitude
+
+
+def metric_cell_polygon_wgs84(
+    cell_easting: int,
+    cell_northing: int,
+    *,
+    size_metres: int = 1_000,
+    decimal_places: int = 5,
+) -> list[list[float]]:
+    """Return a closed, rounded WGS84 ring for an already aggregated BNG cell."""
+
+    if size_metres <= 0:
+        raise ValueError("cell size must be positive")
+    minimum_easting = cell_easting * size_metres
+    minimum_northing = cell_northing * size_metres
+    corners = (
+        (minimum_easting, minimum_northing),
+        (minimum_easting + size_metres, minimum_northing),
+        (minimum_easting + size_metres, minimum_northing + size_metres),
+        (minimum_easting, minimum_northing + size_metres),
+        (minimum_easting, minimum_northing),
+    )
+    return [
+        [round(longitude, decimal_places), round(latitude, decimal_places)]
+        for longitude, latitude in (
+            wgs84_from_british_national_grid(easting, northing)
+            for easting, northing in corners
+        )
+    ]
 
 
 def metric_cell(longitude: float, latitude: float, *, size_metres: int) -> tuple[int, int]:

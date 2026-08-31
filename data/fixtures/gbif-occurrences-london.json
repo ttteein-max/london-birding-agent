@@ -9,7 +9,15 @@
     "metric_grid": {
       "crs": "EPSG:27700",
       "cell_size_metres": 1000,
-      "stored_reference": "run-specific HMAC; secret not persisted"
+      "stored_reference": "run-specific HMAC; secret not persisted",
+      "application_safe_map": {
+        "geometry_crs": "EPSG:4326",
+        "aggregation_crs": "EPSG:27700",
+        "cell_size_metres": 1000,
+        "minimum_records_per_exposed_cell": 3,
+        "only_for_outcome": "strong_map_evidence",
+        "individual_coordinates_persisted": false
+      }
     },
     "default_retrieval_policy": {
       "latest_complete_years_plus_current": 5,
@@ -9809,7 +9817,17 @@
         },
         "dataset_diversity": {
           "retained_dataset_count": 2,
-          "ranking_dataset_count": 2
+          "ranking_dataset_count": 2,
+          "record_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 206,
+            "8a863029-f435-446a-821e-275f4f641165": 74
+          },
+          "ranking_eligible_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 159,
+            "8a863029-f435-446a-821e-275f4f641165": 68
+          },
+          "dominant_ranking_dataset_share": 0.7004,
+          "dominant_basis_of_record_share": 1.0
         },
         "year_distribution": {
           "2026": 280
@@ -9838,11 +9856,1029 @@
           "request_urls": [
             "https://api.gbif.org/v1/occurrence/search?taxon_key=2495455&has_coordinate=true&occurrence_status=present&geometry=POLYGON%28%28-0.5103+51.2868%2C0.3340+51.2868%2C0.3340+51.6919%2C-0.5103+51.6919%2C-0.5103+51.2868%29%29&year=2021%2C2026&month=5&month=6&month=7&limit=300&offset=0"
           ],
-          "deduplication_rule": "First occurrence per GBIF key/occurrenceID; fallback SHA-256 over dataset, institution, catalogue number, date and coordinates."
+          "deduplication_rule": "publisher occurrenceID; stable source identifier; exact repeated GBIF key; deterministic fingerprint for records lacking stable identifiers. Similar fingerprints with distinct stable identifiers are retained and counted.",
+          "deduplication": {
+            "exact_duplicates_removed": 0,
+            "possible_duplicates_retained": 19,
+            "removed_by_method": {},
+            "method": "publisher occurrenceID; stable source identifier; exact repeated GBIF key; deterministic fingerprint for records lacking stable identifiers. Similar fingerprints with distinct stable identifiers are retained and counted."
+          }
         },
         "scenario": "abundant_common",
         "scenario_reason": "Common resident expected to exercise strong representative evidence.",
-        "target_month": 6
+        "target_month": 6,
+        "safe_map_cells": [
+          {
+            "cell_id": "bng-1km-519-185",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.28507,
+                    51.55135
+                  ],
+                  [
+                    -0.27066,
+                    51.55114
+                  ],
+                  [
+                    -0.27032,
+                    51.56012
+                  ],
+                  [
+                    -0.28474,
+                    51.56034
+                  ],
+                  [
+                    -0.28507,
+                    51.55135
+                  ]
+                ]
+              ]
+            },
+            "record_count": 30,
+            "dataset_count": 1,
+            "date_start": "2026-06-04",
+            "date_end": "2026-07-21",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-182",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15643,
+                    51.52242
+                  ],
+                  [
+                    -0.14202,
+                    51.52219
+                  ],
+                  [
+                    -0.14166,
+                    51.53118
+                  ],
+                  [
+                    -0.15607,
+                    51.53141
+                  ],
+                  [
+                    -0.15643,
+                    51.52242
+                  ]
+                ]
+              ]
+            },
+            "record_count": 12,
+            "dataset_count": 1,
+            "date_start": "2026-05-19T20:10:34",
+            "date_end": "2026-06-28T14:35:08",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-529-179",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.14312,
+                    51.49523
+                  ],
+                  [
+                    -0.12872,
+                    51.495
+                  ],
+                  [
+                    -0.12835,
+                    51.50399
+                  ],
+                  [
+                    -0.14275,
+                    51.50422
+                  ],
+                  [
+                    -0.14312,
+                    51.49523
+                  ]
+                ]
+              ]
+            },
+            "record_count": 12,
+            "dataset_count": 2,
+            "date_start": "2026-05-25T10:58:22",
+            "date_end": "2026-06-30T19:39:12",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15715,
+                    51.50445
+                  ],
+                  [
+                    -0.14275,
+                    51.50422
+                  ],
+                  [
+                    -0.14239,
+                    51.51321
+                  ],
+                  [
+                    -0.15679,
+                    51.51343
+                  ],
+                  [
+                    -0.15715,
+                    51.50445
+                  ]
+                ]
+              ]
+            },
+            "record_count": 9,
+            "dataset_count": 2,
+            "date_start": "2026-05-23T10:41:20",
+            "date_end": "2026-07-04T13:45:54",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-526-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.18595,
+                    51.5049
+                  ],
+                  [
+                    -0.17155,
+                    51.50467
+                  ],
+                  [
+                    -0.17119,
+                    51.51366
+                  ],
+                  [
+                    -0.1856,
+                    51.51388
+                  ],
+                  [
+                    -0.18595,
+                    51.5049
+                  ]
+                ]
+              ]
+            },
+            "record_count": 7,
+            "dataset_count": 2,
+            "date_start": "2026-05-10T04:11:25",
+            "date_end": "2026-07-07T10:22:08",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-534-175",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.07265,
+                    51.45813
+                  ],
+                  [
+                    -0.05827,
+                    51.45789
+                  ],
+                  [
+                    -0.05789,
+                    51.46687
+                  ],
+                  [
+                    -0.07227,
+                    51.46711
+                  ],
+                  [
+                    -0.07265,
+                    51.45813
+                  ]
+                ]
+              ]
+            },
+            "record_count": 7,
+            "dataset_count": 1,
+            "date_start": "2026-05-09T15:13:35",
+            "date_end": "2026-06-22T10:29:53",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-518-176",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.3025,
+                    51.47067
+                  ],
+                  [
+                    -0.28811,
+                    51.47046
+                  ],
+                  [
+                    -0.28777,
+                    51.47945
+                  ],
+                  [
+                    -0.30217,
+                    51.47966
+                  ],
+                  [
+                    -0.3025,
+                    51.47067
+                  ]
+                ]
+              ]
+            },
+            "record_count": 6,
+            "dataset_count": 2,
+            "date_start": "2026-05-05T10:03",
+            "date_end": "2026-06-14T13:41:30",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-527-183",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.17047,
+                    51.53163
+                  ],
+                  [
+                    -0.15607,
+                    51.53141
+                  ],
+                  [
+                    -0.1557,
+                    51.54039
+                  ],
+                  [
+                    -0.17011,
+                    51.54062
+                  ],
+                  [
+                    -0.17047,
+                    51.53163
+                  ]
+                ]
+              ]
+            },
+            "record_count": 6,
+            "dataset_count": 1,
+            "date_start": "2026-06-28T15:36:27",
+            "date_end": "2026-06-28T17:33:38",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-529-182",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.14202,
+                    51.52219
+                  ],
+                  [
+                    -0.12762,
+                    51.52196
+                  ],
+                  [
+                    -0.12725,
+                    51.53095
+                  ],
+                  [
+                    -0.14166,
+                    51.53118
+                  ],
+                  [
+                    -0.14202,
+                    51.52219
+                  ]
+                ]
+              ]
+            },
+            "record_count": 6,
+            "dataset_count": 2,
+            "date_start": "2026-05-14T14:44:45",
+            "date_end": "2026-07-09T14:17:10",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-518-177",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.30217,
+                    51.47966
+                  ],
+                  [
+                    -0.28777,
+                    51.47945
+                  ],
+                  [
+                    -0.28744,
+                    51.48844
+                  ],
+                  [
+                    -0.30183,
+                    51.48865
+                  ],
+                  [
+                    -0.30217,
+                    51.47966
+                  ]
+                ]
+              ]
+            },
+            "record_count": 5,
+            "dataset_count": 2,
+            "date_start": "2026-05-14",
+            "date_end": "2026-06-18T08:46:26",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-517-185",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.31391,
+                    51.55177
+                  ],
+                  [
+                    -0.29949,
+                    51.55156
+                  ],
+                  [
+                    -0.29916,
+                    51.56055
+                  ],
+                  [
+                    -0.31357,
+                    51.56075
+                  ],
+                  [
+                    -0.31391,
+                    51.55177
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-06-20",
+            "date_end": "2026-06-20",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-183",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15607,
+                    51.53141
+                  ],
+                  [
+                    -0.14166,
+                    51.53118
+                  ],
+                  [
+                    -0.14129,
+                    51.54017
+                  ],
+                  [
+                    -0.1557,
+                    51.54039
+                  ],
+                  [
+                    -0.15607,
+                    51.53141
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-06-29T16:56:47",
+            "date_end": "2026-07-05T11:43:40",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-530-182",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.12762,
+                    51.52196
+                  ],
+                  [
+                    -0.11321,
+                    51.52173
+                  ],
+                  [
+                    -0.11284,
+                    51.53072
+                  ],
+                  [
+                    -0.12725,
+                    51.53095
+                  ],
+                  [
+                    -0.12762,
+                    51.52196
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 2,
+            "date_start": "2026-05-01",
+            "date_end": "2026-06-08T20:05:04",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-508-176",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.44641,
+                    51.47267
+                  ],
+                  [
+                    -0.43202,
+                    51.47247
+                  ],
+                  [
+                    -0.43171,
+                    51.48146
+                  ],
+                  [
+                    -0.44611,
+                    51.48165
+                  ],
+                  [
+                    -0.44641,
+                    51.47267
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-06-05",
+            "date_end": "2026-07-06",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-513-173",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.37541,
+                    51.44473
+                  ],
+                  [
+                    -0.36103,
+                    51.44453
+                  ],
+                  [
+                    -0.36071,
+                    51.45351
+                  ],
+                  [
+                    -0.37509,
+                    51.45371
+                  ],
+                  [
+                    -0.37541,
+                    51.44473
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-07-01T12:09:19",
+            "date_end": "2026-07-04T05:23:03",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-519-186",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.28474,
+                    51.56034
+                  ],
+                  [
+                    -0.27032,
+                    51.56012
+                  ],
+                  [
+                    -0.26998,
+                    51.56911
+                  ],
+                  [
+                    -0.2844,
+                    51.56932
+                  ],
+                  [
+                    -0.28474,
+                    51.56034
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-30",
+            "date_end": "2026-06-23",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-525-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.20035,
+                    51.50512
+                  ],
+                  [
+                    -0.18595,
+                    51.5049
+                  ],
+                  [
+                    -0.1856,
+                    51.51388
+                  ],
+                  [
+                    -0.2,
+                    51.5141
+                  ],
+                  [
+                    -0.20035,
+                    51.50512
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-08T10:51:57",
+            "date_end": "2026-05-20T19:21:44",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-177",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15824,
+                    51.47749
+                  ],
+                  [
+                    -0.14385,
+                    51.47726
+                  ],
+                  [
+                    -0.14348,
+                    51.48625
+                  ],
+                  [
+                    -0.15788,
+                    51.48647
+                  ],
+                  [
+                    -0.15824,
+                    51.47749
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-06-13T10:31",
+            "date_end": "2026-07-10T11:48:44",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-186",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15497,
+                    51.55837
+                  ],
+                  [
+                    -0.14056,
+                    51.55814
+                  ],
+                  [
+                    -0.14019,
+                    51.56713
+                  ],
+                  [
+                    -0.15461,
+                    51.56735
+                  ],
+                  [
+                    -0.15497,
+                    51.55837
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-17T11:20:11",
+            "date_end": "2026-06-05T14:27:57",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-529-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.14275,
+                    51.50422
+                  ],
+                  [
+                    -0.12835,
+                    51.50399
+                  ],
+                  [
+                    -0.12799,
+                    51.51298
+                  ],
+                  [
+                    -0.14239,
+                    51.51321
+                  ],
+                  [
+                    -0.14275,
+                    51.50422
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 2,
+            "date_start": "2026-05-15T11:52",
+            "date_end": "2026-06-18",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-530-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.12835,
+                    51.50399
+                  ],
+                  [
+                    -0.11395,
+                    51.50376
+                  ],
+                  [
+                    -0.11358,
+                    51.51275
+                  ],
+                  [
+                    -0.12799,
+                    51.51298
+                  ],
+                  [
+                    -0.12835,
+                    51.50399
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-06-10T15:12:21",
+            "date_end": "2026-06-29T14:31:22",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-533-186",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.08289,
+                    51.55721
+                  ],
+                  [
+                    -0.06848,
+                    51.55698
+                  ],
+                  [
+                    -0.06809,
+                    51.56596
+                  ],
+                  [
+                    -0.08251,
+                    51.5662
+                  ],
+                  [
+                    -0.08289,
+                    51.55721
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-03T16:20",
+            "date_end": "2026-06-16T07:45",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-534-174",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.07303,
+                    51.44914
+                  ],
+                  [
+                    -0.05865,
+                    51.4489
+                  ],
+                  [
+                    -0.05827,
+                    51.45789
+                  ],
+                  [
+                    -0.07265,
+                    51.45813
+                  ],
+                  [
+                    -0.07303,
+                    51.44914
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-04T18:36:31",
+            "date_end": "2026-06-15T02:40",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-538-177",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.01433,
+                    51.47514
+                  ],
+                  [
+                    6e-05,
+                    51.47489
+                  ],
+                  [
+                    0.00045,
+                    51.48388
+                  ],
+                  [
+                    -0.01394,
+                    51.48412
+                  ],
+                  [
+                    -0.01433,
+                    51.47514
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-05-31T15:00:45",
+            "date_end": "2026-07-05T16:13:42",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          }
+        ],
+        "quality_summary": {
+          "quality_counts": {
+            "strong": 227,
+            "weak": 5,
+            "context_only": 5,
+            "unknown": 43
+          },
+          "quality_percentages": {
+            "strong": 81.07,
+            "weak": 1.79,
+            "context_only": 1.79,
+            "unknown": 15.36
+          },
+          "record_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 206,
+            "8a863029-f435-446a-821e-275f4f641165": 74
+          },
+          "ranking_eligible_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 159,
+            "8a863029-f435-446a-821e-275f4f641165": 68
+          },
+          "dominant_ranking_dataset_share": 0.7004,
+          "dominant_basis_of_record_share": 1.0,
+          "warnings": []
+        },
+        "evidence_reason": "strong_gate_met"
       },
       {
         "input": "House sparrow",
@@ -18869,7 +19905,8 @@
         },
         "scenario": "abundant_common",
         "scenario_reason": "Common resident and a second English common-name resolution path.",
-        "target_month": 5
+        "target_month": 5,
+        "safe_map_cells": []
       },
       {
         "input": "Eurasian magpie",
@@ -28919,7 +29956,18 @@
         },
         "dataset_diversity": {
           "retained_dataset_count": 3,
-          "ranking_dataset_count": 2
+          "ranking_dataset_count": 2,
+          "record_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 246,
+            "8a863029-f435-446a-821e-275f4f641165": 22,
+            "b1047888-ae52-4179-9dd5-5448ea342a24": 3
+          },
+          "ranking_eligible_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 199,
+            "8a863029-f435-446a-821e-275f4f641165": 20
+          },
+          "dominant_ranking_dataset_share": 0.9087,
+          "dominant_basis_of_record_share": 1.0
         },
         "year_distribution": {
           "2026": 271
@@ -28947,11 +29995,786 @@
           "request_urls": [
             "https://api.gbif.org/v1/occurrence/search?taxon_key=5229490&has_coordinate=true&occurrence_status=present&geometry=POLYGON%28%28-0.5103+51.2868%2C0.3340+51.2868%2C0.3340+51.6919%2C-0.5103+51.6919%2C-0.5103+51.2868%29%29&year=2021%2C2026&month=3&month=4&month=5&limit=300&offset=0"
           ],
-          "deduplication_rule": "First occurrence per GBIF key/occurrenceID; fallback SHA-256 over dataset, institution, catalogue number, date and coordinates."
+          "deduplication_rule": "publisher occurrenceID; stable source identifier; exact repeated GBIF key; deterministic fingerprint for records lacking stable identifiers. Similar fingerprints with distinct stable identifiers are retained and counted.",
+          "deduplication": {
+            "exact_duplicates_removed": 0,
+            "possible_duplicates_retained": 10,
+            "removed_by_method": {},
+            "method": "publisher occurrenceID; stable source identifier; exact repeated GBIF key; deterministic fingerprint for records lacking stable identifiers. Similar fingerprints with distinct stable identifiers are retained and counted."
+          }
         },
         "scenario": "abundant_common",
         "scenario_reason": "Common resident with broad London reporting coverage.",
-        "target_month": 4
+        "target_month": 4,
+        "safe_map_cells": [
+          {
+            "cell_id": "bng-1km-529-179",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.14312,
+                    51.49523
+                  ],
+                  [
+                    -0.12872,
+                    51.495
+                  ],
+                  [
+                    -0.12835,
+                    51.50399
+                  ],
+                  [
+                    -0.14275,
+                    51.50422
+                  ],
+                  [
+                    -0.14312,
+                    51.49523
+                  ]
+                ]
+              ]
+            },
+            "record_count": 17,
+            "dataset_count": 2,
+            "date_start": "2026-03-06T12:10:30Z",
+            "date_end": "2026-04-23",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-183",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15607,
+                    51.53141
+                  ],
+                  [
+                    -0.14166,
+                    51.53118
+                  ],
+                  [
+                    -0.14129,
+                    51.54017
+                  ],
+                  [
+                    -0.1557,
+                    51.54039
+                  ],
+                  [
+                    -0.15607,
+                    51.53141
+                  ]
+                ]
+              ]
+            },
+            "record_count": 13,
+            "dataset_count": 2,
+            "date_start": "2026-03-21T07:08Z",
+            "date_end": "2026-04-19T13:17:18",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-534-182",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.07,
+                    51.52103
+                  ],
+                  [
+                    -0.05559,
+                    51.52079
+                  ],
+                  [
+                    -0.05521,
+                    51.52978
+                  ],
+                  [
+                    -0.06962,
+                    51.53002
+                  ],
+                  [
+                    -0.07,
+                    51.52103
+                  ]
+                ]
+              ]
+            },
+            "record_count": 11,
+            "dataset_count": 1,
+            "date_start": "2026-03-02T10:10Z",
+            "date_end": "2026-04-16T16:18",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-526-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.18595,
+                    51.5049
+                  ],
+                  [
+                    -0.17155,
+                    51.50467
+                  ],
+                  [
+                    -0.17119,
+                    51.51366
+                  ],
+                  [
+                    -0.1856,
+                    51.51388
+                  ],
+                  [
+                    -0.18595,
+                    51.5049
+                  ]
+                ]
+              ]
+            },
+            "record_count": 8,
+            "dataset_count": 2,
+            "date_start": "2026-03-12T10:15:45Z",
+            "date_end": "2026-04-23T10:18:44",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-182",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15643,
+                    51.52242
+                  ],
+                  [
+                    -0.14202,
+                    51.52219
+                  ],
+                  [
+                    -0.14166,
+                    51.53118
+                  ],
+                  [
+                    -0.15607,
+                    51.53141
+                  ],
+                  [
+                    -0.15643,
+                    51.52242
+                  ]
+                ]
+              ]
+            },
+            "record_count": 7,
+            "dataset_count": 2,
+            "date_start": "2026-03-23T14:24Z",
+            "date_end": "2026-04-13T14:50:46",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-534-175",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.07265,
+                    51.45813
+                  ],
+                  [
+                    -0.05827,
+                    51.45789
+                  ],
+                  [
+                    -0.05789,
+                    51.46687
+                  ],
+                  [
+                    -0.07227,
+                    51.46711
+                  ],
+                  [
+                    -0.07265,
+                    51.45813
+                  ]
+                ]
+              ]
+            },
+            "record_count": 7,
+            "dataset_count": 1,
+            "date_start": "2026-03-02T15:35:54Z",
+            "date_end": "2026-04-08T10:40:33",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-526-179",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.18631,
+                    51.49591
+                  ],
+                  [
+                    -0.17191,
+                    51.49569
+                  ],
+                  [
+                    -0.17155,
+                    51.50467
+                  ],
+                  [
+                    -0.18595,
+                    51.5049
+                  ],
+                  [
+                    -0.18631,
+                    51.49591
+                  ]
+                ]
+              ]
+            },
+            "record_count": 5,
+            "dataset_count": 1,
+            "date_start": "2026-03-02T14:03:52Z",
+            "date_end": "2026-03-31T18:40:02",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-527-179",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.17191,
+                    51.49569
+                  ],
+                  [
+                    -0.15752,
+                    51.49546
+                  ],
+                  [
+                    -0.15715,
+                    51.50445
+                  ],
+                  [
+                    -0.17155,
+                    51.50467
+                  ],
+                  [
+                    -0.17191,
+                    51.49569
+                  ]
+                ]
+              ]
+            },
+            "record_count": 5,
+            "dataset_count": 2,
+            "date_start": "2026-03-01T15:30Z",
+            "date_end": "2026-04-13",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-528-179",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.15752,
+                    51.49546
+                  ],
+                  [
+                    -0.14312,
+                    51.49523
+                  ],
+                  [
+                    -0.14275,
+                    51.50422
+                  ],
+                  [
+                    -0.15715,
+                    51.50445
+                  ],
+                  [
+                    -0.15752,
+                    51.49546
+                  ]
+                ]
+              ]
+            },
+            "record_count": 5,
+            "dataset_count": 1,
+            "date_start": "2026-03-09T17:21:36Z",
+            "date_end": "2026-04-01T11:47:37",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-529-172",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.14567,
+                    51.43233
+                  ],
+                  [
+                    -0.13129,
+                    51.4321
+                  ],
+                  [
+                    -0.13093,
+                    51.44108
+                  ],
+                  [
+                    -0.14531,
+                    51.44131
+                  ],
+                  [
+                    -0.14567,
+                    51.43233
+                  ]
+                ]
+              ]
+            },
+            "record_count": 5,
+            "dataset_count": 1,
+            "date_start": "2026-04-24T14:58:45",
+            "date_end": "2026-04-26T11:32:05",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-525-187",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.19787,
+                    51.56803
+                  ],
+                  [
+                    -0.18345,
+                    51.5678
+                  ],
+                  [
+                    -0.18309,
+                    51.57679
+                  ],
+                  [
+                    -0.19752,
+                    51.57701
+                  ],
+                  [
+                    -0.19787,
+                    51.56803
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-03-11T10:43:04Z",
+            "date_end": "2026-04-18T14:28:45",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-526-168",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.19022,
+                    51.39705
+                  ],
+                  [
+                    -0.17586,
+                    51.39683
+                  ],
+                  [
+                    -0.1755,
+                    51.40582
+                  ],
+                  [
+                    -0.18987,
+                    51.40604
+                  ],
+                  [
+                    -0.19022,
+                    51.39705
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-03-10T13:04:59Z",
+            "date_end": "2026-04-27T14:43:51",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-526-170",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.18951,
+                    51.41503
+                  ],
+                  [
+                    -0.17514,
+                    51.4148
+                  ],
+                  [
+                    -0.17478,
+                    51.42379
+                  ],
+                  [
+                    -0.18916,
+                    51.42401
+                  ],
+                  [
+                    -0.18951,
+                    51.41503
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-04-25T09:38:40",
+            "date_end": "2026-04-25T11:01:52",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-527-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.17155,
+                    51.50467
+                  ],
+                  [
+                    -0.15715,
+                    51.50445
+                  ],
+                  [
+                    -0.15679,
+                    51.51343
+                  ],
+                  [
+                    -0.17119,
+                    51.51366
+                  ],
+                  [
+                    -0.17155,
+                    51.50467
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-03-01T15:44Z",
+            "date_end": "2026-03-26T11:37:13Z",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-536-183",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.0408,
+                    51.52954
+                  ],
+                  [
+                    -0.0264,
+                    51.5293
+                  ],
+                  [
+                    -0.02601,
+                    51.53828
+                  ],
+                  [
+                    -0.04042,
+                    51.53852
+                  ],
+                  [
+                    -0.0408,
+                    51.52954
+                  ]
+                ]
+              ]
+            },
+            "record_count": 4,
+            "dataset_count": 1,
+            "date_start": "2026-03-08T12:25Z",
+            "date_end": "2026-03-22T13:04Z",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-520-171",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.27541,
+                    51.42531
+                  ],
+                  [
+                    -0.26104,
+                    51.4251
+                  ],
+                  [
+                    -0.2607,
+                    51.43409
+                  ],
+                  [
+                    -0.27507,
+                    51.4343
+                  ],
+                  [
+                    -0.27541,
+                    51.42531
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-04-25T09:30:13",
+            "date_end": "2026-04-25T12:09:28",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-534-180",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.07076,
+                    51.50306
+                  ],
+                  [
+                    -0.05636,
+                    51.50282
+                  ],
+                  [
+                    -0.05598,
+                    51.51181
+                  ],
+                  [
+                    -0.07038,
+                    51.51204
+                  ],
+                  [
+                    -0.07076,
+                    51.50306
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-04-18T15:16",
+            "date_end": "2026-04-20T09:12",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          },
+          {
+            "cell_id": "bng-1km-535-183",
+            "crs": "EPSG:27700",
+            "cell_size_metres": 1000,
+            "geometry": {
+              "type": "Polygon",
+              "coordinates": [
+                [
+                  [
+                    -0.05521,
+                    51.52978
+                  ],
+                  [
+                    -0.0408,
+                    51.52954
+                  ],
+                  [
+                    -0.04042,
+                    51.53852
+                  ],
+                  [
+                    -0.05483,
+                    51.53876
+                  ],
+                  [
+                    -0.05521,
+                    51.52978
+                  ]
+                ]
+              ]
+            },
+            "record_count": 3,
+            "dataset_count": 1,
+            "date_start": "2026-03-08T12:59Z",
+            "date_end": "2026-03-12T12:13:33Z",
+            "evidence_quality": "ranking_eligible_aggregate",
+            "limitations": [
+              "Generalised 1 km historical-evidence cell; not an occurrence location.",
+              "Does not predict a sighting or imply public access."
+            ]
+          }
+        ],
+        "quality_summary": {
+          "quality_counts": {
+            "strong": 219,
+            "weak": 6,
+            "context_only": 4,
+            "unknown": 42
+          },
+          "quality_percentages": {
+            "strong": 80.81,
+            "weak": 2.21,
+            "context_only": 1.48,
+            "unknown": 15.5
+          },
+          "record_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 246,
+            "8a863029-f435-446a-821e-275f4f641165": 22,
+            "b1047888-ae52-4179-9dd5-5448ea342a24": 3
+          },
+          "ranking_eligible_count_by_dataset": {
+            "50c9509d-22c7-4a22-a47d-8c48425ef4a7": 199,
+            "8a863029-f435-446a-821e-275f4f641165": 20
+          },
+          "dominant_ranking_dataset_share": 0.9087,
+          "dominant_basis_of_record_share": 1.0,
+          "warnings": [
+            "dataset_concentration_warning"
+          ]
+        },
+        "evidence_reason": "strong_gate_met"
       },
       {
         "input": "Common swift",
@@ -51991,7 +53814,8 @@
         },
         "scenario": "moderate_seasonal",
         "scenario_reason": "Seasonal summer visitor used to exercise target-month retrieval.",
-        "target_month": 7
+        "target_month": 7,
+        "safe_map_cells": []
       },
       {
         "input": "Falco subbuteo",
@@ -74901,7 +76725,8 @@
         },
         "scenario": "moderate_seasonal",
         "scenario_reason": "Scientific-name input for a seasonal summer raptor.",
-        "target_month": 7
+        "target_month": 7,
+        "safe_map_cells": []
       },
       {
         "input": "Turdus iliacus",
@@ -84268,7 +86093,8 @@
         },
         "scenario": "moderate_seasonal",
         "scenario_reason": "Scientific-name input for a winter visitor and wrap-around seasonal months.",
-        "target_month": 1
+        "target_month": 1,
+        "safe_map_cells": []
       },
       {
         "input": "Corncrake",
@@ -84332,7 +86158,8 @@
         },
         "scenario": "rare_sparse",
         "scenario_reason": "Sparse historical London evidence should remain contextual, not a hotspot claim.",
-        "target_month": 5
+        "target_month": 5,
+        "safe_map_cells": []
       },
       {
         "input": "Cirl bunting",
@@ -84396,7 +86223,8 @@
         },
         "scenario": "rare_sparse",
         "scenario_reason": "Rare London evidence exercises safe low-count behaviour.",
-        "target_month": 6
+        "target_month": 6,
+        "safe_map_cells": []
       },
       {
         "input": "Kakapo",
@@ -84460,7 +86288,8 @@
         },
         "scenario": "extant_negligible_london",
         "scenario_reason": "Valid extant bird expected to have no meaningful wild London evidence.",
-        "target_month": 6
+        "target_month": 6,
+        "safe_map_cells": []
       },
       {
         "input": "robin",
@@ -84606,7 +86435,8 @@
         "retrieval": null,
         "scenario": "ambiguous_common_name",
         "scenario_reason": "A globally ambiguous one-word English common name.",
-        "target_month": 1
+        "target_month": 1,
+        "safe_map_cells": []
       },
       {
         "input": "eagle",
@@ -84752,7 +86582,8 @@
         "retrieval": null,
         "scenario": "ambiguous_common_name",
         "scenario_reason": "A broad English group name shared by many accepted bird species.",
-        "target_month": 6
+        "target_month": 6,
+        "safe_map_cells": []
       },
       {
         "input": "londun sky parrott xyz",
@@ -84777,7 +86608,8 @@
         "retrieval": null,
         "scenario": "unknown_or_misspelled",
         "scenario_reason": "Deliberately unknown and misspelled input must fail safely.",
-        "target_month": 6
+        "target_month": 6,
+        "safe_map_cells": []
       }
     ]
   },
@@ -84810,7 +86642,7 @@
     "snapshot_version": "2026-08-31",
     "licence": "Each occurrence record and media object retains its own licence field",
     "attribution": "GBIF.org and the contributing datasets named by datasetKey",
-    "checksum_sha256": "021e317f80018d8fec5c47290f09ee92236df447390068b92a735cb168919c0a",
+    "checksum_sha256": "78246864b47253c7800b423d3058b23e10acd729548d21b6f05fe9bb47d46c91",
     "record_counts": {
       "server_match_count": 88319,
       "sampled_count": 3000,
@@ -84840,7 +86672,39 @@
       "At most 900 records per resolved taxon are sampled",
       "Live data, uncertainty fields and dataset composition change over time",
       "Sparse records cannot support hotspot or guaranteed-sighting claims",
-      "Record licences do not automatically license linked media"
+      "Record licences do not automatically license linked media",
+      "Safe-map polygons are aggregated 1 km cells with at least three eligible records; they are not occurrence locations or sighting predictions"
+    ],
+    "safe_map_generated_at_utc": "2026-08-31T06:34:02Z",
+    "safe_map_coverage_gaps": [
+      {
+        "input": "House sparrow",
+        "reason": "bounded_sample_count_drift",
+        "changed_fields": {
+          "deduplicated_count": {
+            "fixture": 300,
+            "live": 160
+          },
+          "retained_total_count": {
+            "fixture": 208,
+            "live": 119
+          }
+        }
+      },
+      {
+        "input": "Turdus iliacus",
+        "reason": "bounded_sample_count_drift",
+        "changed_fields": {
+          "deduplicated_count": {
+            "fixture": 300,
+            "live": 183
+          },
+          "retained_total_count": {
+            "fixture": 191,
+            "live": 111
+          }
+        }
+      }
     ]
   }
 }

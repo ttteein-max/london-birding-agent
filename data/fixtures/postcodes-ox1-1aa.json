@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "payload": {
+    "status": 200,
+    "postcode": "OX1 1AA",
+    "admin_district": "Oxford",
+    "region": "South East",
+    "country": "England",
+    "latitude": 51.75,
+    "longitude": -1.267,
+    "quality": 1
+  },
+  "provenance": {
+    "source_name": "Postcodes.io",
+    "source_url": "https://postcodes.io/",
+    "endpoint": "https://api.postcodes.io/postcodes/OX11AA",
+    "request_parameters": {
+      "postcode": "OX1 1AA"
+    },
+    "retrieved_at_utc": "2026-08-31T06:34:24Z",
+    "snapshot_version": "2026-08-31",
+    "licence": "Contains Royal Mail, Ordnance Survey and ONS data under their stated terms",
+    "attribution": "Postcodes.io; Royal Mail; Ordnance Survey; Office for National Statistics",
+    "checksum_sha256": "fb9e296a151dfe66d5c8f4f26f9da0080b21ca0325438349798f2cc00dc3daca",
+    "record_counts": {
+      "before": 1,
+      "after": 1
+    },
+    "filtering_rules": [
+      "Round coordinates to three decimal places",
+      "Retain locality fields needed for London validation"
+    ],
+    "known_limitations": [
+      "A postcode centroid is not a user's precise position",
+      "Postcode geography can change"
+    ]
+  }
+}

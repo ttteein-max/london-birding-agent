@@ -13,6 +13,8 @@ from app.feasibility.core import STRONG_EVIDENCE_RULE
 from app.feasibility.live import FATAL_GEOSPATIAL_ISSUES, get_json
 from app.feasibility.spatial import (
     location_quality_tier,
+    metric_cell,
+    metric_cell_polygon_wgs84,
     opaque_cell_reference,
     point_in_geometry,
 )
@@ -24,6 +26,7 @@ EvidenceOutcome = Literal[
     "insufficient_evidence",
     "human_selection_required",
     "taxon_not_found",
+    "source_unavailable",
 ]
 
 @dataclass(frozen=True)
@@ -56,22 +59,129 @@ class RetrievalPolicy:
         return sorted({((self.target_month + offset - 1) % 12) + 1 for offset in (-1, 0, 1)})
 
 
-def _record_identity(record: dict[str, Any]) -> str:
-    stable = record.get("key") or record.get("occurrenceID")
-    if stable not in (None, ""):
-        return f"source:{stable}"
-    fallback = "|".join(
-        str(record.get(field) or "")
-        for field in (
-            "datasetKey",
-            "institutionCode",
-            "catalogNumber",
-            "eventDate",
-            "decimalLatitude",
-            "decimalLongitude",
+def _normalised_identifier(value: Any) -> str | None:
+    if value in (None, ""):
+        return None
+    return " ".join(str(value).strip().casefold().split()) or None
+
+
+def _source_identifier(record: dict[str, Any]) -> str | None:
+    """Return a publisher-stable identifier other than occurrenceID when possible."""
+
+    for field in ("organismID", "materialSampleID"):
+        value = _normalised_identifier(record.get(field))
+        if value:
+            return f"{field}:{value}"
+    catalogue = _normalised_identifier(record.get("catalogNumber"))
+    if catalogue:
+        namespace = (
+            _normalised_identifier(record.get("institutionCode"))
+            or _normalised_identifier(record.get("collectionCode"))
+            or _normalised_identifier(record.get("datasetKey"))
+            or "unknown"
         )
+        return f"catalogue:{namespace}:{catalogue}"
+    return None
+
+
+def _generalised_location(record: dict[str, Any]) -> str:
+    longitude = record.get("decimalLongitude")
+    latitude = record.get("decimalLatitude")
+    if not isinstance(longitude, (int, float)) or not isinstance(latitude, (int, float)):
+        return ""
+    try:
+        cell = metric_cell(longitude, latitude, size_metres=1_000)
+    except (TypeError, ValueError):
+        return ""
+    return f"bng1km:{cell[0]}:{cell[1]}"
+
+
+def _record_fingerprint(record: dict[str, Any]) -> str | None:
+    """Build a cautious cross-source fingerprint without collapsing cell/month peers."""
+
+    event = _normalised_identifier(
+        record.get("eventDate") or record.get("eventTime") or record.get("dateIdentified")
     )
-    return f"fallback:{hashlib.sha256(fallback.encode('utf-8')).hexdigest()}"
+    location = _generalised_location(record)
+    dataset = _normalised_identifier(record.get("datasetKey"))
+    taxon = _normalised_identifier(
+        record.get("taxonKey") or record.get("speciesKey") or record.get("scientificName")
+    )
+    if not event or not location or not dataset:
+        return None
+    components = (
+        taxon or "unknown-taxon",
+        event,
+        dataset,
+        location,
+        _normalised_identifier(record.get("basisOfRecord")) or "",
+        _normalised_identifier(record.get("recordedBy")) or "",
+    )
+    return hashlib.sha256("|".join(components).encode("utf-8")).hexdigest()
+
+
+def deduplicate_occurrences(
+    records: list[dict[str, Any]],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Deduplicate by publisher identity before GBIF key, retaining uncertain matches."""
+
+    retained: list[dict[str, Any]] = []
+    seen_occurrence_ids: set[str] = set()
+    seen_source_ids: set[str] = set()
+    seen_gbif_keys: set[str] = set()
+    seen_fingerprints_without_stable_id: set[str] = set()
+    fingerprints_with_stable_id: Counter[str] = Counter()
+    removed_by_method: Counter[str] = Counter()
+    possible_duplicates_retained = 0
+
+    for record in records:
+        occurrence_id = _normalised_identifier(record.get("occurrenceID"))
+        source_id = _source_identifier(record)
+        gbif_key = _normalised_identifier(record.get("key"))
+        fingerprint = _record_fingerprint(record)
+        stable_id = occurrence_id or source_id or gbif_key
+        duplicate_method: str | None = None
+        if occurrence_id and occurrence_id in seen_occurrence_ids:
+            duplicate_method = "occurrence_id"
+        elif source_id and source_id in seen_source_ids:
+            duplicate_method = "source_identifier"
+        elif gbif_key and gbif_key in seen_gbif_keys:
+            duplicate_method = "gbif_key"
+        elif not stable_id and fingerprint and fingerprint in seen_fingerprints_without_stable_id:
+            duplicate_method = "deterministic_fingerprint"
+
+        if duplicate_method:
+            removed_by_method[duplicate_method] += 1
+            continue
+
+        if stable_id and fingerprint and (
+            fingerprints_with_stable_id[fingerprint]
+            or fingerprint in seen_fingerprints_without_stable_id
+        ):
+            possible_duplicates_retained += 1
+        retained.append(record)
+        if occurrence_id:
+            seen_occurrence_ids.add(occurrence_id)
+        if source_id:
+            seen_source_ids.add(source_id)
+        if gbif_key:
+            seen_gbif_keys.add(gbif_key)
+        if fingerprint:
+            if stable_id:
+                fingerprints_with_stable_id[fingerprint] += 1
+            else:
+                seen_fingerprints_without_stable_id.add(fingerprint)
+
+    return retained, {
+        "exact_duplicates_removed": sum(removed_by_method.values()),
+        "possible_duplicates_retained": possible_duplicates_retained,
+        "removed_by_method": dict(sorted(removed_by_method.items())),
+        "method": (
+            "publisher occurrenceID; stable source identifier; exact repeated GBIF key; "
+            "deterministic fingerprint for records lacking stable identifiers. Similar "
+            "fingerprints with distinct stable identifiers are retained and counted."
+        ),
+    }
 
 
 def _hashed_identifier(value: Any) -> str | None:
@@ -268,9 +378,102 @@ def classify_evidence(records: list[dict[str, Any]]) -> EvidenceOutcome:
         and len(datasets) >= STRONG_EVIDENCE_RULE["minimum_datasets"]
     ):
         return "strong_map_evidence"
-    if retained:
+    if len(retained) >= 5:
         return "limited_contextual_evidence"
     return "insufficient_evidence"
+
+
+def _safe_map_cells(
+    raw_records: list[dict[str, Any]],
+    sanitised_records: list[dict[str, Any]],
+    *,
+    evidence_outcome: EvidenceOutcome,
+    minimum_records_per_cell: int = 3,
+) -> list[dict[str, Any]]:
+    """Aggregate eligible records before exposing rounded cell polygons."""
+
+    if evidence_outcome != "strong_map_evidence":
+        return []
+    grouped: dict[tuple[int, int], list[tuple[dict[str, Any], dict[str, Any]]]] = {}
+    for raw, sanitised in zip(raw_records, sanitised_records, strict=True):
+        if not sanitised["ranking_eligible"]:
+            continue
+        cell = metric_cell(
+            raw["decimalLongitude"], raw["decimalLatitude"], size_metres=1_000
+        )
+        grouped.setdefault(cell, []).append((raw, sanitised))
+    cells: list[dict[str, Any]] = []
+    for (cell_easting, cell_northing), items in grouped.items():
+        if len(items) < minimum_records_per_cell:
+            continue
+        dates = sorted(
+            item[1]["observation_or_event_date"]
+            for item in items
+            if item[1]["observation_or_event_date"]
+        )
+        datasets = {item[1]["dataset_key"] for item in items}
+        cells.append(
+            {
+                "cell_id": f"bng-1km-{cell_easting}-{cell_northing}",
+                "crs": "EPSG:27700",
+                "cell_size_metres": 1_000,
+                "geometry": {
+                    "type": "Polygon",
+                    "coordinates": [
+                        metric_cell_polygon_wgs84(cell_easting, cell_northing)
+                    ],
+                },
+                "record_count": len(items),
+                "dataset_count": len(datasets),
+                "date_start": dates[0] if dates else None,
+                "date_end": dates[-1] if dates else None,
+                "evidence_quality": "ranking_eligible_aggregate",
+                "limitations": [
+                    "Generalised 1 km historical-evidence cell; not an occurrence location.",
+                    "Does not predict a sighting or imply public access.",
+                ],
+            }
+        )
+    cells.sort(key=lambda item: (-item["record_count"], item["cell_id"]))
+    return cells[:50]
+
+
+def _quality_and_sampling_summary(records: list[dict[str, Any]]) -> dict[str, Any]:
+    retained = [record for record in records if record["retained"]]
+    ranking = [record for record in retained if record["ranking_eligible"]]
+    total = len(retained)
+    quality_counts = Counter(record["location_quality"] for record in retained)
+    records_by_dataset = Counter(record["dataset_key"] for record in retained)
+    ranking_by_dataset = Counter(record["dataset_key"] for record in ranking)
+    basis_counts = Counter(record.get("basis_of_record") or "missing" for record in retained)
+    dominant_dataset_count = max(ranking_by_dataset.values(), default=0)
+    dominant_basis_count = max(basis_counts.values(), default=0)
+    dominant_dataset_share = dominant_dataset_count / len(ranking) if ranking else 0.0
+    dominant_basis_share = dominant_basis_count / total if total else 0.0
+    warnings: list[str] = []
+    if total and quality_counts["unknown"] / total > 0.5:
+        warnings.append("coordinate_quality_limited")
+    if dominant_dataset_share > 0.8:
+        warnings.append("dataset_concentration_warning")
+    if 0 < len(ranking_by_dataset) and len(ranking_by_dataset) >= 2:
+        ordered = sorted(ranking_by_dataset.values(), reverse=True)
+        if len(ordered) > 1 and ordered[1] == 1:
+            warnings.append("minimal_second_dataset_contribution")
+    return {
+        "quality_counts": {
+            quality: quality_counts[quality]
+            for quality in ("strong", "weak", "context_only", "unknown")
+        },
+        "quality_percentages": {
+            quality: round(100 * quality_counts[quality] / total, 2) if total else 0.0
+            for quality in ("strong", "weak", "context_only", "unknown")
+        },
+        "record_count_by_dataset": dict(sorted(records_by_dataset.items())),
+        "ranking_eligible_count_by_dataset": dict(sorted(ranking_by_dataset.items())),
+        "dominant_ranking_dataset_share": round(dominant_dataset_share, 4),
+        "dominant_basis_of_record_share": round(dominant_basis_share, 4),
+        "warnings": warnings,
+    }
 
 
 def retrieve_occurrences(
@@ -300,7 +503,13 @@ def retrieve_occurrences(
     server_match_count = 0
     stopped_early = False
     stop_reason = "page_budget_exhausted"
-    deduplicated: dict[str, dict[str, Any]] = {}
+    deduplicated: list[dict[str, Any]] = []
+    deduplication = {
+        "exact_duplicates_removed": 0,
+        "possible_duplicates_retained": 0,
+        "removed_by_method": {},
+        "method": "",
+    }
     for page_index in range(selected_policy.effective_page_budget):
         raw, url = fetch_json(
             "https://api.gbif.org/v1/occurrence/search",
@@ -323,11 +532,10 @@ def retrieve_occurrences(
             server_match_count = int(raw.get("count", 0))
         page_records = raw.get("results", [])
         sampled.extend(page_records)
-        for record in page_records:
-            deduplicated.setdefault(_record_identity(record), record)
+        deduplicated, deduplication = deduplicate_occurrences(sampled)
         sanitised_so_far = [
             sanitise_occurrence(record, london_boundary=london_boundary, cell_secret=secret)
-            for record in deduplicated.values()
+            for record in deduplicated
         ]
         if classify_evidence(sanitised_so_far) == "strong_map_evidence":
             stopped_early = True
@@ -340,30 +548,55 @@ def retrieve_occurrences(
 
     records = [
         sanitise_occurrence(record, london_boundary=london_boundary, cell_secret=secret)
-        for record in deduplicated.values()
+        for record in deduplicated
     ]
     counts = occurrence_counts(
         records,
         server_match_count=server_match_count,
         sampled_count=len(sampled),
-        duplicates_removed=len(sampled) - len(deduplicated),
+        duplicates_removed=deduplication["exact_duplicates_removed"],
     )
     retained = [record for record in records if record["retained"]]
     ranking = [record for record in records if record["ranking_eligible"]]
+    outcome = classify_evidence(records)
+    quality_summary = _quality_and_sampling_summary(records)
     return {
         "input": resolution.original_input,
         "taxonomy": resolution.model_dump(mode="json", exclude={"request_urls"}),
-        "evidence_outcome": classify_evidence(records),
+        "evidence_outcome": outcome,
+        "evidence_reason": (
+            "isolated_records_only"
+            if 1 <= len(retained) <= 4
+            else "strong_gate_met"
+            if outcome == "strong_map_evidence"
+            else "below_strong_gate"
+            if outcome == "limited_contextual_evidence"
+            else "no_retained_records"
+        ),
         "evidence_rationale": (
             "Only strong (≤1,000 m uncertainty) records contribute to 1 km spatial "
             "ranking; weaker, context-only and unknown-uncertainty records cannot."
         ),
         "records": records,
+        "safe_map_cells": _safe_map_cells(
+            deduplicated, records, evidence_outcome=outcome
+        ),
         "counts": counts,
         "dataset_diversity": {
             "retained_dataset_count": len({record["dataset_key"] for record in retained}),
             "ranking_dataset_count": len({record["dataset_key"] for record in ranking}),
+            "record_count_by_dataset": quality_summary["record_count_by_dataset"],
+            "ranking_eligible_count_by_dataset": quality_summary[
+                "ranking_eligible_count_by_dataset"
+            ],
+            "dominant_ranking_dataset_share": quality_summary[
+                "dominant_ranking_dataset_share"
+            ],
+            "dominant_basis_of_record_share": quality_summary[
+                "dominant_basis_of_record_share"
+            ],
         },
+        "quality_summary": quality_summary,
         "year_distribution": dict(sorted(Counter(str(record["year"]) for record in retained if record["year"]).items())),
         "month_distribution": dict(sorted(Counter(str(record["month"]) for record in retained if record["month"]).items())),
         "retrieval": {
@@ -376,9 +609,7 @@ def retrieve_occurrences(
             "stopped_early": stopped_early,
             "stop_reason": stop_reason,
             "request_urls": request_urls,
-            "deduplication_rule": (
-                "First occurrence per GBIF key/occurrenceID; fallback SHA-256 over "
-                "dataset, institution, catalogue number, date and coordinates."
-            ),
+            "deduplication": deduplication,
+            "deduplication_rule": deduplication["method"],
         },
     }
