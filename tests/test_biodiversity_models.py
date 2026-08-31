@@ -7,8 +7,11 @@ from pydantic import ValidationError
 
 from app.biodiversity.models import (
     ExpeditionRequest,
+    ExpeditionPlan,
     OccurrenceCounts,
     OccurrenceEvidence,
+    PublicSiteSearchResult,
+    PublicSiteSearchStatus,
     EvidenceOutcome,
     EvidenceQualitySummary,
     SafeMapGeometry,
@@ -20,6 +23,26 @@ from app.biodiversity.models import (
 def test_every_phase1_domain_model_forbids_unexpected_fields() -> None:
     assert StrictModel.__subclasses__()
     assert all(model.model_config.get("extra") == "forbid" for model in StrictModel.__subclasses__())
+
+
+def test_site_search_and_plan_statuses_are_typed_enums() -> None:
+    with pytest.raises(ValidationError):
+        PublicSiteSearchResult(
+            candidates=[], searched_radius_km=5, status="legacy_ok"
+        )
+    with pytest.raises(ValidationError):
+        PublicSiteSearchResult(
+            candidates=[],
+            searched_radius_km=5,
+            status=PublicSiteSearchStatus.success,
+        )
+    with pytest.raises(ValidationError):
+        ExpeditionPlan(
+            status="maybe_ready",
+            target_bird="Avis test",
+            target_date=date(2026, 6, 15),
+            evidence_explanation="Invalid status should fail.",
+        )
 
 
 def test_request_requires_exactly_one_location_and_forbids_extra_fields() -> None:

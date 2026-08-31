@@ -73,6 +73,21 @@ class AccessCertainty(str, Enum):
     unspecified = "unspecified"
 
 
+class PublicSiteSearchStatus(str, Enum):
+    success = "success"
+    not_applicable_location_unresolved = "not_applicable_location_unresolved"
+    not_applicable_without_strong_evidence = "not_applicable_without_strong_evidence"
+    safe_map_unavailable = "safe_map_unavailable"
+    no_suitable_public_sites = "no_suitable_public_sites"
+    source_unavailable = "source_unavailable"
+
+
+class ExpeditionPlanStatus(str, Enum):
+    candidate_plan_ready = "candidate_plan_ready"
+    context_only = "context_only"
+    cannot_recommend_sites = "cannot_recommend_sites"
+
+
 class ConstraintSeverity(str, Enum):
     error = "error"
     warning = "warning"
@@ -100,6 +115,7 @@ class ToolErrorCode(str, Enum):
     missing_or_corrupt_fixture = "missing_or_corrupt_fixture"
     no_occurrence_evidence = "no_occurrence_evidence"
     insufficient_quality_evidence = "insufficient_quality_evidence"
+    safe_map_unavailable = "safe_map_unavailable"
     no_suitable_public_sites = "no_suitable_public_sites"
     routing_not_available = "routing_not_available"
 
@@ -336,8 +352,19 @@ class PublicSiteCandidate(StrictModel):
 class PublicSiteSearchResult(StrictModel):
     candidates: list[PublicSiteCandidate] = Field(default_factory=list)
     searched_radius_km: float = Field(gt=0)
-    status: str
+    status: PublicSiteSearchStatus
     error: "ToolError | None" = None
+
+    @model_validator(mode="after")
+    def grounded_success_only(self) -> "PublicSiteSearchResult":
+        if self.status == PublicSiteSearchStatus.success:
+            if not self.candidates:
+                raise ValueError("successful site search requires at least one candidate")
+            if any(not candidate.associated_safe_cell_ids for candidate in self.candidates):
+                raise ValueError("successful site candidates must be associated with safe cells")
+        elif self.candidates:
+            raise ValueError("non-successful site search cannot expose candidates")
+        return self
 
 
 class ConstraintViolation(StrictModel):
@@ -362,6 +389,7 @@ class ExpeditionEvidenceBundle(StrictModel):
     taxon: ResolvedTaxon
     occurrence: OccurrenceEvidence | None = None
     weather: WeatherEvidence | None = None
+    site_search: PublicSiteSearchResult
     candidate_sites: list[PublicSiteCandidate] = Field(default_factory=list)
     constraints: list[ConstraintViolation] = Field(default_factory=list)
     evidence_outcome: EvidenceOutcome
@@ -369,9 +397,15 @@ class ExpeditionEvidenceBundle(StrictModel):
     provenance: list[EvidenceItem] = Field(default_factory=list)
     tool_errors: list[ToolError] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def candidate_compatibility_view(self) -> "ExpeditionEvidenceBundle":
+        if self.candidate_sites != self.site_search.candidates:
+            raise ValueError("candidate_sites must mirror site_search.candidates")
+        return self
+
 
 class ExpeditionPlan(StrictModel):
-    status: str
+    status: ExpeditionPlanStatus
     target_bird: str
     target_date: date
     candidate_sites: list[PublicSiteCandidate] = Field(default_factory=list)

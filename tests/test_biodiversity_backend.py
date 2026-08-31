@@ -4,7 +4,13 @@ from datetime import date
 
 import pytest
 
-from app.biodiversity.models import EvidenceOutcome, ExpeditionRequest, TaxonStatus
+from app.biodiversity.models import (
+    EvidenceOutcome,
+    ExpeditionPlanStatus,
+    ExpeditionRequest,
+    PublicSiteSearchStatus,
+    TaxonStatus,
+)
 from app.biodiversity.orchestration import run_expedition_backend
 
 
@@ -23,8 +29,13 @@ def test_strong_common_bird_scenario() -> None:
     result = run("Common woodpigeon", 6)
     assert result.bundle.taxon.status == TaxonStatus.resolved
     assert result.bundle.evidence_outcome == EvidenceOutcome.strong_map_evidence
-    assert result.plan.status == "candidate_plan_ready"
+    assert result.plan.status == ExpeditionPlanStatus.candidate_plan_ready
+    assert result.bundle.site_search.status == PublicSiteSearchStatus.success
     assert result.bundle.candidate_sites
+    assert all(
+        candidate.associated_safe_cell_ids
+        for candidate in result.bundle.candidate_sites
+    )
     assert all(
         "decimalLatitude" not in item.model_dump_json()
         for item in result.bundle.candidate_sites
@@ -52,7 +63,7 @@ def test_valid_bird_with_insufficient_evidence() -> None:
     result = run("Kakapo", 6)
     assert result.bundle.taxon.status == TaxonStatus.resolved
     assert result.bundle.evidence_outcome == EvidenceOutcome.insufficient_evidence
-    assert result.plan.status == "cannot_recommend_sites"
+    assert result.plan.status == ExpeditionPlanStatus.cannot_recommend_sites
 
 
 def test_invalid_bird_name() -> None:
@@ -64,7 +75,7 @@ def test_invalid_bird_name() -> None:
 def test_valid_postcode_outside_london_is_rejected() -> None:
     result = run("Common woodpigeon", 6, postcode="OX1 1AA")
     assert result.bundle.location.status.value == "outside_supported_area"
-    assert result.plan.status == "cannot_recommend_sites"
+    assert result.plan.status == ExpeditionPlanStatus.cannot_recommend_sites
     assert result.bundle.candidate_sites == []
 
 

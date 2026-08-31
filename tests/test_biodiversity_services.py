@@ -6,6 +6,8 @@ from typing import Any
 from app.biodiversity.models import (
     ExpeditionRequest,
     LocationStatus,
+    PublicSiteSearchResult,
+    PublicSiteSearchStatus,
     RainPreference,
     ResolvedTaxon,
     TaxonStatus,
@@ -18,6 +20,7 @@ from app.biodiversity.repositories import (
     SnapshotGreenSpaceRepository,
     normalise_postcode,
 )
+from app.biodiversity.orchestration import run_expedition_backend
 from app.biodiversity.tools import (
     find_public_green_spaces,
     get_weather_context,
@@ -89,6 +92,25 @@ def test_weather_requires_exact_requested_date() -> None:
 
 
 def test_public_site_access_and_distance_language() -> None:
+    result = run_expedition_backend(
+        request(target_local_date=date(2026, 6, 15))
+    )
+    assert result.bundle.site_search.status == PublicSiteSearchStatus.success
+    assert result.bundle.site_search.candidates
+    assert {
+        item.access_certainty.value
+        for item in result.bundle.site_search.candidates
+    } <= {
+        "explicit_public",
+        "unspecified",
+    }
+    assert all(
+        "walking-route distance" in item.limitations[0]
+        for item in result.bundle.site_search.candidates
+    )
+
+
+def test_occurrence_none_cannot_produce_site_recommendations() -> None:
     location = lookup_uk_postcode(request(), repository=FixturePostcodeRepository())
     result = find_public_green_spaces(
         location,
@@ -97,14 +119,11 @@ def test_public_site_access_and_distance_language() -> None:
         repository=SnapshotGreenSpaceRepository(),
         limit=20,
     )
-    assert result.status == "ok"
-    assert result.candidates
-    assert {item.access_certainty.value for item in result.candidates} <= {
-        "explicit_public",
-        "unspecified",
-    }
-    assert any(item.access_certainty.value == "unspecified" for item in result.candidates)
-    assert all("walking-route distance" in item.limitations[0] for item in result.candidates)
+    assert (
+        result.status
+        == PublicSiteSearchStatus.not_applicable_without_strong_evidence
+    )
+    assert result.candidates == []
 
 
 def test_walking_limit_is_accepted_but_never_route_validated() -> None:
@@ -129,7 +148,16 @@ def test_walking_limit_is_accepted_but_never_route_validated() -> None:
         rationale="Resolved.",
     )
     constraints = validate_expedition_constraints(
-        req, location, taxon, None, weather, []
+        req,
+        location,
+        taxon,
+        None,
+        weather,
+        PublicSiteSearchResult(
+            candidates=[],
+            searched_radius_km=req.search_radius_km,
+            status=PublicSiteSearchStatus.not_applicable_without_strong_evidence,
+        ),
     )
     routing = next(item for item in constraints if item.code == "routing_not_available")
     assert routing.status.value == "unresolved"
