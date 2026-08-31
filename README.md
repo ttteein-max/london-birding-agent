@@ -4,7 +4,7 @@ An explainable, evidence-grounded planner for urban birdwatching expeditions in 
 
 The project is London-only, birds-first and English-only. It identifies areas with stronger historical occurrence evidence. It does not predict sightings, convert record counts into abundance or population estimates, guarantee access, or guarantee that a bird will be observed.
 
-Phase 1 adds a strict, frontend-independent biodiversity backend with deterministic fixture/live repositories, seven typed services, safe aggregated map geometry and a fixed-order non-LLM orchestrator. The incident-investigation LangGraph graph, state, tools, scripted models, checkpointer and streaming adapter remain unchanged as a regression-protected reference. They are not the biodiversity agent.
+Phase 1 adds a strict, frontend-independent biodiversity backend with deterministic fixture/live repositories, seven typed services, safe aggregated map geometry and a fixed-order non-LLM orchestrator. The dynamic LangGraph biodiversity agent remains intentionally deferred to Phase 2.
 
 ## Phase 1 quick start
 
@@ -27,6 +27,18 @@ The output separates London/taxonomy/source status, historical evidence outcome,
 Phase 1.1 hardens site grounding: a candidate plan is ready only when strong evidence has approved safe-map cells and every returned public-site candidate is associated with one of those cells. Strong evidence with no safe cells, an empty grounded search radius, and site-source failure remain distinct typed outcomes.
 
 Phase 1.2 separates directly grounded recommendations from contextual green spaces. A recommendation now requires an OSM polygon or multipolygon footprint intersecting a safe cell; nearby and ordinary ungrounded sites remain explicitly non-recommended. The occurrence fixture was rebuilt end-to-end with the hardened pipeline, restoring same-snapshot safe cells for House sparrow and `Turdus iliacus`.
+
+## Repository milestones
+
+The standalone Git history preserves the implemented biodiversity phases as immutable tags:
+
+- `phase-0`: feasibility foundation;
+- `phase-0.1`: evidence-data hardening;
+- `phase-1`: typed deterministic backend;
+- `phase-1.1`: site-grounding gate hardening;
+- `phase-1.2`: contextual-site tiers and same-snapshot fixtures.
+
+The default `main` branch contains Phase 1.2 plus repository-only publishing metadata. No Phase 2 LangGraph or LLM implementation is included.
 
 ## What Phase 0.1 demonstrates
 
@@ -91,6 +103,8 @@ python -m scripts.phase0_feasibility
 ```
 
 These commands are offline and need no API key.
+
+The same offline suite and compile checks run on every GitHub push and pull request under the repository's **Actions** tab. The latest local verification summary and JUnit XML are kept under `reports/`.
 
 ## Explicit live candidate and promotion workflow
 

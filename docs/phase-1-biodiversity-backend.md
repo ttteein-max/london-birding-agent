@@ -2,7 +2,7 @@
 
 ## Scope and architecture
 
-Phase 1 adds a frontend-independent backend under `app/biodiversity/`. It is parallel to, and does not import or modify, the incident LangGraph implementation. It uses a fixed service order and no LLM:
+Phase 1 adds a frontend-independent backend under `app/biodiversity/`. It uses a fixed service order and no LLM or LangGraph runtime:
 
 1. validate `ExpeditionRequest`;
 2. resolve and London-check the postcode or rounded map point;

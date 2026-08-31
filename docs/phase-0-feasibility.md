@@ -4,7 +4,7 @@
 
 Phase 0.1 passes. The evidence layer now supports arbitrary English common-name and scientific-name bird input, dynamic ambiguity/not-found outcomes, bounded representative retrieval, explicit coordinate-quality use tiers, a real London polygon, EPSG:27700 cells and internally consistent schema-v2 provenance.
 
-This remains pre-Phase 1. The protected incident LangGraph graph, state/schema, investigator tools, streaming adapter, scripted models and checkpointer were not changed.
+This remains pre-Phase 1. It establishes the deterministic evidence foundation without adding LangGraph, an LLM or agent orchestration.
 
 The product remains: **“London Biodiversity Expedition Planner — an explainable, evidence-grounded planner for urban birdwatching expeditions in London.”** Historical occurrence evidence is not sighting probability, abundance, a population estimate or a guarantee.
 
