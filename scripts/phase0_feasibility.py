@@ -24,7 +24,12 @@ from app.feasibility.core import (
     load_fixture_bundle,
     validate_provenance,
 )
-from app.feasibility.live import fetch_postcode_fixture, fetch_weather_fixture, get_json, utc_now
+from app.feasibility.live import (
+    fetch_postcode_fixture,
+    fetch_weather_fixture,
+    get_json,
+    utc_now,
+)
 from app.feasibility.occurrence import (
     RetrievalPolicy,
     retrieve_occurrences,
@@ -44,7 +49,9 @@ CANONICAL_FILENAMES = (
 
 def _write_json(path: Path, value: Any) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+    path.write_text(
+        json.dumps(value, indent=2, ensure_ascii=False) + "\n", encoding="utf-8"
+    )
 
 
 def _aggregate_counts(results: list[dict[str, Any]]) -> dict[str, Any]:
@@ -157,6 +164,14 @@ def build_live_candidate(output_dir: Path, matrix_path: Path = MATRIX_PATH) -> P
             "crs": "EPSG:27700",
             "cell_size_metres": 1000,
             "stored_reference": "run-specific HMAC; secret not persisted",
+            "application_safe_map": {
+                "geometry_crs": "EPSG:4326",
+                "aggregation_crs": "EPSG:27700",
+                "cell_size_metres": 1000,
+                "minimum_records_per_exposed_cell": 3,
+                "only_for_outcome": "strong_map_evidence",
+                "individual_coordinates_persisted": False,
+            },
         },
         "default_retrieval_policy": {
             "latest_complete_years_plus_current": 5,
@@ -203,6 +218,10 @@ def build_live_candidate(output_dir: Path, matrix_path: Path = MATRIX_PATH) -> P
                 "Live data, uncertainty fields and dataset composition change over time",
                 "Sparse records cannot support hotspot or guaranteed-sighting claims",
                 "Record licences do not automatically license linked media",
+                (
+                    "Safe-map polygons are aggregated 1 km cells with at least three "
+                    "eligible records; they are not occurrence locations or sighting predictions"
+                ),
             ],
         },
     }
@@ -288,8 +307,12 @@ def _validated_candidate(candidate_dir: Path) -> dict[str, Path]:
         loaded[filename] = fixture
 
     taxonomy_results = loaded["gbif-species.json"]["payload"].get("results")
-    occurrence_results = loaded["gbif-occurrences-london.json"]["payload"].get("results")
-    if not isinstance(taxonomy_results, list) or not isinstance(occurrence_results, list):
+    occurrence_results = loaded["gbif-occurrences-london.json"]["payload"].get(
+        "results"
+    )
+    if not isinstance(taxonomy_results, list) or not isinstance(
+        occurrence_results, list
+    ):
         raise RuntimeError("candidate taxonomy/occurrence results must be arrays")
     taxonomy_fields = TaxonomyOutcome.model_fields.keys()
     try:
@@ -300,9 +323,13 @@ def _validated_candidate(candidate_dir: Path) -> dict[str, Path]:
     except (AttributeError, ValidationError) as exc:
         raise RuntimeError("candidate taxonomy result schema is invalid") from exc
     occurrence = loaded["gbif-occurrences-london.json"]
-    aggregate_errors = validate_occurrence_counts(occurrence["provenance"]["record_counts"])
+    aggregate_errors = validate_occurrence_counts(
+        occurrence["provenance"]["record_counts"]
+    )
     if aggregate_errors:
-        raise RuntimeError(f"candidate aggregate occurrence counts are inconsistent: {aggregate_errors}")
+        raise RuntimeError(
+            f"candidate aggregate occurrence counts are inconsistent: {aggregate_errors}"
+        )
     for index, result in enumerate(occurrence_results):
         if not {"input", "taxonomy", "evidence_outcome", "records"}.issubset(result):
             raise RuntimeError(
@@ -315,7 +342,9 @@ def _validated_candidate(candidate_dir: Path) -> dict[str, Path]:
                     f"candidate occurrence counts are inconsistent at result {index}: {errors}"
                 )
     postcode = loaded["postcodes-sw11-4nj.json"]["payload"]
-    if any(postcode.get(field) is None for field in ("postcode", "latitude", "longitude")):
+    if any(
+        postcode.get(field) is None for field in ("postcode", "latitude", "longitude")
+    ):
         raise RuntimeError("candidate postcode fixture omits required fields")
     if not isinstance(postcode["latitude"], (int, float)) or not isinstance(
         postcode["longitude"], (int, float)
@@ -336,7 +365,9 @@ def promote_candidate(candidate_dir: Path) -> None:
     """Prevalidate, stage and replace with rollback if an atomic rename fails."""
 
     validated = _validated_candidate(candidate_dir)
-    with tempfile.TemporaryDirectory(prefix="phase01-promotion-", dir=FIXTURE_DIR) as temporary:
+    with tempfile.TemporaryDirectory(
+        prefix="phase01-promotion-", dir=FIXTURE_DIR
+    ) as temporary:
         staging = Path(temporary) / "staged"
         backups = Path(temporary) / "backups"
         staging.mkdir()
@@ -355,6 +386,58 @@ def promote_candidate(candidate_dir: Path) -> None:
             raise
 
 
+def _occurrence_taxonomy_key_mismatches(
+    canonical_taxonomy: dict[str, Any],
+    candidate_occurrence: dict[str, Any],
+) -> list[str]:
+    canonical_by_input = {
+        result.get("normalised_input"): result.get("accepted_taxon_key")
+        for result in canonical_taxonomy["payload"].get("results", [])
+        if result.get("normalised_input") is not None
+    }
+    mismatches: list[str] = []
+    for result in candidate_occurrence["payload"].get("results", []):
+        taxonomy = result.get("taxonomy") or {}
+        normalised_input = taxonomy.get("normalised_input")
+        candidate_key = taxonomy.get("accepted_taxon_key")
+        if normalised_input not in canonical_by_input:
+            mismatches.append(
+                f"{normalised_input or result.get('input')}: missing from canonical taxonomy"
+            )
+            continue
+        canonical_key = canonical_by_input[normalised_input]
+        if candidate_key != canonical_key:
+            mismatches.append(
+                f"{normalised_input}: candidate={candidate_key}, canonical={canonical_key}"
+            )
+    return mismatches
+
+
+def promote_occurrence_candidate(candidate_dir: Path) -> None:
+    """Validate a full candidate set but replace only the occurrence snapshot."""
+
+    source = _validated_candidate(candidate_dir)["gbif-occurrences-london.json"]
+    candidate_occurrence = json.loads(source.read_text(encoding="utf-8"))
+    canonical_taxonomy = load_fixture_bundle()["taxonomy"]
+    mismatches = _occurrence_taxonomy_key_mismatches(
+        canonical_taxonomy, candidate_occurrence
+    )
+    if mismatches:
+        raise RuntimeError(
+            "occurrence-only promotion rejected because candidate occurrence taxonomy "
+            "does not match the current canonical taxonomy: "
+            + "; ".join(mismatches)
+            + ". Review and promote the complete candidate set instead."
+        )
+    destination = FIXTURE_DIR / "gbif-occurrences-london.json"
+    with tempfile.TemporaryDirectory(
+        prefix="phase01-occurrence-promotion-", dir=FIXTURE_DIR
+    ) as temporary:
+        staging = Path(temporary) / destination.name
+        shutil.copy2(source, staging)
+        os.replace(staging, destination)
+
+
 def live_arbitrary_check(user_input: str, target_month: int) -> dict[str, Any]:
     resolver = GBIFBirdNameResolver(get_json)
     resolution = resolver.resolve(user_input)
@@ -366,7 +449,9 @@ def live_arbitrary_check(user_input: str, target_month: int) -> dict[str, Any]:
     )
     # Keep the command output compact and never print occurrence-level references.
     return {
-        "taxonomy": resolution.model_dump(mode="json", exclude={"request_urls", "candidates"}),
+        "taxonomy": resolution.model_dump(
+            mode="json", exclude={"request_urls", "candidates"}
+        ),
         "evidence_outcome": result["evidence_outcome"],
         "counts": result.get("counts"),
         "dataset_diversity": result.get("dataset_diversity"),
@@ -389,7 +474,10 @@ def validate_and_report() -> int:
                 fixture["provenance"], schema_version=fixture["schema_version"]
             )
         )
-        if canonical_sha256(fixture["payload"]) != fixture["provenance"]["checksum_sha256"]:
+        if (
+            canonical_sha256(fixture["payload"])
+            != fixture["provenance"]["checksum_sha256"]
+        ):
             failures.append(f"{name}: dated snapshot payload checksum mismatch")
     if fixtures["taxonomy"]["schema_version"] != 2:
         failures.append("taxonomy: canonical fixture must use schema version 2")
@@ -401,7 +489,9 @@ def validate_and_report() -> int:
     if len(taxonomy_results) < 12 or len(occurrence_results) < 12:
         failures.append("evaluation matrix must contain at least 12 inputs")
     taxonomy_outcomes = Counter(item.get("outcome") for item in taxonomy_results)
-    evidence_outcomes = Counter(item.get("evidence_outcome") for item in occurrence_results)
+    evidence_outcomes = Counter(
+        item.get("evidence_outcome") for item in occurrence_results
+    )
     for expected in ("resolved", "human_selection_required", "taxon_not_found"):
         if not taxonomy_outcomes[expected]:
             failures.append(f"taxonomy: missing {expected} behaviour")
@@ -447,15 +537,42 @@ def _default_candidate_dir() -> Path:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--live-refresh", action="store_true", help="Write live candidate fixtures; never overwrite canonical fixtures")
+    parser.add_argument(
+        "--live-refresh",
+        action="store_true",
+        help="Write live candidate fixtures; never overwrite canonical fixtures",
+    )
     parser.add_argument("--output-dir", type=Path)
-    parser.add_argument("--promote-candidate", type=Path, help="Explicitly replace canonical fixtures from a validated candidate directory")
-    parser.add_argument("--live-check", metavar="BIRD_NAME", help="Run one arbitrary live resolver and occurrence check without writing fixtures")
+    parser.add_argument(
+        "--promote-candidate",
+        type=Path,
+        help="Explicitly replace canonical fixtures from a validated candidate directory",
+    )
+    parser.add_argument(
+        "--promote-occurrence-candidate",
+        type=Path,
+        help="Validate a complete candidate set but replace only the occurrence fixture",
+    )
+    parser.add_argument(
+        "--live-check",
+        metavar="BIRD_NAME",
+        help="Run one arbitrary live resolver and occurrence check without writing fixtures",
+    )
     parser.add_argument("--target-month", type=int, default=6)
     args = parser.parse_args()
-    selected = sum(bool(value) for value in (args.live_refresh, args.promote_candidate, args.live_check))
+    selected = sum(
+        bool(value)
+        for value in (
+            args.live_refresh,
+            args.promote_candidate,
+            args.promote_occurrence_candidate,
+            args.live_check,
+        )
+    )
     if selected > 1:
-        parser.error("choose only one of --live-refresh, --promote-candidate or --live-check")
+        parser.error(
+            "choose only one of --live-refresh, --promote-candidate or --live-check"
+        )
     if args.live_refresh:
         output = build_live_candidate(args.output_dir or _default_candidate_dir())
         print(f"WROTE LIVE CANDIDATE {output}")
@@ -464,8 +581,18 @@ def main() -> None:
         promote_candidate(args.promote_candidate)
         print(f"PROMOTED CANDIDATE {args.promote_candidate}")
         raise SystemExit(validate_and_report())
+    if args.promote_occurrence_candidate:
+        promote_occurrence_candidate(args.promote_occurrence_candidate)
+        print(f"PROMOTED OCCURRENCE CANDIDATE {args.promote_occurrence_candidate}")
+        raise SystemExit(validate_and_report())
     if args.live_check:
-        print(json.dumps(live_arbitrary_check(args.live_check, args.target_month), indent=2, ensure_ascii=False))
+        print(
+            json.dumps(
+                live_arbitrary_check(args.live_check, args.target_month),
+                indent=2,
+                ensure_ascii=False,
+            )
+        )
         return
     raise SystemExit(validate_and_report())
 
