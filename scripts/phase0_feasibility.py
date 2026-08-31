@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import shutil
+import tempfile
 from collections import Counter
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+
+from pydantic import ValidationError
 
 from app.feasibility.core import (
     FIXTURE_DIR,
@@ -16,6 +20,7 @@ from app.feasibility.core import (
     STRONG_EVIDENCE_RULE,
     canonical_sha256,
     evaluate_occurrence_fixture,
+    file_sha256,
     load_fixture_bundle,
     validate_provenance,
 )
@@ -26,7 +31,7 @@ from app.feasibility.occurrence import (
     validate_occurrence_counts,
 )
 from app.feasibility.spatial import load_london_boundary
-from app.feasibility.taxonomy import GBIFBirdNameResolver
+from app.feasibility.taxonomy import GBIFBirdNameResolver, TaxonomyOutcome
 
 MATRIX_PATH = PROJECT_ROOT / "data" / "evaluation" / "phase-0.1-matrix.json"
 CANONICAL_FILENAMES = (
@@ -218,28 +223,136 @@ def build_live_candidate(output_dir: Path, matrix_path: Path = MATRIX_PATH) -> P
         "candidate_created_at_utc": retrieved_at,
         "canonical_replaced": False,
         "files": list(CANONICAL_FILENAMES),
+        "checksums_sha256": {
+            filename: file_sha256(output_dir / filename)
+            for filename in CANONICAL_FILENAMES
+        },
         "promotion_command": f"python -m scripts.phase0_feasibility --promote-candidate {output_dir}",
     }
     _write_json(output_dir / "candidate-manifest.json", manifest)
     return output_dir
 
 
-def promote_candidate(candidate_dir: Path) -> None:
-    """Explicit promotion boundary; validation alone never calls this function."""
+def _validated_candidate(candidate_dir: Path) -> dict[str, Path]:
+    """Validate the complete candidate set before any canonical file is touched."""
 
+    manifest_path = candidate_dir / "candidate-manifest.json"
+    if not manifest_path.is_file():
+        raise RuntimeError("candidate manifest is missing")
+    try:
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("candidate manifest is not valid JSON") from exc
+    if manifest.get("canonical_replaced") is not False:
+        raise RuntimeError("candidate manifest must declare canonical_replaced=false")
+    if manifest.get("files") != list(CANONICAL_FILENAMES):
+        raise RuntimeError("candidate manifest file list is invalid")
+    checksums = manifest.get("checksums_sha256")
+    if not isinstance(checksums, dict) or set(checksums) != set(CANONICAL_FILENAMES):
+        raise RuntimeError("candidate manifest checksums are missing or incomplete")
+
+    validated: dict[str, Path] = {}
+    loaded: dict[str, dict[str, Any]] = {}
+    expected_versions = {
+        "gbif-species.json": 2,
+        "gbif-occurrences-london.json": 2,
+        "postcodes-sw11-4nj.json": 1,
+        "open-meteo-london.json": 1,
+    }
     for filename in CANONICAL_FILENAMES:
         source = candidate_dir / filename
         if not source.is_file():
             raise RuntimeError(f"candidate is missing {filename}")
-    candidate_occurrence = json.loads(
-        (candidate_dir / "gbif-occurrences-london.json").read_text(encoding="utf-8")
-    )
-    if candidate_occurrence.get("schema_version") != 2:
-        raise RuntimeError("only schema-version 2 occurrence candidates can be promoted")
-    if validate_occurrence_counts(candidate_occurrence["provenance"]["record_counts"]):
-        raise RuntimeError("candidate occurrence counts are inconsistent")
-    for filename in CANONICAL_FILENAMES:
-        shutil.copy2(candidate_dir / filename, FIXTURE_DIR / filename)
+        if file_sha256(source) != checksums[filename]:
+            raise RuntimeError(f"candidate manifest checksum mismatch: {filename}")
+        try:
+            fixture = json.loads(source.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise RuntimeError(f"candidate is not valid JSON: {filename}") from exc
+        if fixture.get("schema_version") != expected_versions[filename]:
+            raise RuntimeError(f"candidate schema version is invalid: {filename}")
+        payload = fixture.get("payload")
+        provenance = fixture.get("provenance")
+        if not isinstance(payload, dict) or not isinstance(provenance, dict):
+            raise RuntimeError(f"candidate fixture shape is invalid: {filename}")
+        provenance_errors = validate_provenance(
+            provenance, schema_version=fixture["schema_version"]
+        )
+        if provenance_errors:
+            raise RuntimeError(
+                f"candidate provenance is invalid: {filename}: {provenance_errors}"
+            )
+        if canonical_sha256(payload) != provenance.get("checksum_sha256"):
+            raise RuntimeError(f"candidate payload checksum mismatch: {filename}")
+        validated[filename] = source
+        loaded[filename] = fixture
+
+    taxonomy_results = loaded["gbif-species.json"]["payload"].get("results")
+    occurrence_results = loaded["gbif-occurrences-london.json"]["payload"].get("results")
+    if not isinstance(taxonomy_results, list) or not isinstance(occurrence_results, list):
+        raise RuntimeError("candidate taxonomy/occurrence results must be arrays")
+    taxonomy_fields = TaxonomyOutcome.model_fields.keys()
+    try:
+        for result in taxonomy_results:
+            TaxonomyOutcome.model_validate(
+                {key: value for key, value in result.items() if key in taxonomy_fields}
+            )
+    except (AttributeError, ValidationError) as exc:
+        raise RuntimeError("candidate taxonomy result schema is invalid") from exc
+    occurrence = loaded["gbif-occurrences-london.json"]
+    aggregate_errors = validate_occurrence_counts(occurrence["provenance"]["record_counts"])
+    if aggregate_errors:
+        raise RuntimeError(f"candidate aggregate occurrence counts are inconsistent: {aggregate_errors}")
+    for index, result in enumerate(occurrence_results):
+        if not {"input", "taxonomy", "evidence_outcome", "records"}.issubset(result):
+            raise RuntimeError(
+                f"candidate occurrence result schema is invalid at result {index}"
+            )
+        if result.get("counts"):
+            errors = validate_occurrence_counts(result["counts"])
+            if errors:
+                raise RuntimeError(
+                    f"candidate occurrence counts are inconsistent at result {index}: {errors}"
+                )
+    postcode = loaded["postcodes-sw11-4nj.json"]["payload"]
+    if any(postcode.get(field) is None for field in ("postcode", "latitude", "longitude")):
+        raise RuntimeError("candidate postcode fixture omits required fields")
+    if not isinstance(postcode["latitude"], (int, float)) or not isinstance(
+        postcode["longitude"], (int, float)
+    ):
+        raise RuntimeError("candidate postcode coordinates must be numeric")
+    daily = loaded["open-meteo-london.json"]["payload"].get("daily")
+    if not isinstance(daily, dict) or not isinstance(daily.get("time"), list):
+        raise RuntimeError("candidate weather fixture omits daily dates")
+    for name, values in daily.items():
+        if isinstance(values, list) and len(values) != len(daily["time"]):
+            raise RuntimeError(
+                f"candidate weather daily array length is inconsistent: {name}"
+            )
+    return validated
+
+
+def promote_candidate(candidate_dir: Path) -> None:
+    """Prevalidate, stage and replace with rollback if an atomic rename fails."""
+
+    validated = _validated_candidate(candidate_dir)
+    with tempfile.TemporaryDirectory(prefix="phase01-promotion-", dir=FIXTURE_DIR) as temporary:
+        staging = Path(temporary) / "staged"
+        backups = Path(temporary) / "backups"
+        staging.mkdir()
+        backups.mkdir()
+        for filename, source in validated.items():
+            shutil.copy2(source, staging / filename)
+            shutil.copy2(FIXTURE_DIR / filename, backups / filename)
+        replaced: list[str] = []
+        try:
+            for filename in CANONICAL_FILENAMES:
+                os.replace(staging / filename, FIXTURE_DIR / filename)
+                replaced.append(filename)
+        except OSError:
+            for filename in reversed(replaced):
+                os.replace(backups / filename, FIXTURE_DIR / filename)
+            raise
 
 
 def live_arbitrary_check(user_input: str, target_month: int) -> dict[str, Any]:

@@ -43,14 +43,15 @@ The matrix is a set of regression scenarios, **not a species whitelist**. Counts
 | Ambiguous | eagle | human selection required | — | — | — | — |
 | Unknown/misspelled | londun sky parrott xyz | taxon not found | — | — | — | — |
 
-The rare scenarios were selected because earlier/all-time London evidence was sparse or absent; the hardened recent seasonal query found zero records, which is an honest insufficient-evidence result. Synthetic behaviour tests separately prove that a small number of valid records yields `limited_contextual_evidence`, never a hotspot or reliable site recommendation.
+The rare scenarios were selected because earlier/all-time London evidence was sparse or absent; the hardened recent seasonal query found zero records, which is an honest insufficient-evidence result. Phase 1 refines the synthetic boundary: one to four retained records remain `insufficient_evidence`, while five or more may become `limited_contextual_evidence`; neither state creates a hotspot or reliable site recommendation.
 
 An arbitrary input outside the matrix, `Blue tit`, resolved live to *Cyanistes caeruleus* (GBIF 2487879) and returned `strong_map_evidence`: server matches 22,895, sampled 300, ranking eligible 205, retained 257, two ranking datasets. This demonstrates that the matrix is not a whitelist.
 
 ## Evidence outcomes
 
 - `strong_map_evidence`: at least 50 ranking-eligible records, five distinct EPSG:27700 1 km cells and two ranking datasets.
-- `limited_contextual_evidence`: at least one retained London record but the strong gate is not met. Wording must state whether evidence is old, seasonal, imprecise, sparse or dataset-concentrated.
+- `limited_contextual_evidence`: at least five retained London records but the strong gate is not met. Wording must state whether evidence is old, seasonal, imprecise, sparse or dataset-concentrated.
+- `insufficient_evidence`: no retained records or only one to four isolated records; source failure remains a separate state.
 - `insufficient_evidence`: no retained evidence in the bounded recent seasonal query.
 - `human_selection_required`: multiple reasonable accepted bird taxa.
 - `taxon_not_found`: no safe accepted bird match.

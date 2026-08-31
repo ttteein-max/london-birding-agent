@@ -75,7 +75,7 @@ def test_fatal_issue_and_outside_boundary_are_rejected() -> None:
     assert not fatal["retained"] and not outside["retained"]
 
 
-def test_sparse_records_are_limited_context_not_site_recommendation() -> None:
+def test_one_to_four_sparse_records_are_insufficient_not_site_recommendation() -> None:
     records = [
         sanitise_occurrence(
             raw_record(index, uncertainty=5_001),
@@ -84,9 +84,21 @@ def test_sparse_records_are_limited_context_not_site_recommendation() -> None:
         )
         for index in range(3)
     ]
-    assert classify_evidence(records) == "limited_contextual_evidence"
+    assert classify_evidence(records) == "insufficient_evidence"
     assert all(record["evidence_use"] == "historical_context_only" for record in records)
     assert all(not record["ranking_eligible"] for record in records)
+
+
+def test_five_sparse_records_can_be_limited_context() -> None:
+    records = [
+        sanitise_occurrence(
+            raw_record(index, uncertainty=5_001),
+            london_boundary=SQUARE_LONDON,
+            cell_secret=b"x" * 32,
+        )
+        for index in range(5)
+    ]
+    assert classify_evidence(records) == "limited_contextual_evidence"
 
 
 def test_strong_gate_uses_only_ranking_eligible_records() -> None:
