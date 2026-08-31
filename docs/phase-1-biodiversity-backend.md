@@ -90,6 +90,10 @@ The saved fixture currently contains 24 safe cells for Common woodpigeon and 18 
 
 Green spaces come only from the committed, checksum-validated OSM snapshot. Runtime Overpass requests are prohibited. `access=private` and `access=no` are excluded; `explicit_public` and `unspecified` are preserved. Distances are EPSG:27700 centre-point proximity and are always labelled approximate, never walking distance. Sites can be associated only with safe aggregate cells, never occurrence coordinates.
 
+Phase 1.1 makes that association a hard grounding gate inside the site tool itself. `find_public_green_spaces` returns no candidates unless evidence is `strong_map_evidence`, at least one approved safe-map cell exists, and the site centre lies both inside the search radius and one of those allowed cells. Every successful candidate therefore has at least one `associated_safe_cell_id`. A strong record gate without safe cells is `safe_map_unavailable`, while an empty grounded radius is `no_suitable_public_sites`; source failure is separate. The complete typed `PublicSiteSearchResult` is retained in the evidence bundle.
+
+`candidate_plan_ready` now requires all of the following: resolved Greater London location, strong evidence, non-empty safe-map cells, successful site search, and at least one candidate associated with an allowed cell. Strong occurrence evidence alone is never sufficient for a site plan.
+
 Weather comes from Open-Meteo fixture/live repositories. A requested date must be present; another date is never substituted. Weather can produce a rain warning but is never used as sighting probability.
 
 A maximum walking distance is accepted as a user constraint and returned as unresolved with `routing_not_available`. Phase 1 has no route provider. London scope, taxonomy validity, evidence quality, access certainty and source truth remain deterministic constraints.
@@ -139,4 +143,4 @@ The 2026-08-31 bounded live evaluation found one retained, unknown-uncertainty r
 
 ## Deferred work
 
-Dynamic LLM evidence-agent behaviour, LangGraph `ToolNode` orchestration, interrupts, checkpoint time travel, API/SSE, frontend maps, routing providers, MCP, conservation-law conclusions, bookings and field actions remain deferred to Phase 2 or later.
+Dynamic LLM evidence-agent behaviour, LangGraph `ToolNode` orchestration, interrupts, checkpoint time travel, API/SSE, frontend maps, routing providers, MCP, conservation-law conclusions, bookings and field actions remain deferred to Phase 2 or later. Phase 1.1 adds only deterministic grounding gates and typed routing-ready statuses.

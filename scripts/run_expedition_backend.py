@@ -67,6 +67,7 @@ def main() -> None:
             "retained_records": occurrence.counts.retained_total_count if occurrence else 0,
             "ranking_records": occurrence.counts.ranking_eligible_count if occurrence else 0,
             "safe_map_cells": len(occurrence.safe_map_cells) if occurrence else 0,
+            "site_search_status": result.bundle.site_search.status,
             "candidate_sites": len(result.bundle.candidate_sites),
             "weather_status": result.bundle.weather.status if result.bundle.weather else None,
             "unresolved_constraints": [

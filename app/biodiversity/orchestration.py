@@ -9,9 +9,10 @@ from app.biodiversity.models import (
     ConstraintStatus,
     EvidenceOutcome,
     ExpeditionPlan,
+    ExpeditionPlanStatus,
     ExpeditionRequest,
     LocationStatus,
-    PublicSiteSearchResult,
+    PublicSiteSearchStatus,
 )
 from app.biodiversity.repositories import (
     FixtureOccurrenceRepository,
@@ -92,24 +93,14 @@ class ExpeditionBackend:
             request.target_local_date,
             repository=self.dependencies.weather,
         )
-        if (
-            location.status == LocationStatus.resolved
-            and occurrence.outcome == EvidenceOutcome.strong_map_evidence
-        ):
-            sites = find_public_green_spaces(
-                location,
-                search_radius_km=request.search_radius_km,
-                occurrence=occurrence,
-                repository=self.dependencies.green_spaces,
-            )
-        else:
-            sites = PublicSiteSearchResult(
-                candidates=[],
-                searched_radius_km=request.search_radius_km,
-                status="not_applicable_without_strong_spatial_evidence",
-            )
+        sites = find_public_green_spaces(
+            location,
+            search_radius_km=request.search_radius_km,
+            occurrence=occurrence,
+            repository=self.dependencies.green_spaces,
+        )
         constraints = validate_expedition_constraints(
-            request, location, taxon, occurrence, weather, sites.candidates
+            request, location, taxon, occurrence, weather, sites
         )
         bundle = build_expedition_evidence_bundle(
             request,
@@ -125,20 +116,48 @@ class ExpeditionBackend:
             for item in constraints
             if item.status in {ConstraintStatus.unresolved, ConstraintStatus.violated}
         ]
+        grounded_candidates = (
+            sites.status == PublicSiteSearchStatus.success
+            and bool(sites.candidates)
+            and all(site.associated_safe_cell_ids for site in sites.candidates)
+        )
+        candidate_plan_ready = (
+            location.status == LocationStatus.resolved
+            and occurrence.outcome == EvidenceOutcome.strong_map_evidence
+            and bool(occurrence.safe_map_cells)
+            and grounded_candidates
+        )
         status = (
-            "candidate_plan_ready"
-            if occurrence.outcome == EvidenceOutcome.strong_map_evidence
-            and location.status == LocationStatus.resolved
-            else "context_only"
+            ExpeditionPlanStatus.candidate_plan_ready
+            if candidate_plan_ready
+            else ExpeditionPlanStatus.context_only
             if occurrence.outcome == EvidenceOutcome.limited_contextual_evidence
             and location.status == LocationStatus.resolved
-            else "cannot_recommend_sites"
+            else ExpeditionPlanStatus.cannot_recommend_sites
+        )
+        strong_explanation = {
+            PublicSiteSearchStatus.success: (
+                "The bounded historical sample passes the strong gate, and every candidate "
+                "site is associated with an approved aggregated safe-map cell."
+            ),
+            PublicSiteSearchStatus.safe_map_unavailable: (
+                "The historical sample passes the record-quality gate, but no approved "
+                "safe-map cells are available, so site recommendations are suppressed."
+            ),
+            PublicSiteSearchStatus.no_suitable_public_sites: (
+                "Strong evidence and safe-map cells exist, but no grounded public-site "
+                "candidate was found within the requested search radius."
+            ),
+            PublicSiteSearchStatus.source_unavailable: (
+                "Strong evidence and safe-map cells exist, but the public-site source was "
+                "unavailable, so no candidate plan can be produced."
+            ),
+        }.get(
+            sites.status,
+            "Strong historical evidence alone is insufficient for a grounded site recommendation.",
         )
         explanation = {
-            EvidenceOutcome.strong_map_evidence: (
-                "The bounded historical sample passes the 50-record, five-cell and "
-                "two-ranking-dataset gate; candidate sites use only aggregated safe cells."
-            ),
+            EvidenceOutcome.strong_map_evidence: strong_explanation,
             EvidenceOutcome.limited_contextual_evidence: (
                 "At least five retained historical records exist, but the strong spatial "
                 "gate is not met; no site-level hotspot recommendation is made."

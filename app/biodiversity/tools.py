@@ -24,6 +24,7 @@ from app.biodiversity.models import (
     OccurrenceEvidence,
     PublicSiteCandidate,
     PublicSiteSearchResult,
+    PublicSiteSearchStatus,
     ResolvedLocation,
     ResolvedTaxon,
     SafeMapGeometry,
@@ -639,7 +640,31 @@ def find_public_green_spaces(
 
     if location.status != LocationStatus.resolved or location.british_national_grid is None:
         return PublicSiteSearchResult(
-            candidates=[], searched_radius_km=search_radius_km, status="location_unresolved"
+            candidates=[],
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.not_applicable_location_unresolved,
+        )
+    if occurrence is None or occurrence.outcome != EvidenceOutcome.strong_map_evidence:
+        return PublicSiteSearchResult(
+            candidates=[],
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.not_applicable_without_strong_evidence,
+        )
+    allowed_cells = {cell.cell_id for cell in occurrence.safe_map_cells}
+    if not allowed_cells:
+        message = (
+            "Strong occurrence evidence exists, but no approved public safe-map cells "
+            "are available for grounded site recommendations."
+        )
+        return PublicSiteSearchResult(
+            candidates=[],
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.safe_map_unavailable,
+            error=ToolError(
+                tool="find_public_green_spaces",
+                code=ToolErrorCode.safe_map_unavailable,
+                message=message,
+            ),
         )
     try:
         features, provenance_data = repository.snapshot()
@@ -647,13 +672,16 @@ def find_public_green_spaces(
         return PublicSiteSearchResult(
             candidates=[],
             searched_radius_km=search_radius_km,
-            status="source_unavailable",
-            error=_failure("find_public_green_spaces", exc),
+            status=PublicSiteSearchStatus.source_unavailable,
+            error=ToolError(
+                tool="find_public_green_spaces",
+                code=ToolErrorCode.source_unavailable,
+                message=exc.message,
+                retryable=exc.retryable,
+                source=exc.source,
+            ),
         )
-    allowed_cells = {
-        cell.cell_id for cell in (occurrence.safe_map_cells if occurrence else [])
-    }
-    ranked: list[tuple[int, float, PublicSiteCandidate]] = []
+    ranked: list[tuple[float, PublicSiteCandidate]] = []
     provenance = _evidence_item(
         provenance_data,
         record_type="versioned_green_space_candidate_snapshot",
@@ -680,7 +708,8 @@ def find_public_green_spaces(
             longitude, latitude, size_metres=1_000
         )
         cell_id = f"bng-1km-{cell_easting}-{cell_northing}"
-        associations = [cell_id] if cell_id in allowed_cells else []
+        if cell_id not in allowed_cells:
+            continue
         site_type = next(
             (
                 str(tags[key])
@@ -701,27 +730,41 @@ def find_public_green_spaces(
             operator=tags.get("operator"),
             opening_hours=tags.get("opening_hours"),
             website=tags.get("website"),
-            associated_safe_cell_ids=associations,
+            associated_safe_cell_ids=[cell_id],
             provenance=provenance,
             limitations=[
                 "Distance is projected centre-point proximity, not walking-route distance.",
                 "The OSM candidate snapshot does not guarantee current access or opening.",
             ],
         )
-        ranked.append((0 if associations else 1, distance_km, candidate))
+        ranked.append((distance_km, candidate))
     ranked.sort(
         key=lambda item: (
+            0 if item[1].access_certainty == AccessCertainty.explicit_public else 1,
             item[0],
-            0 if item[2].access_certainty == AccessCertainty.explicit_public else 1,
-            item[1],
-            item[2].name.casefold(),
+            item[1].name.casefold(),
         )
     )
-    candidates = [item[2] for item in ranked[:limit]]
+    candidates = [item[1] for item in ranked[:limit]]
+    if not candidates:
+        message = (
+            "No public green-space snapshot candidate lies within the search radius "
+            "and an allowed safe-map cell."
+        )
+        return PublicSiteSearchResult(
+            candidates=[],
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.no_suitable_public_sites,
+            error=ToolError(
+                tool="find_public_green_spaces",
+                code=ToolErrorCode.no_suitable_public_sites,
+                message=message,
+            ),
+        )
     return PublicSiteSearchResult(
         candidates=candidates,
         searched_radius_km=search_radius_km,
-        status="ok" if candidates else "no_suitable_public_sites",
+        status=PublicSiteSearchStatus.success,
     )
 
 
@@ -731,7 +774,7 @@ def validate_expedition_constraints(
     taxon: ResolvedTaxon,
     occurrence: OccurrenceEvidence | None,
     weather: WeatherEvidence | None,
-    sites: list[PublicSiteCandidate],
+    site_search: PublicSiteSearchResult,
 ) -> list[ConstraintViolation]:
     """Apply non-negotiable scientific and product-safety constraints."""
 
@@ -798,6 +841,39 @@ def validate_expedition_constraints(
                 ),
             )
         )
+    site_constraint = {
+        PublicSiteSearchStatus.success: ConstraintViolation(
+            code="grounded_public_site_candidates",
+            status=ConstraintStatus.satisfied,
+            severity=ConstraintSeverity.information,
+            message="Every recommended site is associated with an allowed safe-map cell.",
+        ),
+        PublicSiteSearchStatus.safe_map_unavailable: ConstraintViolation(
+            code="safe_map_unavailable",
+            status=ConstraintStatus.unresolved,
+            severity=ConstraintSeverity.warning,
+            message=(
+                "Strong occurrence evidence exists, but safe-map cells are unavailable; "
+                "site recommendations are suppressed."
+            ),
+        ),
+        PublicSiteSearchStatus.no_suitable_public_sites: ConstraintViolation(
+            code="no_suitable_public_sites",
+            status=ConstraintStatus.unresolved,
+            severity=ConstraintSeverity.warning,
+            message=(
+                "No grounded public-site candidate was found within the requested search radius."
+            ),
+        ),
+        PublicSiteSearchStatus.source_unavailable: ConstraintViolation(
+            code="site_source_unavailable",
+            status=ConstraintStatus.unresolved,
+            severity=ConstraintSeverity.error,
+            message="The public green-space source was unavailable; no sites are recommended.",
+        ),
+    }.get(site_search.status)
+    if site_constraint is not None:
+        results.append(site_constraint)
     results.append(
         ConstraintViolation(
             code="duration_within_phase1_bounds",
@@ -866,7 +942,10 @@ def validate_expedition_constraints(
                     message="Rain preference cannot be evaluated because exact-date weather is unavailable.",
                 )
             )
-    if sites and any(site.access_certainty == AccessCertainty.unspecified for site in sites):
+    if site_search.candidates and any(
+        site.access_certainty == AccessCertainty.unspecified
+        for site in site_search.candidates
+    ):
         results.append(
             ConstraintViolation(
                 code="site_access_uncertain",
@@ -992,6 +1071,7 @@ def build_expedition_evidence_bundle(
         taxon=taxon,
         occurrence=occurrence,
         weather=weather,
+        site_search=sites_result,
         candidate_sites=sites_result.candidates,
         constraints=constraints,
         evidence_outcome=outcome,

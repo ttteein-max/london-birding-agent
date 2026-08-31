@@ -24,6 +24,8 @@ python -m scripts.run_expedition_backend \
 
 The output separates London/taxonomy/source status, historical evidence outcome, safe aggregate cell count, candidate-site count, exact-date weather availability and unresolved routing constraints. See [the Phase 1 backend documentation](docs/phase-1-biodiversity-backend.md) for contracts, architecture, privacy, live mode and reproduction commands.
 
+Phase 1.1 hardens site grounding: a candidate plan is ready only when strong evidence has approved safe-map cells and every returned public-site candidate is associated with one of those cells. Strong evidence with no safe cells, an empty grounded search radius, and site-source failure remain distinct typed outcomes.
+
 ## What Phase 0.1 demonstrates
 
 `GBIFBirdNameResolver` accepts arbitrary user text rather than consulting a supported-species dictionary. It handles English common names, scientific names, case and whitespace differences, ambiguous names and unknown or misspelled input. Its typed outcomes are:
