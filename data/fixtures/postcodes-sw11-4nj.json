@@ -1,0 +1,38 @@
+{
+  "schema_version": 1,
+  "payload": {
+    "status": 200,
+    "postcode": "SW11 4NJ",
+    "admin_district": "Wandsworth",
+    "region": "London",
+    "country": "England",
+    "latitude": 51.476,
+    "longitude": -0.161,
+    "quality": 1
+  },
+  "provenance": {
+    "source_name": "Postcodes.io",
+    "source_url": "https://postcodes.io/",
+    "endpoint": "https://api.postcodes.io/postcodes/SW114NJ",
+    "request_parameters": {
+      "postcode": "SW11 4NJ"
+    },
+    "retrieved_at_utc": "2026-08-31T03:39:38Z",
+    "snapshot_version": "2026-08-31",
+    "licence": "Contains Royal Mail, Ordnance Survey and ONS data under their stated terms",
+    "attribution": "Postcodes.io; Royal Mail; Ordnance Survey; Office for National Statistics",
+    "checksum_sha256": "bdee64764291ed2bd2b921475d4b6c71c2222083ce771bc52b46da2328b2e4b6",
+    "record_counts": {
+      "before": 1,
+      "after": 1
+    },
+    "filtering_rules": [
+      "Round coordinates to three decimal places",
+      "Retain locality fields needed for London validation"
+    ],
+    "known_limitations": [
+      "A postcode centroid is not a user's precise position",
+      "Postcode geography can change"
+    ]
+  }
+}

@@ -1,0 +1,157 @@
+{
+  "schema_version": 1,
+  "payload": {
+    "resolved_taxa": [
+      {
+        "scenario": "abundant_evidence",
+        "input": "Common woodpigeon",
+        "query": "Columba palumbus",
+        "key": 2495455,
+        "scientific_name": "Columba palumbus Linnaeus, 1758",
+        "canonical_name": "Columba palumbus",
+        "rank": "SPECIES",
+        "status": "ACCEPTED",
+        "match_type": "EXACT",
+        "confidence": 100,
+        "class": "Aves"
+      },
+      {
+        "scenario": "map_viable",
+        "input": "House sparrow",
+        "query": "Passer domesticus",
+        "key": 5231190,
+        "scientific_name": "Passer domesticus (Linnaeus, 1758)",
+        "canonical_name": "Passer domesticus",
+        "rank": "SPECIES",
+        "status": "ACCEPTED",
+        "match_type": "EXACT",
+        "confidence": 100,
+        "class": "Aves"
+      },
+      {
+        "scenario": "map_viable",
+        "input": "Eurasian magpie",
+        "query": "Pica pica",
+        "key": 5229490,
+        "scientific_name": "Pica pica (Linnaeus, 1758)",
+        "canonical_name": "Pica pica",
+        "rank": "SPECIES",
+        "status": "ACCEPTED",
+        "match_type": "EXACT",
+        "confidence": 100,
+        "class": "Aves"
+      },
+      {
+        "scenario": "sparse_evidence",
+        "input": "Corncrake",
+        "query": "Crex crex",
+        "key": 4408498,
+        "scientific_name": "Crex crex (Linnaeus, 1758)",
+        "canonical_name": "Crex crex",
+        "rank": "SPECIES",
+        "status": "ACCEPTED",
+        "match_type": "EXACT",
+        "confidence": 100,
+        "class": "Aves"
+      },
+      {
+        "scenario": "no_usable_evidence",
+        "input": "Great auk",
+        "query": "Pinguinus impennis",
+        "key": 5229273,
+        "scientific_name": "Pinguinus impennis (Linnaeus, 1758)",
+        "canonical_name": "Pinguinus impennis",
+        "rank": "SPECIES",
+        "status": "ACCEPTED",
+        "match_type": "EXACT",
+        "confidence": 100,
+        "class": "Aves"
+      }
+    ],
+    "ambiguous": {
+      "input": "robin",
+      "direct_match": {
+        "key": 1,
+        "scientific_name": "Animalia",
+        "canonical_name": "Animalia",
+        "rank": "KINGDOM",
+        "status": "ACCEPTED",
+        "match_type": "HIGHERRANK",
+        "confidence": 99,
+        "class": null
+      },
+      "resolution_status": "human_selection_required",
+      "candidates": [
+        {
+          "common_name": "European robin",
+          "key": 2492462,
+          "scientific_name": "Erithacus rubecula (Linnaeus, 1758)",
+          "canonical_name": "Erithacus rubecula",
+          "rank": "SPECIES",
+          "status": "ACCEPTED",
+          "match_type": null,
+          "confidence": null,
+          "class": "Aves"
+        },
+        {
+          "common_name": "American robin",
+          "key": 9510564,
+          "scientific_name": "Turdus migratorius Linnaeus, 1766",
+          "canonical_name": "Turdus migratorius",
+          "rank": "SPECIES",
+          "status": "ACCEPTED",
+          "match_type": null,
+          "confidence": null,
+          "class": "Aves"
+        },
+        {
+          "common_name": "Ryukyu robin",
+          "key": 2492463,
+          "scientific_name": "Erithacus komadori (Temminck, 1835)",
+          "canonical_name": "Erithacus komadori",
+          "rank": "SPECIES",
+          "status": "ACCEPTED",
+          "match_type": null,
+          "confidence": null,
+          "class": "Aves"
+        }
+      ],
+      "reason": "The unqualified English common name resolves only to a higher rank; multiple bird species use robin in their English name."
+    }
+  },
+  "provenance": {
+    "source_name": "GBIF Species API",
+    "source_url": "https://www.gbif.org/developer/species",
+    "endpoint": "https://api.gbif.org/v1/species/match and /species/search",
+    "request_parameters": {
+      "requests": [
+        "https://api.gbif.org/v1/species/match?name=Columba+palumbus&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/match?name=Passer+domesticus&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/match?name=Pica+pica&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/match?name=Crex+crex&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/match?name=Pinguinus+impennis&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/match?name=robin&kingdom=Animalia",
+        "https://api.gbif.org/v1/species/search?q=European+robin&rank=SPECIES&highertaxon_key=212&limit=5",
+        "https://api.gbif.org/v1/species/search?q=American+robin&rank=SPECIES&highertaxon_key=212&limit=5",
+        "https://api.gbif.org/v1/species/search?q=Ryukyu+robin&rank=SPECIES&highertaxon_key=212&limit=5"
+      ]
+    },
+    "retrieved_at_utc": "2026-08-31T03:39:24Z",
+    "snapshot_version": "2026-08-31",
+    "licence": "GBIF API terms; taxonomy source datasets retain their own terms",
+    "attribution": "GBIF.org",
+    "checksum_sha256": "1ded28e1dc12518880e409693e8500f7b108ca98dce8e92b046d9050a4288c30",
+    "record_counts": {
+      "before": 9,
+      "after": 9
+    },
+    "filtering_rules": [
+      "Retain compact taxonomic fields only",
+      "Candidate searches retain the first accepted Aves species"
+    ],
+    "known_limitations": [
+      "GBIF common-name matching is not a complete disambiguation service",
+      "Taxonomy can change after snapshot retrieval"
+    ]
+  }
+}
