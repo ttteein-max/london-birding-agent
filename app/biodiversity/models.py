@@ -73,6 +73,23 @@ class AccessCertainty(str, Enum):
     unspecified = "unspecified"
 
 
+class SiteEvidenceTier(str, Enum):
+    directly_grounded = "directly_grounded"
+    nearby_context = "nearby_context"
+    ungrounded = "ungrounded"
+
+
+class SiteSearchAction(str, Enum):
+    correct_or_select_location = "correct_or_select_location"
+    select_taxon = "select_taxon"
+    correct_bird_input = "correct_bird_input"
+    change_target_month = "change_target_month"
+    expand_search_radius = "expand_search_radius"
+    refresh_live_evidence = "refresh_live_evidence"
+    retry_occurrence_source = "retry_occurrence_source"
+    retry_site_source = "retry_site_source"
+
+
 class PublicSiteSearchStatus(str, Enum):
     success = "success"
     not_applicable_location_unresolved = "not_applicable_location_unresolved"
@@ -186,7 +203,9 @@ class ResolvedLocation(StrictModel):
             if not self.within_greater_london:
                 raise ValueError("resolved location must be within Greater London")
             if self.rounded_start_point is None or self.british_national_grid is None:
-                raise ValueError("resolved location requires WGS84 and EPSG:27700 positions")
+                raise ValueError(
+                    "resolved location requires WGS84 and EPSG:27700 positions"
+                )
         return self
 
 
@@ -228,9 +247,14 @@ class ResolvedTaxon(StrictModel):
             self.taxonomic_status,
             self.resolution_method,
         )
-        if self.status == TaxonStatus.resolved and any(value is None for value in accepted):
+        if self.status == TaxonStatus.resolved and any(
+            value is None for value in accepted
+        ):
             raise ValueError("resolved taxon requires accepted taxonomy fields")
-        if self.status == TaxonStatus.human_selection_required and len(self.candidates) < 2:
+        if (
+            self.status == TaxonStatus.human_selection_required
+            and len(self.candidates) < 2
+        ):
             raise ValueError("human selection requires at least two candidates")
         return self
 
@@ -247,7 +271,10 @@ class OccurrenceCounts(StrictModel):
 
     @model_validator(mode="after")
     def count_semantics(self) -> "OccurrenceCounts":
-        if self.sampled_count - self.exact_duplicates_removed != self.deduplicated_count:
+        if (
+            self.sampled_count - self.exact_duplicates_removed
+            != self.deduplicated_count
+        ):
             raise ValueError("sampled minus duplicates must equal deduplicated")
         if self.retained_total_count + self.rejected_count != self.deduplicated_count:
             raise ValueError("retained plus rejected must equal deduplicated")
@@ -344,26 +371,61 @@ class PublicSiteCandidate(StrictModel):
     operator: str | None = None
     opening_hours: str | None = None
     website: str | None = None
+    evidence_tier: SiteEvidenceTier
+    source_geometry_type: str = Field(pattern=r"^(Point|Polygon|MultiPolygon)$")
+    distance_to_nearest_safe_cell_km: float | None = Field(default=None, ge=0)
     associated_safe_cell_ids: list[str] = Field(default_factory=list)
     provenance: EvidenceItem
     limitations: list[NonEmptyText] = Field(default_factory=list)
 
+    @model_validator(mode="after")
+    def evidence_tier_fields(self) -> "PublicSiteCandidate":
+        if self.evidence_tier == SiteEvidenceTier.directly_grounded:
+            if self.source_geometry_type not in {"Polygon", "MultiPolygon"}:
+                raise ValueError("direct grounding requires a polygon footprint")
+            if not self.associated_safe_cell_ids:
+                raise ValueError("direct grounding requires associated safe cells")
+            if self.distance_to_nearest_safe_cell_km != 0:
+                raise ValueError("direct grounding requires zero safe-cell distance")
+        elif self.associated_safe_cell_ids:
+            raise ValueError("contextual sites cannot claim safe-cell associations")
+        return self
+
 
 class PublicSiteSearchResult(StrictModel):
     candidates: list[PublicSiteCandidate] = Field(default_factory=list)
+    contextual_sites: list[PublicSiteCandidate] = Field(default_factory=list)
     searched_radius_km: float = Field(gt=0)
     status: PublicSiteSearchStatus
+    suggested_actions: list[SiteSearchAction] = Field(default_factory=list)
     error: "ToolError | None" = None
 
     @model_validator(mode="after")
     def grounded_success_only(self) -> "PublicSiteSearchResult":
         if self.status == PublicSiteSearchStatus.success:
             if not self.candidates:
-                raise ValueError("successful site search requires at least one candidate")
-            if any(not candidate.associated_safe_cell_ids for candidate in self.candidates):
-                raise ValueError("successful site candidates must be associated with safe cells")
+                raise ValueError(
+                    "successful site search requires at least one candidate"
+                )
+            if any(
+                candidate.evidence_tier != SiteEvidenceTier.directly_grounded
+                or not candidate.associated_safe_cell_ids
+                for candidate in self.candidates
+            ):
+                raise ValueError("successful site candidates must be directly grounded")
         elif self.candidates:
             raise ValueError("non-successful site search cannot expose candidates")
+        if any(
+            candidate.evidence_tier == SiteEvidenceTier.directly_grounded
+            or candidate.associated_safe_cell_ids
+            for candidate in self.contextual_sites
+        ):
+            raise ValueError(
+                "contextual sites cannot contain directly grounded recommendations"
+            )
+        candidate_ids = {candidate.site_id for candidate in self.candidates}
+        if candidate_ids.intersection(site.site_id for site in self.contextual_sites):
+            raise ValueError("a site cannot be both grounded and contextual")
         return self
 
 
@@ -391,6 +453,7 @@ class ExpeditionEvidenceBundle(StrictModel):
     weather: WeatherEvidence | None = None
     site_search: PublicSiteSearchResult
     candidate_sites: list[PublicSiteCandidate] = Field(default_factory=list)
+    contextual_sites: list[PublicSiteCandidate] = Field(default_factory=list)
     constraints: list[ConstraintViolation] = Field(default_factory=list)
     evidence_outcome: EvidenceOutcome
     safety_and_scientific_limitations: list[NonEmptyText] = Field(default_factory=list)
@@ -401,6 +464,10 @@ class ExpeditionEvidenceBundle(StrictModel):
     def candidate_compatibility_view(self) -> "ExpeditionEvidenceBundle":
         if self.candidate_sites != self.site_search.candidates:
             raise ValueError("candidate_sites must mirror site_search.candidates")
+        if self.contextual_sites != self.site_search.contextual_sites:
+            raise ValueError(
+                "contextual_sites must mirror site_search.contextual_sites"
+            )
         return self
 
 
@@ -409,6 +476,8 @@ class ExpeditionPlan(StrictModel):
     target_bird: str
     target_date: date
     candidate_sites: list[PublicSiteCandidate] = Field(default_factory=list)
+    contextual_sites: list[PublicSiteCandidate] = Field(default_factory=list)
+    suggested_actions: list[SiteSearchAction] = Field(default_factory=list)
     evidence_explanation: NonEmptyText
     unresolved_constraints: list[ConstraintViolation] = Field(default_factory=list)
     limitations: list[NonEmptyText] = Field(default_factory=list)

@@ -26,7 +26,7 @@ The public contracts are:
 - `OccurrenceEvidence` and `EvidenceQualitySummary`: outcome, bounded counts, coordinate tiers, distributions, sampling concentration, deduplication and safe cells;
 - `SafeSpatialCell`: EPSG:27700 1 km aggregate represented as a rounded WGS84 polygon, with counts and dates but no occurrence IDs;
 - `WeatherEvidence`: exact requested date, `Europe/London`, temperatures in Celsius, rain fields, WMO code and availability status;
-- `PublicSiteCandidate`: OSM snapshot site, access certainty, approximate projected centre distance and metadata;
+- `PublicSiteCandidate`: OSM snapshot site, access certainty, evidence tier, source-geometry type, approximate projected centre distance and metadata;
 - `ConstraintViolation`: deterministic satisfied, violated or unresolved result;
 - `ExpeditionEvidenceBundle` and `ExpeditionPlan`: complete structured evidence and a non-LLM plan skeleton.
 
@@ -84,15 +84,17 @@ Three representations have different purposes:
 
 A public cell requires at least three ranking-eligible records, contains only aggregate record count, dataset count and date range, and never contains occurrence IDs. Safe cells are emitted only for `strong_map_evidence`; limited and insufficient evidence cannot create false hotspot cells. A cell remains historical context, not a sighting prediction, access claim or route.
 
-The saved fixture currently contains 24 safe cells for Common woodpigeon and 18 for Eurasian magpie. House sparrow and `Turdus iliacus` were suppressed because a bounded live refresh no longer matched the older sanitised fixture after the hardened deduplication; this coverage gap is recorded in fixture provenance rather than mixing samples.
+The saved fixture was rebuilt end-to-end through the current hardened retrieval, deduplication, sanitisation, classification and safe-map pipeline. Counts, sanitised records, evidence outcomes and public cells therefore come from the same bounded snapshot. It contains 24 safe cells for Common woodpigeon, 8 for House sparrow, 18 for Eurasian magpie and 7 for `Turdus iliacus`; the former mixed-snapshot coverage-gap metadata has been removed.
 
 ## Public sites, weather and constraints
 
-Green spaces come only from the committed, checksum-validated OSM snapshot. Runtime Overpass requests are prohibited. `access=private` and `access=no` are excluded; `explicit_public` and `unspecified` are preserved. Distances are EPSG:27700 centre-point proximity and are always labelled approximate, never walking distance. Sites can be associated only with safe aggregate cells, never occurrence coordinates.
+Green spaces come only from the committed, checksum-validated OSM snapshot. Runtime Overpass requests are prohibited. `access=private` and `access=no` are excluded; `explicit_public` and `unspecified` are preserved. The current snapshot retains 3,299 polygon or multipolygon footprints and 65 labelled point fallbacks. Distances remain EPSG:27700 centre-point proximity and are always labelled approximate, never walking distance. Sites can be associated only with safe aggregate cells, never occurrence coordinates.
 
-Phase 1.1 makes that association a hard grounding gate inside the site tool itself. `find_public_green_spaces` returns no candidates unless evidence is `strong_map_evidence`, at least one approved safe-map cell exists, and the site centre lies both inside the search radius and one of those allowed cells. Every successful candidate therefore has at least one `associated_safe_cell_id`. A strong record gate without safe cells is `safe_map_unavailable`, while an empty grounded radius is `no_suitable_public_sites`; source failure is separate. The complete typed `PublicSiteSearchResult` is retained in the evidence bundle.
+Phase 1.1 makes the association a hard gate inside the site tool. Phase 1.2 adds three non-overlapping evidence tiers: `directly_grounded` means an OSM Polygon/MultiPolygon footprint intersects at least one approved safe-map polygon; `nearby_context` means the footprint or point fallback is within 1 km of a safe cell but does not qualify as a direct intersection; `ungrounded` means it is merely a green space within the user's radius. Only directly grounded sites appear in `candidates` and can support `candidate_plan_ready`. The other two tiers appear only in `contextual_sites`, carry no `associated_safe_cell_ids`, and are explicitly not recommendations.
 
-`candidate_plan_ready` now requires all of the following: resolved Greater London location, strong evidence, non-empty safe-map cells, successful site search, and at least one candidate associated with an allowed cell. Strong occurrence evidence alone is never sufficient for a site plan.
+`find_public_green_spaces` can therefore preserve useful nearby context when evidence is limited or safe cells are unavailable without laundering it into a recommendation. Its typed status still describes the grounded search: a strong record gate without safe cells is `safe_map_unavailable`, an empty grounded radius is `no_suitable_public_sites`, and source failure is separate. Deterministic `suggested_actions` are outcome-specific: ambiguity yields only `select_taxon`; a missing taxon yields only `correct_bird_input`; occurrence-source failure yields only `retry_occurrence_source`; limited or insufficient evidence yields `change_target_month` and `refresh_live_evidence`; safe-map absence yields `refresh_live_evidence`; and an empty grounded radius yields `expand_search_radius`. The complete result, including both site layers and actions, is retained in the evidence bundle.
+
+`candidate_plan_ready` requires all of the following: resolved Greater London location, strong evidence, non-empty safe-map cells, successful site search, and at least one polygon-grounded candidate associated with an allowed cell. Contextual sites never contribute to readiness. Strong occurrence evidence alone is never sufficient for a site plan.
 
 Weather comes from Open-Meteo fixture/live repositories. A requested date must be present; another date is never substituted. Weather can produce a rain warning but is never used as sighting probability.
 
@@ -136,11 +138,13 @@ python -m scripts.run_expedition_backend \
 python -m scripts.generate_phase1_safe_map_candidate \
   --output-dir /tmp/phase1-safe-map-candidate
 python -m scripts.phase0_feasibility \
-  --promote-candidate /tmp/phase1-safe-map-candidate
+  --promote-occurrence-candidate /tmp/phase1-safe-map-candidate
 ```
+
+Occurrence-only promotion validates the complete candidate set and then compares every candidate occurrence `accepted_taxon_key` with the currently committed canonical taxonomy entry for the same normalised input. Any missing input or key drift rejects the operation before replacement; taxonomy-changing candidates require reviewed complete-set promotion so taxonomy and occurrence cannot be mixed silently.
 
 The 2026-08-31 bounded live evaluation found one retained, unknown-uncertainty record for `Jynx torquilla` in target month 5. It correctly remained `insufficient_evidence` with no map cell. Live data changes, so this is evaluation evidence, not an eternal expected count.
 
 ## Deferred work
 
-Dynamic LLM evidence-agent behaviour, LangGraph `ToolNode` orchestration, interrupts, checkpoint time travel, API/SSE, frontend maps, routing providers, MCP, conservation-law conclusions, bookings and field actions remain deferred to Phase 2 or later. Phase 1.1 adds only deterministic grounding gates and typed routing-ready statuses.
+Dynamic LLM evidence-agent behaviour, LangGraph `ToolNode` orchestration, interrupts, checkpoint time travel, API/SSE, frontend maps, routing providers, MCP, conservation-law conclusions, bookings and field actions remain deferred to Phase 2 or later. Phase 1.1/1.2 add only deterministic grounding gates, evidence tiers, same-snapshot fixtures and typed routing-ready statuses.

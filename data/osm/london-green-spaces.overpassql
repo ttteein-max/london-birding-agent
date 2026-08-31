@@ -5,4 +5,4 @@ area["boundary"="administrative"]["name"="Greater London"]["admin_level"="5"]->.
   nwr["name"]["landuse"~"^(recreation_ground|forest|meadow)$"](area.london);
   nwr["name"]["boundary"="protected_area"](area.london);
 );
-out tags center;
+out body geom;

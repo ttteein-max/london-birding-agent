@@ -10,6 +10,8 @@ from app.biodiversity.models import (
     PublicSiteSearchStatus,
     RainPreference,
     ResolvedTaxon,
+    SiteEvidenceTier,
+    SiteSearchAction,
     TaxonStatus,
     WeatherStatus,
     WGS84Point,
@@ -42,9 +44,7 @@ def request(**overrides: Any) -> ExpeditionRequest:
 
 def test_postcode_normalisation_and_london_boundary() -> None:
     assert normalise_postcode(" sw11  4nj ") == "SW11 4NJ"
-    location = lookup_uk_postcode(
-        request(), repository=FixturePostcodeRepository()
-    )
+    location = lookup_uk_postcode(request(), repository=FixturePostcodeRepository())
     assert location.status == LocationStatus.resolved
     assert location.normalised_postcode == "SW11 4NJ"
     assert location.within_greater_london is True
@@ -57,7 +57,9 @@ def test_postcode_normalisation_and_london_boundary() -> None:
     assert outside_postcode.administrative_district == "Oxford"
 
     outside = lookup_uk_postcode(
-        request(postcode=None, start_point=WGS84Point(longitude=-0.1278, latitude=51.752)),
+        request(
+            postcode=None, start_point=WGS84Point(longitude=-0.1278, latitude=51.752)
+        ),
         repository=FixturePostcodeRepository(),
     )
     assert outside.status == LocationStatus.outside_supported_area
@@ -92,14 +94,11 @@ def test_weather_requires_exact_requested_date() -> None:
 
 
 def test_public_site_access_and_distance_language() -> None:
-    result = run_expedition_backend(
-        request(target_local_date=date(2026, 6, 15))
-    )
+    result = run_expedition_backend(request(target_local_date=date(2026, 6, 15)))
     assert result.bundle.site_search.status == PublicSiteSearchStatus.success
     assert result.bundle.site_search.candidates
     assert {
-        item.access_certainty.value
-        for item in result.bundle.site_search.candidates
+        item.access_certainty.value for item in result.bundle.site_search.candidates
     } <= {
         "explicit_public",
         "unspecified",
@@ -120,10 +119,16 @@ def test_occurrence_none_cannot_produce_site_recommendations() -> None:
         limit=20,
     )
     assert (
-        result.status
-        == PublicSiteSearchStatus.not_applicable_without_strong_evidence
+        result.status == PublicSiteSearchStatus.not_applicable_without_strong_evidence
     )
     assert result.candidates == []
+    assert result.contextual_sites
+    assert all(
+        site.evidence_tier == SiteEvidenceTier.ungrounded
+        and not site.associated_safe_cell_ids
+        for site in result.contextual_sites
+    )
+    assert result.suggested_actions == [SiteSearchAction.retry_occurrence_source]
 
 
 def test_walking_limit_is_accepted_but_never_route_validated() -> None:

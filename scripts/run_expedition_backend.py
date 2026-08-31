@@ -64,12 +64,20 @@ def main() -> None:
             "location_status": result.bundle.location.status,
             "taxon_status": result.bundle.taxon.status,
             "evidence_outcome": result.bundle.evidence_outcome,
-            "retained_records": occurrence.counts.retained_total_count if occurrence else 0,
-            "ranking_records": occurrence.counts.ranking_eligible_count if occurrence else 0,
+            "retained_records": occurrence.counts.retained_total_count
+            if occurrence
+            else 0,
+            "ranking_records": occurrence.counts.ranking_eligible_count
+            if occurrence
+            else 0,
             "safe_map_cells": len(occurrence.safe_map_cells) if occurrence else 0,
             "site_search_status": result.bundle.site_search.status,
             "candidate_sites": len(result.bundle.candidate_sites),
-            "weather_status": result.bundle.weather.status if result.bundle.weather else None,
+            "contextual_sites": len(result.bundle.contextual_sites),
+            "suggested_actions": result.bundle.site_search.suggested_actions,
+            "weather_status": result.bundle.weather.status
+            if result.bundle.weather
+            else None,
             "unresolved_constraints": [
                 item.code for item in result.plan.unresolved_constraints
             ],

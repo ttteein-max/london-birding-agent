@@ -29,6 +29,8 @@ from app.biodiversity.models import (
     ResolvedTaxon,
     SafeMapGeometry,
     SafeSpatialCell,
+    SiteEvidenceTier,
+    SiteSearchAction,
     SourceFailure,
     TaxonCandidate,
     TaxonStatus,
@@ -48,8 +50,9 @@ from app.biodiversity.repositories import (
 )
 from app.feasibility.spatial import (
     british_national_grid,
+    geometries_intersect,
+    geometry_distance_metres,
     load_london_boundary,
-    metric_cell,
     point_in_geometry,
 )
 from app.feasibility.taxonomy import TaxonomyOutcome
@@ -84,7 +87,9 @@ def _evidence_item(
         source_record_type=record_type,
         retrieved_at=_parse_retrieved_at(provenance.get("retrieved_at_utc")),
         licence=provenance.get("licence") or "See source terms",
-        attribution=provenance.get("attribution") or provenance.get("source_name") or "Unknown",
+        attribution=provenance.get("attribution")
+        or provenance.get("source_name")
+        or "Unknown",
         use_classification=use,
         limitations=list(provenance.get("known_limitations") or []),
         source_reference=source_reference or provenance.get("source_url"),
@@ -393,11 +398,19 @@ def search_occurrences(
     quality_counts = Counter(record.get("location_quality") for record in retained)
     quality_raw = raw.get("quality_summary") or {}
     diversity = raw.get("dataset_diversity") or {}
-    ranking_dataset_counts = Counter(record.get("dataset_key", "missing") for record in ranking)
-    record_dataset_counts = Counter(record.get("dataset_key", "missing") for record in retained)
-    basis_counts = Counter(record.get("basis_of_record") or "missing" for record in retained)
+    ranking_dataset_counts = Counter(
+        record.get("dataset_key", "missing") for record in ranking
+    )
+    record_dataset_counts = Counter(
+        record.get("dataset_key", "missing") for record in retained
+    )
+    basis_counts = Counter(
+        record.get("basis_of_record") or "missing" for record in retained
+    )
     dominant_dataset_share = (
-        max(ranking_dataset_counts.values(), default=0) / len(ranking) if ranking else 0.0
+        max(ranking_dataset_counts.values(), default=0) / len(ranking)
+        if ranking
+        else 0.0
     )
     dominant_basis_share = (
         max(basis_counts.values(), default=0) / len(retained) if retained else 0.0
@@ -412,7 +425,11 @@ def search_occurrences(
         warnings.append("minimal_second_dataset_contribution")
     warnings = list(dict.fromkeys(warnings))
     cell_count = len(
-        {record.get("spatial_cell_1km_ref") for record in ranking if record.get("spatial_cell_1km_ref")}
+        {
+            record.get("spatial_cell_1km_ref")
+            for record in ranking
+            if record.get("spatial_cell_1km_ref")
+        }
     )
     safe_cells = [
         SafeSpatialCell(
@@ -493,7 +510,9 @@ def search_occurrences(
         reason=reason,
         seasonal_target_month=target_month,
         seasonal_months=list(retrieval.get("seasonal_months") or []),
-        year_window=tuple(retrieval.get("year_window") or (_now().year - 5, _now().year)),
+        year_window=tuple(
+            retrieval.get("year_window") or (_now().year - 5, _now().year)
+        ),
         counts=OccurrenceCounts(
             server_match_count=counts.get("server_match_count", 0),
             sampled_count=counts.get("sampled_count", 0),
@@ -521,7 +540,8 @@ def search_occurrences(
                 diversity.get("record_count_by_dataset") or record_dataset_counts
             ),
             ranking_eligible_count_by_dataset=dict(
-                diversity.get("ranking_eligible_count_by_dataset") or ranking_dataset_counts
+                diversity.get("ranking_eligible_count_by_dataset")
+                or ranking_dataset_counts
             ),
             dominant_ranking_dataset_share=diversity.get(
                 "dominant_ranking_dataset_share", round(dominant_dataset_share, 4)
@@ -552,11 +572,16 @@ def get_weather_context(
 ) -> WeatherEvidence:
     """Return exact-date weather context or an explicit unavailable state."""
 
-    if location.status != LocationStatus.resolved or location.rounded_start_point is None:
+    if (
+        location.status != LocationStatus.resolved
+        or location.rounded_start_point is None
+    ):
         return WeatherEvidence(
             status=WeatherStatus.not_requested_location_unresolved,
             requested_date=requested_date,
-            limitations=["Weather was not requested because the location did not resolve."],
+            limitations=[
+                "Weather was not requested because the location did not resolve."
+            ],
         )
     try:
         fixture = repository.daily(
@@ -574,7 +599,10 @@ def get_weather_context(
                 else WeatherStatus.source_unavailable
             ),
             requested_date=requested_date,
-            limitations=[exc.message, "Weather context is not a bird-sighting probability."],
+            limitations=[
+                exc.message,
+                "Weather context is not a bird-sighting probability.",
+            ],
             tool_error=_failure("get_weather_context", exc),
         )
     payload = fixture["payload"]
@@ -635,36 +663,23 @@ def find_public_green_spaces(
     occurrence: OccurrenceEvidence | None,
     repository: GreenSpaceRepository,
     limit: int = 8,
+    contextual_limit: int = 8,
+    nearby_context_distance_km: float = 1.0,
 ) -> PublicSiteSearchResult:
-    """Rank snapshot candidates by evidence-cell association then projected proximity."""
+    """Separate polygon-grounded recommendations from explicitly contextual sites."""
 
-    if location.status != LocationStatus.resolved or location.british_national_grid is None:
+    if nearby_context_distance_km <= 0:
+        raise ValueError("nearby_context_distance_km must be positive")
+
+    if (
+        location.status != LocationStatus.resolved
+        or location.british_national_grid is None
+    ):
         return PublicSiteSearchResult(
             candidates=[],
             searched_radius_km=search_radius_km,
             status=PublicSiteSearchStatus.not_applicable_location_unresolved,
-        )
-    if occurrence is None or occurrence.outcome != EvidenceOutcome.strong_map_evidence:
-        return PublicSiteSearchResult(
-            candidates=[],
-            searched_radius_km=search_radius_km,
-            status=PublicSiteSearchStatus.not_applicable_without_strong_evidence,
-        )
-    allowed_cells = {cell.cell_id for cell in occurrence.safe_map_cells}
-    if not allowed_cells:
-        message = (
-            "Strong occurrence evidence exists, but no approved public safe-map cells "
-            "are available for grounded site recommendations."
-        )
-        return PublicSiteSearchResult(
-            candidates=[],
-            searched_radius_km=search_radius_km,
-            status=PublicSiteSearchStatus.safe_map_unavailable,
-            error=ToolError(
-                tool="find_public_green_spaces",
-                code=ToolErrorCode.safe_map_unavailable,
-                message=message,
-            ),
+            suggested_actions=[SiteSearchAction.correct_or_select_location],
         )
     try:
         features, provenance_data = repository.snapshot()
@@ -673,6 +688,7 @@ def find_public_green_spaces(
             candidates=[],
             searched_radius_km=search_radius_km,
             status=PublicSiteSearchStatus.source_unavailable,
+            suggested_actions=[SiteSearchAction.retry_site_source],
             error=ToolError(
                 tool="find_public_green_spaces",
                 code=ToolErrorCode.source_unavailable,
@@ -681,7 +697,16 @@ def find_public_green_spaces(
                 source=exc.source,
             ),
         )
-    ranked: list[tuple[float, PublicSiteCandidate]] = []
+    safe_geometries = (
+        {
+            cell.cell_id: cell.geometry.model_dump(mode="json")
+            for cell in occurrence.safe_map_cells
+        }
+        if occurrence and occurrence.outcome == EvidenceOutcome.strong_map_evidence
+        else {}
+    )
+    grounded_ranked: list[tuple[float, PublicSiteCandidate]] = []
+    contextual_ranked: list[tuple[int, float, PublicSiteCandidate]] = []
     provenance = _evidence_item(
         provenance_data,
         record_type="versioned_green_space_candidate_snapshot",
@@ -693,23 +718,50 @@ def find_public_green_spaces(
         tags = properties.get("source_tags") or {}
         if tags.get("access") in {"private", "no"}:
             continue
-        coordinates = (feature.get("geometry") or {}).get("coordinates")
-        if not isinstance(coordinates, list) or len(coordinates) != 2:
+        geometry = feature.get("geometry") or {}
+        geometry_type = geometry.get("type")
+        centre = properties.get("centre_point")
+        if centre is None and geometry_type == "Point":
+            centre = geometry.get("coordinates")
+        if not isinstance(centre, list) or len(centre) != 2:
             continue
-        longitude, latitude = float(coordinates[0]), float(coordinates[1])
+        if geometry_type not in {"Point", "Polygon", "MultiPolygon"}:
+            continue
+        longitude, latitude = float(centre[0]), float(centre[1])
         easting, northing = british_national_grid(longitude, latitude)
-        distance_km = hypot(
-            easting - location.british_national_grid.easting,
-            northing - location.british_national_grid.northing,
-        ) / 1000
+        distance_km = (
+            hypot(
+                easting - location.british_national_grid.easting,
+                northing - location.british_national_grid.northing,
+            )
+            / 1000
+        )
         if distance_km > search_radius_km:
             continue
-        cell_easting, cell_northing = metric_cell(
-            longitude, latitude, size_metres=1_000
+        associated_cells = sorted(
+            cell_id
+            for cell_id, safe_geometry in safe_geometries.items()
+            if geometry_type in {"Polygon", "MultiPolygon"}
+            and geometries_intersect(geometry, safe_geometry)
         )
-        cell_id = f"bng-1km-{cell_easting}-{cell_northing}"
-        if cell_id not in allowed_cells:
-            continue
+        nearest_safe_distance_km = (
+            min(
+                geometry_distance_metres(geometry, safe_geometry)
+                for safe_geometry in safe_geometries.values()
+            )
+            / 1000
+            if safe_geometries
+            else None
+        )
+        if associated_cells:
+            evidence_tier = SiteEvidenceTier.directly_grounded
+        elif (
+            nearest_safe_distance_km is not None
+            and nearest_safe_distance_km <= nearby_context_distance_km
+        ):
+            evidence_tier = SiteEvidenceTier.nearby_context
+        else:
+            evidence_tier = SiteEvidenceTier.ungrounded
         site_type = next(
             (
                 str(tags[key])
@@ -730,31 +782,110 @@ def find_public_green_spaces(
             operator=tags.get("operator"),
             opening_hours=tags.get("opening_hours"),
             website=tags.get("website"),
-            associated_safe_cell_ids=[cell_id],
+            evidence_tier=evidence_tier,
+            source_geometry_type=geometry_type,
+            distance_to_nearest_safe_cell_km=(
+                0.0
+                if associated_cells
+                else round(nearest_safe_distance_km, 2)
+                if nearest_safe_distance_km is not None
+                else None
+            ),
+            associated_safe_cell_ids=associated_cells,
             provenance=provenance,
             limitations=[
                 "Distance is projected centre-point proximity, not walking-route distance.",
                 "The OSM candidate snapshot does not guarantee current access or opening.",
+                (
+                    "The source polygon intersects a historical aggregate safe-map cell; this does not place an occurrence inside the site."
+                    if evidence_tier == SiteEvidenceTier.directly_grounded
+                    else "This contextual site is not a bird-evidence-grounded recommendation."
+                ),
             ],
         )
-        ranked.append((distance_km, candidate))
-    ranked.sort(
+        if evidence_tier == SiteEvidenceTier.directly_grounded:
+            grounded_ranked.append((distance_km, candidate))
+        else:
+            contextual_ranked.append(
+                (
+                    0 if evidence_tier == SiteEvidenceTier.nearby_context else 1,
+                    distance_km,
+                    candidate,
+                )
+            )
+    grounded_ranked.sort(
         key=lambda item: (
             0 if item[1].access_certainty == AccessCertainty.explicit_public else 1,
             item[0],
             item[1].name.casefold(),
         )
     )
-    candidates = [item[1] for item in ranked[:limit]]
-    if not candidates:
-        message = (
-            "No public green-space snapshot candidate lies within the search radius "
-            "and an allowed safe-map cell."
+    contextual_ranked.sort(
+        key=lambda item: (
+            item[0],
+            0 if item[2].access_certainty == AccessCertainty.explicit_public else 1,
+            item[1],
+            item[2].name.casefold(),
+        )
+    )
+    candidates = [item[1] for item in grounded_ranked[:limit]]
+    contextual_sites = [item[2] for item in contextual_ranked[:contextual_limit]]
+    if occurrence is None or occurrence.outcome != EvidenceOutcome.strong_map_evidence:
+        actions_by_outcome = {
+            EvidenceOutcome.human_selection_required: [SiteSearchAction.select_taxon],
+            EvidenceOutcome.taxon_not_found: [SiteSearchAction.correct_bird_input],
+            EvidenceOutcome.source_unavailable: [
+                SiteSearchAction.retry_occurrence_source
+            ],
+            EvidenceOutcome.limited_contextual_evidence: [
+                SiteSearchAction.change_target_month,
+                SiteSearchAction.refresh_live_evidence,
+            ],
+            EvidenceOutcome.insufficient_evidence: [
+                SiteSearchAction.change_target_month,
+                SiteSearchAction.refresh_live_evidence,
+            ],
+        }
+        actions = (
+            actions_by_outcome[occurrence.outcome]
+            if occurrence is not None
+            else [SiteSearchAction.retry_occurrence_source]
         )
         return PublicSiteSearchResult(
             candidates=[],
+            contextual_sites=contextual_sites,
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.not_applicable_without_strong_evidence,
+            suggested_actions=actions,
+        )
+    if not safe_geometries:
+        message = (
+            "Strong occurrence evidence exists, but no approved public safe-map cells "
+            "are available for grounded site recommendations."
+        )
+        return PublicSiteSearchResult(
+            candidates=[],
+            contextual_sites=contextual_sites,
+            searched_radius_km=search_radius_km,
+            status=PublicSiteSearchStatus.safe_map_unavailable,
+            suggested_actions=[SiteSearchAction.refresh_live_evidence],
+            error=ToolError(
+                tool="find_public_green_spaces",
+                code=ToolErrorCode.safe_map_unavailable,
+                message=message,
+            ),
+        )
+    if not candidates:
+        message = (
+            "No public green-space snapshot candidate lies within the search radius "
+            "with a polygon intersecting an allowed safe-map cell."
+        )
+        return PublicSiteSearchResult(
+            candidates=[],
+            contextual_sites=contextual_sites,
             searched_radius_km=search_radius_km,
             status=PublicSiteSearchStatus.no_suitable_public_sites,
+            suggested_actions=[SiteSearchAction.expand_search_radius],
             error=ToolError(
                 tool="find_public_green_spaces",
                 code=ToolErrorCode.no_suitable_public_sites,
@@ -763,6 +894,7 @@ def find_public_green_spaces(
         )
     return PublicSiteSearchResult(
         candidates=candidates,
+        contextual_sites=contextual_sites,
         searched_radius_km=search_radius_km,
         status=PublicSiteSearchStatus.success,
     )
@@ -874,6 +1006,18 @@ def validate_expedition_constraints(
     }.get(site_search.status)
     if site_constraint is not None:
         results.append(site_constraint)
+    if site_search.contextual_sites:
+        results.append(
+            ConstraintViolation(
+                code="contextual_sites_not_recommendations",
+                status=ConstraintStatus.not_applicable,
+                severity=ConstraintSeverity.information,
+                message=(
+                    "Nearby green spaces are retained as contextual options only; they are "
+                    "not included in grounded recommendations or candidate-plan readiness."
+                ),
+            )
+        )
     results.append(
         ConstraintViolation(
             code="duration_within_phase1_bounds",
@@ -982,14 +1126,18 @@ def build_expedition_evidence_bundle(
         provenance.extend(occurrence.evidence_items)
     if weather and weather.provenance:
         provenance.append(weather.provenance)
-    if sites_result.candidates:
-        provenance.append(sites_result.candidates[0].provenance)
+    source_sites = sites_result.candidates or sites_result.contextual_sites
+    if source_sites:
+        provenance.append(source_sites[0].provenance)
     tool_errors: list[ToolError] = []
     if sites_result.error:
         tool_errors.append(sites_result.error)
     if location.tool_error:
         tool_errors.append(location.tool_error)
-    elif location.status not in {LocationStatus.resolved, LocationStatus.outside_supported_area}:
+    elif location.status not in {
+        LocationStatus.resolved,
+        LocationStatus.outside_supported_area,
+    }:
         tool_errors.append(
             ToolError(
                 tool="lookup_uk_postcode",
@@ -1049,7 +1197,8 @@ def build_expedition_evidence_bundle(
                 tool="get_weather_context",
                 code=(
                     ToolErrorCode.weather_unavailable_for_requested_date
-                    if weather.status == WeatherStatus.weather_unavailable_for_requested_date
+                    if weather.status
+                    == WeatherStatus.weather_unavailable_for_requested_date
                     else ToolErrorCode.source_unavailable
                 ),
                 message=weather.limitations[0],
@@ -1073,6 +1222,7 @@ def build_expedition_evidence_bundle(
         weather=weather,
         site_search=sites_result,
         candidate_sites=sites_result.candidates,
+        contextual_sites=sites_result.contextual_sites,
         constraints=constraints,
         evidence_outcome=outcome,
         safety_and_scientific_limitations=list(dict.fromkeys(limitations)),

@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from app.feasibility.spatial import (
     british_national_grid,
+    geometries_intersect,
+    geometry_distance_metres,
     load_london_boundary,
     location_quality_tier,
     metric_cell,
@@ -34,6 +36,49 @@ def test_polygon_inclusion_and_hole_exclusion() -> None:
     assert point_in_geometry(0, 5, geometry)
 
 
+def test_polygon_intersection_and_projected_distance() -> None:
+    first = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [-0.13, 51.50],
+                [-0.11, 51.50],
+                [-0.11, 51.52],
+                [-0.13, 51.52],
+                [-0.13, 51.50],
+            ]
+        ],
+    }
+    overlapping = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [-0.12, 51.51],
+                [-0.10, 51.51],
+                [-0.10, 51.53],
+                [-0.12, 51.53],
+                [-0.12, 51.51],
+            ]
+        ],
+    }
+    separate = {
+        "type": "Polygon",
+        "coordinates": [
+            [
+                [-0.08, 51.50],
+                [-0.07, 51.50],
+                [-0.07, 51.51],
+                [-0.08, 51.51],
+                [-0.08, 51.50],
+            ]
+        ],
+    }
+    assert geometries_intersect(first, overlapping)
+    assert geometry_distance_metres(first, overlapping) == 0
+    assert not geometries_intersect(first, separate)
+    assert geometry_distance_metres(first, separate) > 1_000
+
+
 def test_real_london_boundary_rejects_bbox_only_point() -> None:
     boundary = load_london_boundary()
     assert point_in_geometry(-0.1276, 51.5074, boundary)  # Trafalgar Square
@@ -51,7 +96,9 @@ def test_epsg27700_is_metric_and_uses_one_kilometre_cells() -> None:
 def test_opaque_reference_depends_on_unpersisted_secret() -> None:
     first = opaque_cell_reference(-0.1276, 51.5074, size_metres=1_000, secret=b"a" * 32)
     same = opaque_cell_reference(-0.1276, 51.5074, size_metres=1_000, secret=b"a" * 32)
-    other_session = opaque_cell_reference(-0.1276, 51.5074, size_metres=1_000, secret=b"b" * 32)
+    other_session = opaque_cell_reference(
+        -0.1276, 51.5074, size_metres=1_000, secret=b"b" * 32
+    )
     assert first == same
     assert first != other_session
     assert "530" not in first

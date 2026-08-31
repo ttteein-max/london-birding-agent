@@ -77,9 +77,7 @@ class ExpeditionBackend:
     def run(self, request: ExpeditionRequest) -> BackendResult:
         """Execute the deterministic backend in the documented fixed order."""
 
-        location = lookup_uk_postcode(
-            request, repository=self.dependencies.postcode
-        )
+        location = lookup_uk_postcode(request, repository=self.dependencies.postcode)
         taxon = resolve_bird_taxon(
             request.bird_input, repository=self.dependencies.taxonomy
         )
@@ -138,7 +136,7 @@ class ExpeditionBackend:
         strong_explanation = {
             PublicSiteSearchStatus.success: (
                 "The bounded historical sample passes the strong gate, and every candidate "
-                "site is associated with an approved aggregated safe-map cell."
+                "site has a source polygon intersecting an approved aggregated safe-map cell."
             ),
             PublicSiteSearchStatus.safe_map_unavailable: (
                 "The historical sample passes the record-quality gate, but no approved "
@@ -146,7 +144,8 @@ class ExpeditionBackend:
             ),
             PublicSiteSearchStatus.no_suitable_public_sites: (
                 "Strong evidence and safe-map cells exist, but no grounded public-site "
-                "candidate was found within the requested search radius."
+                "polygon was found within the requested search radius; contextual sites "
+                "remain explicitly non-recommended."
             ),
             PublicSiteSearchStatus.source_unavailable: (
                 "Strong evidence and safe-map cells exist, but the public-site source was "
@@ -181,6 +180,8 @@ class ExpeditionBackend:
             target_bird=taxon.canonical_name or request.bird_input,
             target_date=request.target_local_date,
             candidate_sites=sites.candidates,
+            contextual_sites=sites.contextual_sites,
+            suggested_actions=sites.suggested_actions,
             evidence_explanation=explanation,
             unresolved_constraints=unresolved,
             limitations=bundle.safety_and_scientific_limitations,
@@ -194,6 +195,8 @@ def run_expedition_backend(
     if mode not in {"fixture", "live"}:
         raise ValueError("mode must be fixture or live")
     dependencies = (
-        BackendDependencies.fixture() if mode == "fixture" else BackendDependencies.live()
+        BackendDependencies.fixture()
+        if mode == "fixture"
+        else BackendDependencies.live()
     )
     return ExpeditionBackend(dependencies).run(request)
