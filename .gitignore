@@ -27,4 +27,5 @@ temp/
 # Phase 0 generators keep compact, versioned snapshots only. Raw downloads stay local.
 data/raw/
 data/downloads/
+data/candidates/
 *.overpass.json

@@ -18,22 +18,22 @@
         "2026-09-02"
       ],
       "temperature_2m_max": [
-        21.7,
-        21.3,
+        21.0,
+        21.2,
         22.4
       ],
       "temperature_2m_min": [
         14.8,
-        13.5,
+        13.3,
         15.8
       ],
       "precipitation_probability_max": [
-        77,
+        74,
         6,
-        24
+        19
       ],
       "weather_code": [
-        81,
+        53,
         3,
         3
       ]
@@ -50,11 +50,11 @@
       "timezone": "Europe/London",
       "forecast_days": 3
     },
-    "retrieved_at_utc": "2026-08-31T03:39:39Z",
+    "retrieved_at_utc": "2026-08-31T04:38:58Z",
     "snapshot_version": "2026-08-31",
     "licence": "CC BY 4.0 for Open-Meteo weather data; upstream model terms also apply",
     "attribution": "Weather data by Open-Meteo.com",
-    "checksum_sha256": "9eeca8f1fa9f28e1edcbb25c8e77ae075014156b0637200f6b2512eec3575054",
+    "checksum_sha256": "4b7e1e52c2e16a8136a88220081cf37df64fcb657a861ca2fa236f084c6a4773",
     "record_counts": {
       "before": 3,
       "after": 3

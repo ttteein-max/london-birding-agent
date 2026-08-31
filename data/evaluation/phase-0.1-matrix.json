@@ -1,0 +1,78 @@
+{
+  "schema_version": 1,
+  "description": "Regression scenarios for Phase 0.1; this is not a supported-species whitelist.",
+  "inputs": [
+    {
+      "scenario": "abundant_common",
+      "input": "Common woodpigeon",
+      "target_month": 6,
+      "reason": "Common resident expected to exercise strong representative evidence."
+    },
+    {
+      "scenario": "abundant_common",
+      "input": "House sparrow",
+      "target_month": 5,
+      "reason": "Common resident and a second English common-name resolution path."
+    },
+    {
+      "scenario": "abundant_common",
+      "input": "Eurasian magpie",
+      "target_month": 4,
+      "reason": "Common resident with broad London reporting coverage."
+    },
+    {
+      "scenario": "moderate_seasonal",
+      "input": "Common swift",
+      "target_month": 7,
+      "reason": "Seasonal summer visitor used to exercise target-month retrieval."
+    },
+    {
+      "scenario": "moderate_seasonal",
+      "input": "Falco subbuteo",
+      "target_month": 7,
+      "reason": "Scientific-name input for a seasonal summer raptor."
+    },
+    {
+      "scenario": "moderate_seasonal",
+      "input": "Turdus iliacus",
+      "target_month": 1,
+      "reason": "Scientific-name input for a winter visitor and wrap-around seasonal months."
+    },
+    {
+      "scenario": "rare_sparse",
+      "input": "Corncrake",
+      "target_month": 5,
+      "reason": "Sparse historical London evidence should remain contextual, not a hotspot claim."
+    },
+    {
+      "scenario": "rare_sparse",
+      "input": "Cirl bunting",
+      "target_month": 6,
+      "reason": "Rare London evidence exercises safe low-count behaviour."
+    },
+    {
+      "scenario": "extant_negligible_london",
+      "input": "Kakapo",
+      "target_month": 6,
+      "reason": "Valid extant bird expected to have no meaningful wild London evidence."
+    },
+    {
+      "scenario": "ambiguous_common_name",
+      "input": "robin",
+      "target_month": 1,
+      "reason": "A globally ambiguous one-word English common name."
+    },
+    {
+      "scenario": "ambiguous_common_name",
+      "input": "eagle",
+      "target_month": 6,
+      "reason": "A broad English group name shared by many accepted bird species."
+    },
+    {
+      "scenario": "unknown_or_misspelled",
+      "input": "londun sky parrott xyz",
+      "target_month": 6,
+      "reason": "Deliberately unknown and misspelled input must fail safely."
+    }
+  ]
+}
