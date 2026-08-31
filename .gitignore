@@ -1,0 +1,30 @@
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+.env.local
+.env.*.local
+.DS_Store
+
+# Local editor, build and temporary output.
+.idea/
+.vscode/
+build/
+dist/
+*.egg-info/
+tmp/
+temp/
+*.tmp
+*.log
+
+# Phase 0 generators keep compact, versioned snapshots only. Raw downloads stay local.
+data/raw/
+data/downloads/
+*.overpass.json

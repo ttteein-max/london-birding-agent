@@ -1,0 +1,47 @@
+{
+  "source_name": "OpenStreetMap via Overpass API",
+  "source_url": "https://www.openstreetmap.org/",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "request_parameters": {
+    "query_file": "data/osm/london-green-spaces.overpassql"
+  },
+  "retrieved_at_utc": "2026-08-31T03:38:19Z",
+  "snapshot_version": "2026-08-31",
+  "licence": "Open Database Licence (ODbL) 1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "checksum_sha256": "82512b8921c37287917f9adb6067317c090b9285f19169eaf1f7bd93b87bd443",
+  "record_counts": {
+    "before": 3620,
+    "after": 3364
+  },
+  "filtering_rules": [
+    "Query named park, garden, nature reserve, recreation ground, forest, meadow and protected-area features in Greater London",
+    "Exclude access=private and access=no",
+    "Retain one centre point per OSM element and compact relevant source tags",
+    "Mark access as explicit_public only for access=yes, permissive, designated or public; otherwise mark unspecified"
+  ],
+  "known_limitations": [
+    "This is a candidate dataset, not a guarantee of legal access, opening, safety or accessibility",
+    "Centroid points simplify polygon and multipolygon geometry",
+    "OSM is community-maintained and can be incomplete or outdated",
+    "Missing access tags are explicitly classified as unspecified"
+  ],
+  "feature_count": 3364,
+  "excluded_private_or_no_access": 256,
+  "excluded_missing_centre": 0,
+  "relevant_source_tags": [
+    "name",
+    "name:en",
+    "leisure",
+    "landuse",
+    "boundary",
+    "protect_class",
+    "access",
+    "operator",
+    "opening_hours",
+    "website",
+    "wikidata"
+  ],
+  "query_sha256": "3039c72f0cbf92e6fb8f3bf0cad4445a636b837b54aec5f87c550af3a5ad2347",
+  "regeneration_command": "python -m scripts.generate_osm_snapshot --live-refresh"
+}

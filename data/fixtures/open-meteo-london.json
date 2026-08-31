@@ -1,0 +1,70 @@
+{
+  "schema_version": 1,
+  "payload": {
+    "latitude": 51.476105,
+    "longitude": -0.16152954,
+    "timezone": "Europe/London",
+    "daily_units": {
+      "time": "iso8601",
+      "temperature_2m_max": "°C",
+      "temperature_2m_min": "°C",
+      "precipitation_probability_max": "%",
+      "weather_code": "wmo code"
+    },
+    "daily": {
+      "time": [
+        "2026-08-31",
+        "2026-09-01",
+        "2026-09-02"
+      ],
+      "temperature_2m_max": [
+        21.7,
+        21.3,
+        22.4
+      ],
+      "temperature_2m_min": [
+        14.8,
+        13.5,
+        15.8
+      ],
+      "precipitation_probability_max": [
+        77,
+        6,
+        24
+      ],
+      "weather_code": [
+        81,
+        3,
+        3
+      ]
+    }
+  },
+  "provenance": {
+    "source_name": "Open-Meteo Forecast API",
+    "source_url": "https://open-meteo.com/",
+    "endpoint": "https://api.open-meteo.com/v1/forecast",
+    "request_parameters": {
+      "latitude": 51.476,
+      "longitude": -0.161,
+      "daily": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weather_code",
+      "timezone": "Europe/London",
+      "forecast_days": 3
+    },
+    "retrieved_at_utc": "2026-08-31T03:39:39Z",
+    "snapshot_version": "2026-08-31",
+    "licence": "CC BY 4.0 for Open-Meteo weather data; upstream model terms also apply",
+    "attribution": "Weather data by Open-Meteo.com",
+    "checksum_sha256": "9eeca8f1fa9f28e1edcbb25c8e77ae075014156b0637200f6b2512eec3575054",
+    "record_counts": {
+      "before": 3,
+      "after": 3
+    },
+    "filtering_rules": [
+      "Retain only three daily planning-feasibility fields plus WMO weather code"
+    ],
+    "known_limitations": [
+      "Forecasts change on refresh",
+      "Weather feasibility does not predict bird sightings"
+    ]
+  }
+}
