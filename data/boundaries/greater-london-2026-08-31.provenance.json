@@ -1,0 +1,28 @@
+{
+  "source_name": "OpenStreetMap Greater London boundary via Nominatim",
+  "source_url": "https://www.openstreetmap.org/relation/175342",
+  "endpoint": "https://nominatim.openstreetmap.org/search",
+  "request_parameters": {
+    "request_url": "https://nominatim.openstreetmap.org/search?q=Greater+London%2C+England%2C+United+Kingdom&format=geojson&polygon_geojson=1&addressdetails=1&limit=1&countrycodes=gb",
+    "osm_relation": 175342
+  },
+  "retrieved_at_utc": "2026-08-31T04:28:45Z",
+  "snapshot_version": "2026-08-31",
+  "licence": "Open Database Licence (ODbL) 1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "checksum_sha256": "7f3e3e39fe5c89ca9ff7a49b6e7e32f348d9ebf8881accc305b720f601df6cae",
+  "record_counts": {
+    "before": 1,
+    "after": 1
+  },
+  "filtering_rules": [
+    "Require OSM relation 175342",
+    "Require Polygon or MultiPolygon geometry",
+    "Retain boundary geometry and compact administrative identifiers only"
+  ],
+  "known_limitations": [
+    "The boundary is a dated OpenStreetMap snapshot and may change",
+    "Boundary inclusion does not establish site access"
+  ],
+  "regeneration_command": "python -m scripts.generate_london_boundary --live-refresh"
+}

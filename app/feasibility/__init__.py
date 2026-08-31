@@ -2,6 +2,7 @@
 
 from app.feasibility.core import (
     MAP_VIABILITY_RULE,
+    STRONG_EVIDENCE_RULE,
     evaluate_occurrence_fixture,
     load_fixture_bundle,
     validate_provenance,
@@ -9,6 +10,7 @@ from app.feasibility.core import (
 
 __all__ = [
     "MAP_VIABILITY_RULE",
+    "STRONG_EVIDENCE_RULE",
     "evaluate_occurrence_fixture",
     "load_fixture_bundle",
     "validate_provenance",

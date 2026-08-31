@@ -10,11 +10,12 @@ from typing import Any
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIR = PROJECT_ROOT / "data" / "fixtures"
 
-MAP_VIABILITY_RULE = {
-    "minimum_retained_records": 50,
+STRONG_EVIDENCE_RULE = {
+    "minimum_ranking_eligible_records": 50,
     "minimum_spatial_cells_1km": 5,
     "minimum_datasets": 2,
 }
+MAP_VIABILITY_RULE = STRONG_EVIDENCE_RULE
 
 REQUIRED_PROVENANCE_FIELDS = {
     "source_name",
@@ -54,7 +55,11 @@ def file_sha256(path: Path) -> str:
     return digest.hexdigest()
 
 
-def validate_provenance(provenance: dict[str, Any]) -> list[str]:
+def validate_provenance(
+    provenance: dict[str, Any],
+    *,
+    schema_version: int | None = None,
+) -> list[str]:
     """Return missing or malformed provenance fields; an empty list is valid."""
 
     errors = [
@@ -62,7 +67,13 @@ def validate_provenance(provenance: dict[str, Any]) -> list[str]:
         for name in sorted(REQUIRED_PROVENANCE_FIELDS.difference(provenance))
     ]
     counts = provenance.get("record_counts")
-    if not isinstance(counts, dict) or not {"before", "after"}.issubset(counts):
+    if not isinstance(counts, dict):
+        errors.append("record_counts must be an object")
+    elif schema_version == 2 and "server_match_count" in counts:
+        from app.feasibility.occurrence import validate_occurrence_counts
+
+        errors.extend(validate_occurrence_counts(counts))
+    elif not {"before", "after"}.issubset(counts):
         errors.append("record_counts must contain before and after")
     checksum = provenance.get("checksum_sha256", "")
     if not isinstance(checksum, str) or len(checksum) != 64:
@@ -75,28 +86,29 @@ def validate_provenance(provenance: dict[str, Any]) -> list[str]:
 
 
 def evaluate_occurrence_fixture(taxon: dict[str, Any]) -> dict[str, Any]:
-    """Classify an already sanitised taxon sample using the predeclared gate."""
+    """Summarise a schema-v2 occurrence scenario without reclassifying live data."""
 
-    records = taxon["records"]
-    retained = [record for record in records if record["retained"]]
-    cells = {record["spatial_cell_1km"] for record in retained}
-    datasets = {record["dataset_key"] for record in retained}
-    passed = (
-        len(retained) >= MAP_VIABILITY_RULE["minimum_retained_records"]
-        and len(cells) >= MAP_VIABILITY_RULE["minimum_spatial_cells_1km"]
-        and len(datasets) >= MAP_VIABILITY_RULE["minimum_datasets"]
-    )
+    records = taxon.get("records", [])
+    counts = taxon.get("counts")
+    taxonomy = taxon.get("taxonomy", {})
     return {
-        "scenario": taxon["scenario"],
+        "scenario": taxon.get("scenario"),
         "input": taxon["input"],
-        "scientific_name": taxon["scientific_name"],
-        "taxon_key": taxon["taxon_key"],
-        "raw_server_count": taxon["raw_server_count"],
-        "sampled_count": len(records),
-        "retained_count": len(retained),
-        "spatial_cells_1km": len(cells),
-        "dataset_count": len(datasets),
-        "status": "map_viable" if passed else "insufficient_evidence",
+        "scientific_name": taxonomy.get("scientific_name"),
+        "taxon_key": taxonomy.get("accepted_taxon_key"),
+        "server_match_count": counts.get("server_match_count") if counts else None,
+        "sampled_count": counts.get("sampled_count") if counts else 0,
+        "ranking_eligible_count": counts.get("ranking_eligible_count") if counts else 0,
+        "retained_total_count": counts.get("retained_total_count") if counts else 0,
+        "spatial_cells_1km": len(
+            {
+                record["spatial_cell_1km_ref"]
+                for record in records
+                if record.get("ranking_eligible")
+            }
+        ),
+        "dataset_count": (taxon.get("dataset_diversity") or {}).get("ranking_dataset_count", 0),
+        "status": taxon["evidence_outcome"],
     }
 
 

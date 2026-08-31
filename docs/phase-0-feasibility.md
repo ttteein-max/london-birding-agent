@@ -1,114 +1,158 @@
-# Phase 0 feasibility: London Biodiversity Expedition Planner
+# Phase 0.1 data-hardening report
 
-## Decision
+## Decision and scope
 
-Phase 0 passes the engineering feasibility gate for a London-only, birds-first, English-only product.
+Phase 0.1 passes. The evidence layer now supports arbitrary English common-name and scientific-name bird input, dynamic ambiguity/not-found outcomes, bounded representative retrieval, explicit coordinate-quality use tiers, a real London polygon, EPSG:27700 cells and internally consistent schema-v2 provenance.
 
-The product is positioned as: **“London Biodiversity Expedition Planner — an explainable, evidence-grounded planner for urban birdwatching expeditions in London.”** It identifies areas with stronger historical occurrence evidence. It does not predict sightings, estimate populations, guarantee access or guarantee that a bird will be observed.
+This remains pre-Phase 1. The protected incident LangGraph graph, state/schema, investigator tools, streaming adapter, scripted models and checkpointer were not changed.
 
-The live evidence was retrieved on 31 August 2026 UTC. Default checks replay sanitised fixtures and require no network or API key.
+The product remains: **“London Biodiversity Expedition Planner — an explainable, evidence-grounded planner for urban birdwatching expeditions in London.”** Historical occurrence evidence is not sighting probability, abundance, a population estimate or a guarantee.
 
-## Predeclared map-viability rule
+## Dynamic taxonomy resolution
 
-A resolved taxon is map-viable only if its bounded London sample has all of:
+The reusable resolver normalises case and whitespace while preserving the original input. It first attempts GBIF Species Match, then searches up to 100 current species results and restricts candidates to accepted, species-rank `Aves` taxa. It has no fixed supported-species dictionary.
 
-1. at least 50 retained occurrence records;
-2. at least five distinct approximately 1 km spatial cells;
-3. evidence from at least two GBIF datasets;
-4. numeric coordinates inside the Greater London bounding envelope;
-5. `occurrenceStatus=PRESENT` where the field is present;
-6. none of `ZERO_COORDINATE`, `COORDINATE_OUT_OF_RANGE`, `COORDINATE_INVALID` or `COUNTRY_COORDINATE_MISMATCH`;
-7. no known `coordinateUncertaintyInMeters` above 10,000 metres.
+Examples from the 31 August 2026 live run:
 
-Missing uncertainty is retained but remains an explicit limitation; it is not interpreted as zero. Coordinates and identifiers in committed fixtures are replaced with non-reversible hashes of approximately 1 km cells and source identifiers. The GBIF search is limited to 300 results per taxon, so retained counts describe a bounded engineering sample, not abundance.
+| User input | Outcome | Result |
+|---|---|---|
+| `Common woodpigeon` | `resolved` | *Columba palumbus*, GBIF 2495455, matched English name “Common Woodpigeon” |
+| `Falco subbuteo` | `resolved` | *Falco subbuteo*, GBIF 2481035, exact scientific match |
+| `robin` | `human_selection_required` | 12 API-generated accepted bird candidates retained |
+| `eagle` | `human_selection_required` | 12 API-generated accepted bird candidates retained |
+| `londun sky parrott xyz` | `taxon_not_found` | no safe exact bird match |
 
-## Taxon matrix
+Ambiguous candidates come from the current API response. The resolver does not issue predeclared “European/American/Ryukyu robin” searches and does not substitute a common or London-likely species.
 
-GBIF scientific taxa were resolved live rather than using unsupported hard-coded identifiers.
+## Evaluation matrix
 
-| Behaviour | Input | GBIF accepted taxon | Server count | Sampled | Retained | 1 km cells | Datasets | Result |
-|---|---|---|---:|---:|---:|---:|---:|---|
-| Abundant evidence | Common woodpigeon | *Columba palumbus* (2495455) | 146,572 | 300 | 295 | 187 | 4 | Map-viable |
-| Another viable taxon | House sparrow | *Passer domesticus* (5231190) | 53,533 | 300 | 294 | 163 | 4 | Map-viable |
-| Another viable taxon | Eurasian magpie | *Pica pica* (5229490) | 133,843 | 300 | 294 | 175 | 3 | Map-viable |
-| Sparse London evidence | Corncrake | *Crex crex* (4408498) | 5 | 5 | 5 | 4 | 3 | Insufficient evidence |
-| Valid taxon, no usable London evidence | Great auk | *Pinguinus impennis* (5229273) | 0 | 0 | 0 | 0 | 0 | Insufficient evidence |
-| Ambiguous English name | robin | Direct match: Animalia (higher rank) | — | — | — | — | — | Human selection required |
+The matrix is a set of regression scenarios, **not a species whitelist**. Counts below belong to the dated 2026-08-31 snapshot and are not permanent expectations.
 
-For `robin`, the preserved GBIF candidate list includes European robin (*Erithacus rubecula*, 2492462), American robin (*Turdus migratorius*, 9510564) and Ryukyu robin (*Erithacus komadori*, 2492463). Phase 0 does not silently choose the London-likely species. A later human-in-the-loop interface must present the alternatives.
+| Scenario | Input | Taxonomy/evidence outcome | Server matches | Sampled | Ranking eligible | Retained |
+|---|---|---|---:|---:|---:|---:|
+| Abundant/common | Common woodpigeon | strong | 24,804 | 300 | 227 | 280 |
+| Abundant/common | House sparrow | strong | 12,476 | 300 | 93 | 208 |
+| Abundant/common | Eurasian magpie | strong | 26,676 | 300 | 219 | 271 |
+| Moderate/seasonal | Common swift | limited contextual | 11,711 | 900 | 31 | 717 |
+| Moderate/seasonal, scientific input | *Falco subbuteo* | limited contextual | 1,246 | 900 | 7 | 743 |
+| Moderate/seasonal, scientific input | *Turdus iliacus* | strong | 11,406 | 300 | 86 | 191 |
+| Rare/sparse | Corncrake | insufficient | 0 | 0 | 0 | 0 |
+| Rare/sparse | Cirl bunting | insufficient | 0 | 0 | 0 | 0 |
+| Extant/negligible London evidence | Kakapo | insufficient | 0 | 0 | 0 | 0 |
+| Ambiguous | robin | human selection required | — | — | — | — |
+| Ambiguous | eagle | human selection required | — | — | — | — |
+| Unknown/misspelled | londun sky parrott xyz | taxon not found | — | — | — | — |
 
-The three passing taxa satisfy the declared gate. Corncrake and great auk terminate safely with an explicit `insufficient_evidence` classification.
+The rare scenarios were selected because earlier/all-time London evidence was sparse or absent; the hardened recent seasonal query found zero records, which is an honest insufficient-evidence result. Synthetic behaviour tests separately prove that a small number of valid records yields `limited_contextual_evidence`, never a hotspot or reliable site recommendation.
 
-## GBIF quality and media audit
+An arbitrary input outside the matrix, `Blue tit`, resolved live to *Cyanistes caeruleus* (GBIF 2487879) and returned `strong_map_evidence`: server matches 22,895, sampled 300, ranking eligible 205, retained 257, two ranking datasets. This demonstrates that the matrix is not a whitelist.
 
-Every sampled record preserves these sanitised audit fields: `has_coordinate`, `occurrence_status`, `issues`, `coordinate_uncertainty_metres`, observation/event date, dataset key, basis of record, record licence, a hashed media identifier and media-level licence when media exists.
+## Evidence outcomes
 
-All 905 sampled records had coordinates and `PRESENT` status because these were bounded search parameters. Seventeen high-uncertainty records were rejected: five woodpigeon, six house sparrow and six magpie records exceeded 10 km. Missing uncertainty occurred in the fixtures and remains flagged as unknown. Common non-fatal GBIF issues included `CONTINENT_DERIVED_FROM_COORDINATES`, `COORDINATE_ROUNDED` and taxon identifier warnings; they are retained for audit and are not converted into confidence scores.
+- `strong_map_evidence`: at least 50 ranking-eligible records, five distinct EPSG:27700 1 km cells and two ranking datasets.
+- `limited_contextual_evidence`: at least one retained London record but the strong gate is not met. Wording must state whether evidence is old, seasonal, imprecise, sparse or dataset-concentrated.
+- `insufficient_evidence`: no retained evidence in the bounded recent seasonal query.
+- `human_selection_required`: multiple reasonable accepted bird taxa.
+- `taxon_not_found`: no safe accepted bird match.
 
-The sample contains human observations, a small number of machine observations and one preserved Corncrake specimen. Record licences include CC BY, CC BY-NC and CC0. Linked media were not downloaded or displayed. The audit keeps each media licence independently; only clearly identified CC0 or CC BY media are marked reusable for possible later review. CC BY-NC, missing or unfamiliar terms are not automatically approved. The occurrence record's licence never substitutes for the media object's licence.
+Strong status is calculated only from location-quality `strong` records. A large server count or many unknown-uncertainty records cannot make a taxon strong.
 
-The fixture contains no decimal coordinates and no reversible cell coordinates. This is especially important for sparse or potentially sensitive occurrences.
+## Coordinate-quality use tiers
 
-## Postcode and weather feasibility
+| Uncertainty | Tier | Permitted use |
+|---|---|---|
+| ≤1,000 m | `strong` | site-level/1 km ranking |
+| 1,001–5,000 m | `weak` | broad-zone or borough context only |
+| >5,000 m | `context_only` | London historical context only |
+| missing | `unknown` | audit only; excluded from ranking |
 
-The real Postcodes.io response for `SW11 4NJ` resolved to Wandsworth, London, England. Its centroid is rounded to three decimals in the fixture. The result demonstrates London scope validation but is not a user's precise position.
+Exact tests cover 1,000, 1,001, 5,000, 5,001 metres and missing uncertainty. Fatal GBIF geospatial issues and points outside the actual London polygon are rejected. Thresholds are never loosened.
 
-A representative three-day Open-Meteo request used the rounded postcode centroid, the `Europe/London` timezone, daily maximum/minimum temperature, maximum precipitation probability and WMO weather code. It demonstrates weather-schema feasibility only. Forecast weather cannot predict whether a bird will be observed.
+Aggregate dated snapshot counts:
 
-## OSM public green-space candidate snapshot
+- ranking eligible (`strong`): 663
+- weak: 15
+- context only: 16
+- unknown uncertainty: 1,716
+- rejected: 590, all outside the final Greater London polygon
+- retained total: 2,410
 
-The versioned snapshot is `data/osm/london-green-space-candidates-2026-08-31.geojson`.
+## Greater London boundary and metric cells
 
-- Retrieval: `2026-08-31T03:38:19Z`
-- Endpoint: `https://overpass-api.de/api/interpreter`
-- Input elements: 3,620
-- Retained candidate features: 3,364
-- Excluded `access=private` or `access=no`: 256
-- Access marked `explicit_public`: 212
-- Access marked `unspecified`: 3,152
-- SHA-256: `82512b8921c37287917f9adb6067317c090b9285f19169eaf1f7bd93b87bd443`
-- Licence: Open Database Licence (ODbL) 1.0
+The remote API envelope reduces query work only. Every coordinate is tested locally against `data/boundaries/greater-london-2026-08-31.geojson`, sourced from OSM relation 175342 through Nominatim.
+
+- Geometry: Polygon, outer ring 12,919 points
+- Retrieved: `2026-08-31T04:28:45Z`
+- SHA-256: `7f3e3e39fe5c89ca9ff7a49b6e7e32f348d9ebf8881accc305b720f601df6cae`
+- Licence: ODbL 1.0
 - Attribution: `© OpenStreetMap contributors`
 
-The exact Overpass QL, provenance sidecar and generator are committed. The processing retains named park, garden, nature reserve, recreation ground, forest, meadow and protected-area candidates; excludes explicit private/no access; retains compact relevant tags; and converts each OSM element to a centre point. Missing access is `unspecified`, never inferred as public. This is not a guaranteed-access dataset.
+The metric grid is British National Grid EPSG:27700. Each documented cell is exactly 1,000 × 1,000 projected metres. In-memory cell equality is stored as a run-specific HMAC reference; the secret and occurrence coordinates are never persisted. Weak/context/unknown records have no 1 km ranking reference.
 
-Regenerate explicitly and sequentially with:
+## Representative retrieval and stopping budget
 
-```bash
-python -m scripts.generate_osm_snapshot --live-refresh
+For each resolved taxon:
+
+1. Query the latest five complete years plus current year (2021–2026 for this snapshot).
+2. Query target month ±1 month; January correctly wraps to December/January/February.
+3. Request sequential 300-record pages.
+4. Stop after at most three pages and three occurrence requests.
+5. Stop early when the strong gate is reached or the server is exhausted.
+6. Deduplicate by GBIF key or occurrence ID; when absent, use a SHA-256 fingerprint over dataset, institution, catalogue number, date and in-memory coordinates. Keep the first record deterministically.
+7. Report dataset diversity plus retained year and month distributions.
+
+The dated matrix used 13 occurrence requests. Strong common scenarios stopped after one page; Common swift and *Falco subbuteo* used the full three-page budget. No query attempted to download all server matches.
+
+## Corrected provenance semantics
+
+Occurrence fixture schema is version 2. Its aggregate count example is:
+
+```json
+{
+  "server_match_count": 88319,
+  "sampled_count": 3000,
+  "deduplicated_count": 3000,
+  "duplicates_removed": 0,
+  "ranking_eligible_count": 663,
+  "weak_count": 15,
+  "context_only_count": 16,
+  "unknown_uncertainty_count": 1716,
+  "rejected_count": 590,
+  "retained_total_count": 2410,
+  "rejection_counts_by_reason": {
+    "outside_greater_london_boundary": 590
+  }
+}
 ```
 
-Overpass is used only for this snapshot workflow, with at most three attempts and backoff. It is not queried per user request. If regeneration repeatedly returns 429, 5xx or times out, retain the query and generator and use an OSM-derived GeoJSON or London OSM extract with equivalent provenance as the manual fallback.
+The validator enforces:
 
-## Provenance format
+- `sampled - duplicates = deduplicated`;
+- `retained + rejected = deduplicated`;
+- strong/ranking + weak + context-only + unknown = retained;
+- sampled never exceeds server matches.
 
-Each fixture or snapshot provenance record contains:
+Thus 88,319 server matches are explicitly not represented as downloaded or filtered records.
 
-- source name and URL;
-- endpoint and request parameters;
-- UTC retrieval timestamp;
-- snapshot/source version where available;
-- licence and attribution;
-- SHA-256 checksum;
-- counts before and after filtering;
-- filtering rules;
-- known limitations.
+## Stable validation and live refresh boundary
 
-OSM provenance additionally records relevant source tags, query checksum, exclusions, feature count and the exact regeneration command. Payload checksums are validated offline; the OSM sidecar validates the complete GeoJSON file.
+Default pytest contains behaviour tests with synthetic GBIF-shaped data and separate dated snapshot-integrity tests. It does not assert permanent live counts or an eternal OSM feature count. Two `live`-marked integration checks are excluded by `pytest.ini` unless explicitly selected.
 
-## Reproduction and limitations
+Live refresh writes candidate fixtures to a supplied temporary/versioned directory and records `canonical_replaced: false`. Canonical replacement requires the separate `--promote-candidate` command after checksum and count validation.
 
 ```bash
 python -m pytest -q
 python -m scripts.phase0_feasibility
-python -m scripts.phase0_feasibility --live-refresh
-python -m scripts.generate_osm_snapshot --live-refresh
+python -m scripts.phase0_feasibility --live-refresh --output-dir /tmp/phase01-candidate
+python -m scripts.phase0_feasibility --live-check "Blue tit" --target-month 4
+python -m scripts.phase0_feasibility --promote-candidate /tmp/phase01-candidate
+python -m pytest -m live -q
 ```
 
-The first two commands are offline. Live commands are explicit, sequential, rate-conscious and use a project-specific User-Agent, 30-second API request timeouts (150 seconds for Overpass), at most three attempts and bounded exponential backoff. Failures exit non-zero.
+Public API responses and counts will change. All requests have timeouts, at most three transport attempts, bounded backoff, a project User-Agent and explicit request/page budgets.
 
-Known limitations include observer-effort bias, dataset coverage and duplication, changing taxonomy, incomplete uncertainty fields, the use of a Greater London bounding envelope rather than a boundary point-in-polygon filter, a 300-record sample cap, forecast volatility, centroid simplification and incomplete OSM access metadata. None of the results is a probability, population estimate, access guarantee or field-action instruction.
+## Scientific, privacy and access limitations
 
-## Phase boundary
+GBIF is affected by observer effort, reporting duplication, dataset composition, taxonomy drift, incomplete uncertainty and licence metadata. Evidence can be seasonal, old or dominated by one dataset. Record licences do not automatically license linked media.
 
-Phase 0 adds feasibility evidence only. The incident `app/graph/workflow.py`, state/schema, investigator tools, streaming adapter, scripted models, checkpointer and thread-ID infrastructure remain available. Biodiversity domain replacement, frontend, routing, HITL, persistence expansion and MCP work belong to later phases and are not implemented here.
+No precise occurrence coordinates are committed or printed. Rare/sensitive results use generalised context only. One or a few records are never called a hotspot. No related species is substituted without user approval. OSM green-space candidates do not guarantee current access or opening.
