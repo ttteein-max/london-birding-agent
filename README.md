@@ -51,6 +51,8 @@ python -m scripts.run_biodiversity_agent \
   --model-mode scripted
 ```
 
+The CLI saves every node, model and tool lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
+
 Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 2 LangGraph documentation](docs/phase-2-biodiversity-langgraph.md) for the topology, state reducers, HITL payloads, safety boundary and all CLI commands.
 
 ## What Phase 0.1 demonstrates
@@ -143,8 +145,11 @@ python -m scripts.phase0_feasibility \
 Opt-in live pytest checks are excluded by default:
 
 ```bash
-python -m pytest -m live -q
+RUN_LIVE_BIODIVERSITY_AGENT=1 \
+python -m pytest -m live tests/test_phase2_live_langgraph.py -vv -s
 ```
+
+Confirm that pytest reports `collected 1 item` and `PASSED`; `deselected` or `skipped` means the live test did not run.
 
 Boundary and OSM regeneration are also explicit:
 

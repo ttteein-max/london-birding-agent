@@ -68,6 +68,29 @@ Required-source failures and the six-round evidence limit end in a typed safe fa
 
 `create_biodiversity_checkpointer()` provides an in-memory checkpointer for tests and the CLI. Every checkpointed run needs a stable `configurable.thread_id`; a resume must use the same ID. Separate IDs remain isolated. Tool results are recorded by call ID, so replay and resume do not duplicate evidence.
 
+## Execution timing and saved reports
+
+The biodiversity CLI attaches an application-owned callback recorder to every graph invocation and resume. It records separate lifecycle spans for:
+
+- every LangGraph node execution, including repeated evidence-agent and ToolNode rounds;
+- every observable chat-model request inside its owning node;
+- every individual tool execution, including tools running concurrently inside one ToolNode;
+- the total application run, including time waiting for a human resume.
+
+Every completed or failed span has a UTC `started_at`, UTC `finished_at`, monotonic `duration_ms`, `span_id`, `parent_span_id`, kind, name, node ID and status. Wall-clock timestamps support display; monotonic measurement prevents system-clock adjustments from producing invalid durations. Node wall time includes its nested model or tool time, so parent and child durations must not be summed as independent elapsed time.
+
+Each CLI run saves a unique local directory under `reports/runs` by default:
+
+```text
+metadata.json    safe run identity, modes, total duration and counts
+events.json      ordered start/completion/failure events for SSE-style replay
+timings.json     completed node/model/tool spans for a Phase 4 timeline
+tool-audit.json  canonical domain tool audit already held in graph state
+final-plan.json  grounded final plan, when one was produced
+```
+
+Timing artifacts deliberately omit prompts, model output text, tool arguments/results and raw occurrence data. They can be persisted or streamed without becoming a second sensitive-state store. Use `--report-dir <path>` for an exact destination or `--no-save-report` when no local artifact is wanted. Historical runs without timing events cannot be reconstructed exactly; the recorder applies to new executions.
+
 ## Node contracts and authority
 
 `parse_expedition_request` uses an injected model with structured output to create an optional-field `ExpeditionRequestDraft`. The parser prompt treats embedded instructions as user data. Deterministic construction of `ExpeditionRequest` then enforces required values, exactly one location and `Europe/London`. Missing data causes an interrupt; the parser never fills it silently.
@@ -80,7 +103,7 @@ Required-source failures and the six-round evidence limit end in a typed safe fa
 - `get_weather_context`: uses the resolved location and exact requested date;
 - `find_public_green_spaces`: uses the trusted radius, resolved location and already-recorded occurrence evidence.
 
-The tools are executed by a genuine LangGraph `ToolNode`. Their repositories are bound in closures. Tool messages contain compact summaries only. Full Phase 1 results are kept as JSON state, validated in `record_structured_evidence`, and never include raw occurrence records. Model-visible summaries omit occurrence coordinates, occurrence identifiers, `record_ref`, HMAC references, site centre coordinates and safe-cell associations.
+The tools are executed by a genuine LangGraph `ToolNode`. Their repositories are bound in closures. Tool messages contain compact summaries only. The model may request independent tools in parallel; the CLI normalises LangGraph's list-shaped parallel updates before displaying them. Full Phase 1 results are kept as JSON state, validated in `record_structured_evidence`, and never include raw occurrence records. Model-visible summaries omit occurrence coordinates, occurrence identifiers, `record_ref`, HMAC references, site centre coordinates and safe-cell associations.
 
 Identical calls use canonical trusted arguments. A completed non-retryable call is suppressed; an explicitly retryable failure may be retried. Public-site search before occurrence evidence returns a typed ordering error. The sixth evidence-agent round cannot start another tool execution.
 
@@ -137,7 +160,7 @@ The graph does not offer user choices for source failure, unavailable routing, u
 
 ## Composition, grounding and fallback
 
-The composer receives a coordinate-free validated bundle containing exact status, taxon, date, duration, London start context, candidate/contextual site views, weather, constraints, limitations, actions, provenance references and evidence-citation names. It does not receive the original request or raw occurrence records.
+The composer receives a coordinate-free validated bundle containing exact status, taxon, date, duration, London start context, candidate/contextual site views, weather, constraints, limitations, actions, provenance references and evidence-citation names. URL query strings are removed from model-facing provenance references because a weather request URL can contain the resolved postcode centroid. It does not receive the original request or raw occurrence records.
 
 The strict `BiodiversityExpeditionPlan` separates recommended and contextual sites. Each site copies a deterministic ID, name, access certainty, evidence tier and approximate straight-line distance. Evidence attributions and provenance references are separate required fields and are checked exactly.
 
@@ -147,7 +170,7 @@ Post-generation checks reject:
 - status disagreement with Phase 1;
 - changed dates, durations, distances, access values, weather values or constraints;
 - invented or exposed safe cells and associations;
-- occurrence coordinates, IDs, `record_ref` or HMAC text;
+- occurrence coordinates, occurrence-ID values, `record_ref` values or HMAC references;
 - access/opening assurances, walking-route claims, abundance/population claims, predictions, hotspot claims, sighting probabilities or guarantees;
 - missing limitations, attribution, provenance or evidence citations.
 
@@ -217,7 +240,14 @@ python -m scripts.phase0_feasibility
 git diff --check
 ```
 
-The opt-in live smoke test additionally requires `RUN_LIVE_BIODIVERSITY_AGENT=1`. It asserts typed outcomes and privacy invariants, not permanent counts or exact prose.
+The opt-in live end-to-end test additionally requires `RUN_LIVE_BIODIVERSITY_AGENT=1` and must be selected explicitly because `pytest.ini` excludes `live` by default:
+
+```bash
+RUN_LIVE_BIODIVERSITY_AGENT=1 \
+python -m pytest -m live tests/test_phase2_live_langgraph.py -vv -s
+```
+
+`collected 1 item` followed by `PASSED` means the online test ran. `deselected` or `skipped` means it did not. A pass now requires resolved live location and taxonomy, strong occurrence evidence, available exact-date weather, successful site search and an LLM-composed or LLM-revised plan that passes grounding. A deterministic fallback is reported as a failure rather than a false-positive pass. Counts and exact prose remain unpinned because live data and model wording can change.
 
 ## Limitations and deferred work
 

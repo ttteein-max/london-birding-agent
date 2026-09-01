@@ -1,0 +1,211 @@
+{
+  "status": "candidate_plan_ready",
+  "target_species": "Columba palumbus",
+  "target_date": "2026-09-01",
+  "duration_hours": 2.0,
+  "resolved_london_start_context": "Postcode centroid SW11 4NJ, Wandsworth, within Greater London.",
+  "recommended_sites": [
+    {
+      "site_id": "osm-way-1187346499",
+      "name": "Sub-Tropical Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 0.25,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-relation-4109332",
+      "name": "Meadowbank Area SMI",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.28,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-way-154293379",
+      "name": "Yalta Memorial Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.31,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-way-24436380",
+      "name": "John Madejski Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.46,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-way-4959893",
+      "name": "Prince's Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.71,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-relation-20172284",
+      "name": "Cardinal Place Roof Gaeden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.77,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-way-28418911",
+      "name": "Channel 4 Park",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.95,
+      "evidence_tier": "directly_grounded"
+    },
+    {
+      "site_id": "osm-way-230381104",
+      "name": "Living Wall",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 3.29,
+      "evidence_tier": "directly_grounded"
+    }
+  ],
+  "contextual_sites": [
+    {
+      "site_id": "osm-way-225907207",
+      "name": "Chelsea Embankment Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 0.9,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-804847432",
+      "name": "Mulberry Square",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.51,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-23066992",
+      "name": "Eden Nature Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.64,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-421889395",
+      "name": "Churchill Gardens Wildflower Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.71,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-32865592",
+      "name": "Redcliffe Square Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.33,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-4259687",
+      "name": "Victoria Tower Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 3.36,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-relation-3439360",
+      "name": "St Mary's Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 3.49,
+      "evidence_tier": "nearby_context"
+    },
+    {
+      "site_id": "osm-way-4373996",
+      "name": "Jubilee Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 4.28,
+      "evidence_tier": "nearby_context"
+    }
+  ],
+  "weather_context": {
+    "status": "available",
+    "requested_date": "2026-09-01",
+    "maximum_temperature_c": 22.5,
+    "minimum_temperature_c": 13.6,
+    "precipitation_probability_percent": 0,
+    "precipitation_amount_mm": 0.0,
+    "explanation": "Exact-date weather context is available; it does not indicate the chance of seeing the bird."
+  },
+  "constraints": [
+    {
+      "code": "greater_london_scope",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Postcode centroid resolved and validated within Greater London."
+    },
+    {
+      "code": "taxon_resolution",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "One accepted Aves species has an exact scientific or English common-name match."
+    },
+    {
+      "code": "historical_evidence_quality",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Historical evidence passes the deterministic map gate."
+    },
+    {
+      "code": "grounded_public_site_candidates",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Every recommended site is associated with an allowed safe-map cell."
+    },
+    {
+      "code": "contextual_sites_not_recommendations",
+      "status": "not_applicable",
+      "severity": "information",
+      "message": "Nearby green spaces are retained as contextual options only; they are not included in grounded recommendations or candidate-plan readiness."
+    },
+    {
+      "code": "duration_within_phase1_bounds",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Requested duration of 2 hours is accepted."
+    },
+    {
+      "code": "search_radius",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Candidate search uses a 5 km projected radius; this is distinct from walking distance."
+    }
+  ],
+  "unresolved_limitations": [
+    "Historical occurrence evidence does not guarantee a sighting.",
+    "The backend does not estimate bird populations or abundance.",
+    "No individual occurrence coordinates are included.",
+    "Candidate-site access and opening are not guaranteed.",
+    "Projected proximity is not a walking route or walking-distance validation.",
+    "This output is not legal or conservation advice and executes no field action.",
+    "Historical occurrence records do not predict or guarantee a sighting.",
+    "Record counts are not population or abundance estimates.",
+    "Only records with known uncertainty of at most 1,000 m support spatial ranking."
+  ],
+  "suggested_next_actions": [],
+  "provenance_references": [
+    "https://api.postcodes.io/postcodes/SW114NJ",
+    "https://www.gbif.org/developer/species",
+    "https://www.gbif.org/developer/occurrence",
+    "https://api.open-meteo.com/v1/forecast",
+    "data/osm/london-green-space-candidates-2026-08-31.geojson"
+  ],
+  "evidence_attributions": [
+    "Postcodes.io",
+    "GBIF.org",
+    "GBIF.org and contributing datasets",
+    "Weather data by Open-Meteo.com",
+    "© OpenStreetMap contributors"
+  ],
+  "evidence_citations": [
+    "location",
+    "taxonomy",
+    "occurrence",
+    "public_sites",
+    "weather"
+  ],
+  "explanation": "The bounded historical sample passes the strong gate, and every candidate site has a source polygon intersecting an approved aggregated safe-map cell.",
+  "generated_by": "llm_phase_2_composer"
+}
