@@ -1,0 +1,15 @@
+{
+  "run_date": "2026-09-01",
+  "request": "Plan a two-hour expedition from SW11 4NJ on 1 September 2026 to look for Common woodpigeon.",
+  "thread_id": "phase2-live-gemini-20260901",
+  "data_mode": "live",
+  "model_mode": "live",
+  "model": "gemini-3.7-flash",
+  "base_url": "https://api.openai-proxy.org/v1",
+  "credential_source": "macOS Keychain item agent-control-studio-closeai-api-key",
+  "credential_value_saved": false,
+  "live_test_result": "1 passed in 223.35s",
+  "terminal_status": "completed",
+  "grounding_result": "passed_without_revision",
+  "privacy_note": "This artifact excludes API credentials, individual occurrence coordinates, occurrence identifiers, HMAC references and internal safe-cell associations."
+}

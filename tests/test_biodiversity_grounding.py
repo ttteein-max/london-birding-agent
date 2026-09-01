@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from datetime import date
+from types import SimpleNamespace
 
 import pytest
 
 from app.biodiversity.agent_models import ExpeditionRequestDraft, PlanSiteOption
 from app.biodiversity.graph import build_biodiversity_graph
+from app.biodiversity.graph.grounding import provenance_references
 from app.biodiversity.models import ExpeditionPlanStatus
 from app.biodiversity.testing import (
     ScriptedEvidenceModel,
@@ -109,6 +111,40 @@ def test_grounding_rejects_precise_coordinate_or_identifier_leakage(leak: str) -
     result = run_with_responses([unsafe])
     assert result["plan_revision_count"] == 1
     assert leak not in result["final_validated_plan"]["explanation"]
+
+
+def test_grounding_allows_privacy_disclaimer_without_sensitive_values() -> None:
+    def disclaimer(payload):
+        plan = plan_from_compact_payload(payload)
+        return plan.model_copy(
+            update={
+                "explanation": (
+                    f"{plan.explanation} No HMAC references, record_ref values or "
+                    "occurrenceID values are included."
+                )
+            }
+        )
+
+    result = run_with_responses([disclaimer])
+    assert result["plan_revision_count"] == 0
+    assert result["terminal_status"] == "completed"
+    assert result["final_validated_plan"]["generated_by"] == "llm_phase_2_composer"
+
+
+def test_model_facing_provenance_strips_coordinate_query_parameters() -> None:
+    bundle = SimpleNamespace(
+        provenance=[
+            SimpleNamespace(
+                source_reference=(
+                    "https://api.open-meteo.com/v1/forecast?"
+                    "latitude=51.4704&longitude=-0.1663&start_date=2026-09-01"
+                )
+            )
+        ]
+    )
+    assert provenance_references(bundle) == [
+        "https://api.open-meteo.com/v1/forecast"
+    ]
 
 
 @pytest.mark.parametrize("unsafe", [invented_site, promoted_contextual_site])

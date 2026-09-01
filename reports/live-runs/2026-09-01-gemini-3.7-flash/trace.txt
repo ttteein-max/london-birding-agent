@@ -1,0 +1,23 @@
+NODE parse_expedition_request
+NODE resolve_location
+NODE resolve_taxon
+NODE evidence_agent
+TOOL CALL search_occurrences args={}
+TOOL CALL get_weather_context args={}
+NODE evidence_tools
+NODE record_structured_evidence
+EVIDENCE occurrence_evidence status=strong_map_evidence
+EVIDENCE weather_evidence status=available
+NODE evidence_agent
+TOOL CALL find_public_green_spaces args={}
+NODE evidence_tools
+NODE record_structured_evidence
+EVIDENCE public_site_search status=success
+NODE evidence_agent
+NODE deterministic_validation
+NODE compose_expedition_plan
+NODE grounding_and_safety_checks
+
+The model selected occurrence and weather tools in parallel. Public-site search
+ran only after occurrence evidence had been recorded. The first composed plan
+passed deterministic grounding, so no revision or fallback node ran.

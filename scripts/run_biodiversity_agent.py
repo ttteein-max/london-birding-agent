@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from pathlib import Path
 from typing import Any
 
 from langchain.messages import AIMessage
@@ -15,7 +16,25 @@ from app.biodiversity.graph import (
     create_biodiversity_checkpointer,
 )
 from app.biodiversity.orchestration import BackendDependencies
+from app.biodiversity.observability import AgentRunRecorder
+from app.biodiversity.reporting import (
+    default_report_directory,
+    save_biodiversity_run_report,
+)
 from app.biodiversity.testing import make_scripted_biodiversity_models
+
+
+PROJECT_ROOT = Path(__file__).parents[1]
+
+
+def _update_fragments(update: Any) -> list[dict[str, Any]]:
+    """Normalise single and parallel ToolNode stream updates for display."""
+
+    if isinstance(update, dict):
+        return [update]
+    if isinstance(update, list):
+        return [fragment for fragment in update if isinstance(fragment, dict)]
+    return []
 
 
 def _print_updates(graph: Any, graph_input: Any, config: dict[str, Any]) -> None:
@@ -30,14 +49,17 @@ def _print_updates(graph: Any, graph_input: Any, config: dict[str, Any]) -> None
             if node_name == "__interrupt__":
                 continue
             print(f"NODE {node_name}")
-            for message in (update or {}).get("messages", []):
-                if isinstance(message, AIMessage):
-                    for call in message.tool_calls:
-                        print(f"TOOL CALL {call['name']} args={json.dumps(call['args'], sort_keys=True)}")
-            for field in ("occurrence_evidence", "weather_evidence", "public_site_search"):
-                value = (update or {}).get(field)
-                if value:
-                    print(f"EVIDENCE {field} status={value.get('outcome') or value.get('status')}")
+            for fragment in _update_fragments(update):
+                for message in fragment.get("messages", []):
+                    if isinstance(message, AIMessage):
+                        for call in message.tool_calls:
+                            print(f"TOOL CALL {call['name']} args={json.dumps(call['args'], sort_keys=True)}")
+                for field in ("occurrence_evidence", "weather_evidence", "public_site_search"):
+                    value = fragment.get(field)
+                    if value:
+                        print(f"EVIDENCE {field} status={value.get('outcome') or value.get('status')}")
+                for error in fragment.get("grounding_errors", []):
+                    print(f"GROUNDING ERROR {error}")
 
 
 def _automatic_resume(payload: dict[str, Any]) -> dict[str, Any]:
@@ -71,6 +93,16 @@ def main() -> None:
     parser.add_argument("--resume-json", help="JSON resume object for the first interrupt.")
     parser.add_argument("--auto-resume", action="store_true", help="Use the safe scripted demonstration choice at each interrupt.")
     parser.add_argument("--compact", action="store_true", help="Print a compact final plan summary after node progress.")
+    parser.add_argument(
+        "--report-dir",
+        type=Path,
+        help="Exact directory for saved metadata, events, timings, tool audit, and final plan.",
+    )
+    parser.add_argument(
+        "--no-save-report",
+        action="store_true",
+        help="Do not save the default local run report under reports/runs.",
+    )
     args = parser.parse_args()
 
     dependencies = BackendDependencies.fixture() if args.data_mode == "fixture" else BackendDependencies.live()
@@ -89,28 +121,60 @@ def main() -> None:
             dependencies=dependencies,
             checkpointer=create_biodiversity_checkpointer(),
         )
-    config = {"configurable": {"thread_id": args.thread_id}}
+    recorder = AgentRunRecorder(thread_id=args.thread_id)
+    config = {
+        "configurable": {"thread_id": args.thread_id},
+        "callbacks": [recorder],
+    }
     graph_input: Any = {"original_request_text": args.request}
     supplied_resume = json.loads(args.resume_json) if args.resume_json else None
-    while True:
-        _print_updates(graph, graph_input, config)
-        snapshot = graph.get_state(config)
-        interrupts = [interrupt for task in snapshot.tasks for interrupt in task.interrupts]
-        if not interrupts:
-            result = snapshot.values
-            break
-        payload = interrupts[0].value
-        print("INTERRUPT")
-        print(json.dumps(payload, indent=2, ensure_ascii=False))
-        if supplied_resume is not None:
-            resume = supplied_resume
-            supplied_resume = None
-        elif args.auto_resume:
-            resume = _automatic_resume(payload)
-        else:
-            resume = json.loads(input("Resume JSON: "))
-        print(f"RESUME {json.dumps(resume, ensure_ascii=False)}")
-        graph_input = Command(resume=resume)
+    result: dict[str, Any] = {}
+    try:
+        while True:
+            _print_updates(graph, graph_input, config)
+            snapshot = graph.get_state(config)
+            interrupts = [interrupt for task in snapshot.tasks for interrupt in task.interrupts]
+            if not interrupts:
+                result = dict(snapshot.values)
+                break
+            payload = interrupts[0].value
+            print("INTERRUPT")
+            print(json.dumps(payload, indent=2, ensure_ascii=False))
+            if supplied_resume is not None:
+                resume = supplied_resume
+                supplied_resume = None
+            elif args.auto_resume:
+                resume = _automatic_resume(payload)
+            else:
+                resume = json.loads(input("Resume JSON: "))
+            print(f"RESUME {json.dumps(resume, ensure_ascii=False)}")
+            graph_input = Command(resume=resume)
+    except Exception as error:
+        recorder.finish(
+            "failed",
+            payload={"error_type": type(error).__name__},
+        )
+        if not args.no_save_report:
+            report_dir = args.report_dir or default_report_directory(
+                PROJECT_ROOT / "reports" / "runs",
+                thread_id=args.thread_id,
+                run_id=recorder.run_id,
+            )
+            save_biodiversity_run_report(
+                report_dir,
+                recorder=recorder,
+                result=result,
+                request=args.request,
+                data_mode=args.data_mode,
+                model_mode=args.model_mode,
+            )
+            print(f"RUN REPORT {report_dir.resolve()}")
+        raise
+
+    recorder.finish(
+        "completed",
+        payload={"terminal_status": result.get("terminal_status")},
+    )
 
     final_plan = result.get("final_validated_plan")
     if args.compact and final_plan:
@@ -132,6 +196,21 @@ def main() -> None:
         "terminal_result": result.get("terminal_result"),
     }
     print(json.dumps(summary, indent=2, ensure_ascii=False))
+    if not args.no_save_report:
+        report_dir = args.report_dir or default_report_directory(
+            PROJECT_ROOT / "reports" / "runs",
+            thread_id=args.thread_id,
+            run_id=recorder.run_id,
+        )
+        save_biodiversity_run_report(
+            report_dir,
+            recorder=recorder,
+            result=result,
+            request=args.request,
+            data_mode=args.data_mode,
+            model_mode=args.model_mode,
+        )
+        print(f"RUN REPORT {report_dir.resolve()}")
 
 
 if __name__ == "__main__":

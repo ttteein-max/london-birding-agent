@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-import json
 import re
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
 from app.biodiversity.agent_models import (
     BiodiversityExpeditionPlan,
@@ -40,13 +40,18 @@ def london_start_context(bundle: ExpeditionEvidenceBundle) -> str:
 
 
 def provenance_references(bundle: ExpeditionEvidenceBundle) -> list[str]:
-    return list(
-        dict.fromkeys(
-            item.source_reference
-            for item in bundle.provenance
-            if item.source_reference
-        )
-    )
+    references: list[str] = []
+    for item in bundle.provenance:
+        reference = item.source_reference
+        if not reference:
+            continue
+        parts = urlsplit(reference)
+        if parts.scheme in {"http", "https"}:
+            # Query strings can contain a postcode centroid used for weather lookup.
+            # The stable source endpoint is sufficient provenance for model output.
+            reference = urlunsplit((parts.scheme, parts.netloc, parts.path, "", ""))
+        references.append(reference)
+    return list(dict.fromkeys(references))
 
 
 def evidence_attributions(bundle: ExpeditionEvidenceBundle) -> list[str]:
@@ -224,23 +229,24 @@ def validate_grounded_plan(
     if draft.evidence_citations != required_evidence_citations(bundle):
         errors.append("Evidence citations refer to missing evidence or omit required evidence.")
 
-    serialised = json.dumps(draft.model_dump(mode="json"), ensure_ascii=False).casefold()
-    leakage_tokens = [
-        "decimallatitude",
-        "decimallongitude",
-        "occurrenceid",
-        "occurrence_id",
-        "gbifid",
-        "record_ref",
-        "hmac",
+    # Every structured field above is compared exactly with trusted deterministic
+    # input. The explanation is the only free-form model output and therefore the
+    # only place where a record identifier or precise coordinate can be invented.
+    explanation = draft.explanation.casefold()
+    sensitive_value_patterns = [
+        r"\b(?:decimallatitude|decimallongitude|occurrenceid|occurrence_id|gbifid|record_ref)\s*[:=]\s*[\"']?[^\s,;\]}]+",
+        r"\bhmac(?:\s+(?:reference|ref))?\s*(?::|=|\s)\s*(?:secret|[a-f0-9]{8,})\b",
     ]
-    if any(token in serialised for token in leakage_tokens):
+    if any(re.search(pattern, explanation) for pattern in sensitive_value_patterns):
         errors.append("The draft exposes an occurrence coordinate or record identifier.")
-    if re.search(r"\bbng-1km-\d", draft.explanation.casefold()):
+    if re.search(r"\bbng-1km-\d", explanation):
         errors.append("The draft exposes or invents safe-cell associations.")
-    if re.search(r"\bassociated_safe_cell_ids?\b|\bsafe[- ]cell (?:id|association)\b", draft.explanation.casefold()):
+    if re.search(
+        r"\b(?:associated_safe_cell_ids?|safe[- ]cell (?:id|association))\s*[:=]",
+        explanation,
+    ):
         errors.append("The draft exposes or invents safe-cell associations.")
-    if re.search(r"\b(?:latitude|longitude)\s*[:=]\s*-?\d+\.\d+", serialised):
+    if re.search(r"\b(?:latitude|longitude)\s*[:=]\s*-?\d+\.\d+", explanation):
         errors.append("The draft contains precise labelled coordinates.")
     for label in _positive_unsupported_claims(draft.explanation):
         errors.append(f"The explanation contains an unsupported {label}.")
