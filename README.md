@@ -38,7 +38,20 @@ The standalone Git history preserves the implemented biodiversity phases as immu
 - `phase-1.1`: site-grounding gate hardening;
 - `phase-1.2`: contextual-site tiers and same-snapshot fixtures.
 
-The default `main` branch contains Phase 1.2 plus repository-only publishing metadata. No Phase 2 LangGraph or LLM implementation is included.
+The default `main` branch now contains the Phase 2 biodiversity LangGraph implementation above the tagged Phase 1.2 deterministic baseline.
+
+## Phase 2 quick start
+
+Phase 2 adds a separate, checkpointed biodiversity LangGraph above the unchanged Phase 1.2 authority boundary. It parses natural English, uses a genuine ToolNode evidence loop, interrupts for validated human choices, composes a structured plan and applies deterministic grounding checks with one revision and a safe fallback. Fixture/scripted mode requires no API key:
+
+```bash
+python -m scripts.run_biodiversity_agent \
+  --request "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 to look for Common woodpigeon." \
+  --data-mode fixture \
+  --model-mode scripted
+```
+
+Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 2 LangGraph documentation](docs/phase-2-biodiversity-langgraph.md) for the topology, state reducers, HITL payloads, safety boundary and all CLI commands.
 
 ## What Phase 0.1 demonstrates
 
