@@ -1,0 +1,23 @@
+[
+  {
+    "call_id": "toolu_custom_r9EXSP4c9jb1KqKKfoITVbws",
+    "tool_name": "search_occurrences",
+    "canonical_arguments": "{\"accepted_taxon_key\": 2495455, \"seasonal_months\": [8, 9, 10], \"seasonal_window_radius_months\": 1, \"target_month\": \"09\"}",
+    "status": "success",
+    "retryable": false
+  },
+  {
+    "call_id": "toolu_custom_D6lmxO7xsNjM2YCE1c31DXeC",
+    "tool_name": "get_weather_context",
+    "canonical_arguments": "{\"location\": \"SW11 4NJ\", \"requested_date\": \"2026-09-02\"}",
+    "status": "success",
+    "retryable": false
+  },
+  {
+    "call_id": "toolu_custom_BC50SUGhxNii69wz5qK7Au43",
+    "tool_name": "find_public_green_spaces",
+    "canonical_arguments": "{\"location\": \"SW11 4NJ\", \"occurrence_outcome\": \"strong_map_evidence\", \"search_radius_km\": 5.0, \"target_month\": 9}",
+    "status": "success",
+    "retryable": false
+  }
+]

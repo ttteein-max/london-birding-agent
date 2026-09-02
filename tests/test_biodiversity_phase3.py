@@ -17,7 +17,7 @@ from app.biodiversity.graph import (
 )
 from app.biodiversity.observability import AgentRunRecorder
 from app.biodiversity.reporting import save_biodiversity_run_report
-from app.biodiversity.run_models import ForkRequest
+from app.biodiversity.run_models import ForkRequest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
 from app.biodiversity.testing import (
     ScriptedRequestParserModel,
@@ -58,6 +58,8 @@ def test_sqlite_interrupt_survives_graph_rebuild_and_thread_isolation(
         graph, _ = _graph(checkpointer, _draft("robin", 1))
         first = BiodiversityRunManager(graph).start("Look for robin", thread_id="one")
         assert _interrupt(first)["kind"] == "taxon_selection"
+        assert first["run_manifest"]["data_mode"] == "fixture"
+        assert first["run_manifest"]["model_mode"] == "scripted"
 
     with open_biodiversity_sqlite_checkpointer(database) as checkpointer:
         graph, _ = _graph(checkpointer, _draft("robin", 1))
@@ -89,6 +91,39 @@ def test_sqlite_interrupt_survives_graph_rebuild_and_thread_isolation(
         )
         assert completed["terminal_status"] == "completed"
         assert completed["final_validated_plan"]["recommended_sites"] == []
+        assert completed["final_validated_plan"]["evidence_gate_passed"] is False
+        assert completed["final_validated_plan"]["low_confidence_accepted"] is True
+        assert "evidence gate did not pass" in completed["final_validated_plan"][
+            "low_confidence_notice"
+        ]
+
+
+def test_saved_run_manifest_rejects_runtime_mode_switch_without_mutation(
+    tmp_path: Path,
+) -> None:
+    database = tmp_path / "manifest.sqlite"
+    with open_biodiversity_sqlite_checkpointer(database) as checkpointer:
+        graph, _ = _graph(checkpointer, _draft("robin", 1))
+        manager = BiodiversityRunManager(graph)
+        manager.start("robin", thread_id="manifest")
+        before = len(manager.history(thread_id="manifest"))
+
+    with open_biodiversity_sqlite_checkpointer(database) as checkpointer:
+        graph, _ = _graph(checkpointer, _draft("robin", 1))
+        mismatched = BiodiversityRunManager(
+            graph,
+            run_profile=RunProfile(
+                data_mode="live",
+                model_mode="scripted",
+                model_identifier="scripted-biodiversity-v1",
+            ),
+        )
+        with pytest.raises(ValueError, match="data_mode"):
+            mismatched.resume(
+                thread_id="manifest",
+                resume={"accepted_taxon_key": 2489281},
+            )
+        assert len(mismatched.history(thread_id="manifest")) == before
 
 
 def test_ambiguous_payload_has_taxonomy_bounded_previews_and_no_private_data() -> None:
@@ -242,6 +277,11 @@ def test_related_taxon_requires_second_interrupt_and_rejects_forged_key() -> Non
     )
     assert result["resolved_taxon"]["accepted_taxon_key"] == chosen
     assert result["weather_evidence"] is not None
+    assert result["related_taxon_candidates"] == []
+    assert result["related_taxon_source_key"] is None
+    assert result["resolved_taxon"]["provenance"]["source_record_type"] == (
+        "accepted_related_taxon_selection"
+    )
     assert [item["tool_name"] for item in result["executed_tool_call_audit"]].count(
         "get_weather_context"
     ) == 1
@@ -257,6 +297,8 @@ def test_accept_low_confidence_has_no_recommended_sites() -> None:
     )
     assert result["final_validated_plan"]["status"] == "context_only"
     assert result["final_validated_plan"]["recommended_sites"] == []
+    assert result["final_validated_plan"]["evidence_gate_passed"] is False
+    assert result["final_validated_plan"]["low_confidence_accepted"] is True
     assert any(
         item.get("option") == "keep_constraints_accept_low_confidence"
         for item in result["applied_user_decisions"]
@@ -281,11 +323,28 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
         item for item in history if item.next_nodes == ["compose_expedition_plan"]
     )
     invocations_before = composer.invocations
-    manager.replay(
+    original_branch = manager.branches(thread_id="travel")[0]
+    replay = manager.replay(
         thread_id="travel",
         checkpoint_id=before_compose.checkpoint_id,
     )
     assert composer.invocations == invocations_before + 1
+    assert replay.execution_id != before_compose.execution_id
+    assert replay.parent_execution_id == before_compose.execution_id
+    assert replay.replayed_from_checkpoint_id == before_compose.checkpoint_id
+    branch_after_replay = next(
+        item
+        for item in manager.branches(thread_id="travel")
+        if item.branch_id == original_branch.branch_id
+    )
+    assert branch_after_replay.final_checkpoint_id == original_final
+    assert branch_after_replay.created_at == original_branch.created_at
+    replay_execution = next(
+        item
+        for item in manager.executions(thread_id="travel")
+        if item.execution_id == replay.execution_id
+    )
+    assert replay_execution.final_checkpoint_id == replay.final_checkpoint_id
 
     fork = manager.fork(
         ForkRequest(
@@ -333,6 +392,15 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
         for item in fork_snapshot.values["applied_user_decisions"]
     ]
     assert len(decisions) == len(set(decisions))
+    refreshed_history = manager.history(thread_id="travel")
+    original_summaries = [
+        item
+        for item in refreshed_history
+        if item.execution_id == before_compose.execution_id
+    ]
+    assert {item.final_checkpoint_id for item in original_summaries} == {
+        original_final
+    }
     public_contract = json.dumps(
         {
             "history": [item.model_dump(mode="json") for item in history],
@@ -348,6 +416,55 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
         "safe_map_cells",
     ):
         assert forbidden not in public_contract
+
+
+def test_terminal_checkpoint_replay_is_rejected_without_ghost_execution() -> None:
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    completed = manager.start(
+        "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 "
+        "to look for Common woodpigeon.",
+        thread_id="terminal-replay",
+    )
+    terminal_checkpoint = manager.history(thread_id="terminal-replay")[0]
+    assert completed["terminal_status"] == "completed"
+    assert terminal_checkpoint.next_nodes == []
+    executions_before = manager.executions(thread_id="terminal-replay")
+
+    with pytest.raises(ValueError, match="no downstream nodes"):
+        manager.replay(
+            thread_id="terminal-replay",
+            checkpoint_id=terminal_checkpoint.checkpoint_id,
+        )
+
+    assert manager.executions(thread_id="terminal-replay") == executions_before
+
+
+def test_replayed_interrupt_resume_keeps_replay_execution_identity() -> None:
+    graph, _ = _graph(create_biodiversity_checkpointer(), _draft("Common swift", 7))
+    manager = BiodiversityRunManager(graph)
+    manager.start("swift", thread_id="replay-resume")
+    interrupted = manager.history(thread_id="replay-resume")[0]
+    assert interrupted.interrupt_kind == "actionable_tradeoff"
+
+    replay = manager.replay(
+        thread_id="replay-resume",
+        checkpoint_id=interrupted.checkpoint_id,
+    )
+    resumed = manager.resume(
+        thread_id="replay-resume",
+        checkpoint_id=replay.head_checkpoint_id,
+        resume={"option": "keep_constraints_accept_low_confidence"},
+    )
+
+    assert resumed["execution_id"] == replay.execution_id
+    assert resumed["parent_execution_id"] == replay.parent_execution_id
+    assert resumed["replayed_from_checkpoint_id"] == interrupted.checkpoint_id
+    replay_head = manager.execution_head(
+        thread_id="replay-resume",
+        execution_id=replay.execution_id,
+    )
+    assert replay_head.values["terminal_status"] == "completed"
 
 
 def test_phase3_events_and_report_include_checkpoint_branch_metadata(
@@ -392,6 +509,72 @@ def test_phase3_events_and_report_include_checkpoint_branch_metadata(
     assert metadata["branch_id"]
     assert metadata["parent_branch_id"]
     assert metadata["forked_from_checkpoint_id"] == original_checkpoint
+    assert metadata["execution_id"]
+    assert {span.kind for span in recorder.spans} == {"node", "model", "tool"}
+
+
+def test_multiple_pending_branches_require_an_exact_resume_target() -> None:
+    graph, _ = _graph(create_biodiversity_checkpointer(), _draft("Common swift", 7))
+    manager = BiodiversityRunManager(graph)
+    manager.start("swift", thread_id="multi-pending")
+    source = manager.history(thread_id="multi-pending")[0].checkpoint_id
+    first = manager.fork(
+        ForkRequest(
+            thread_id="multi-pending",
+            checkpoint_id=source,
+            updates={"duration_hours": 3},
+        )
+    )
+    second = manager.fork(
+        ForkRequest(
+            thread_id="multi-pending",
+            checkpoint_id=source,
+            updates={"duration_hours": 4},
+        )
+    )
+    assert first.interrupt_kind == second.interrupt_kind == "actionable_tradeoff"
+    with pytest.raises(ValueError, match="multiple pending executions"):
+        manager.resume(
+            thread_id="multi-pending",
+            resume={"option": "keep_constraints_accept_low_confidence"},
+        )
+    completed = manager.resume(
+        thread_id="multi-pending",
+        checkpoint_id=first.head_checkpoint_id,
+        resume={"option": "keep_constraints_accept_low_confidence"},
+    )
+    assert completed["expedition_request"]["duration_hours"] == 3
+    assert completed["terminal_status"] == "completed"
+    still_pending = manager.execution_head(
+        thread_id="multi-pending", execution_id=second.execution_id
+    )
+    assert _interrupt_kind(still_pending) == "actionable_tradeoff"
+
+
+def _interrupt_kind(snapshot) -> str | None:
+    for task in snapshot.tasks:
+        if task.interrupts:
+            return task.interrupts[0].value.get("kind")
+    return None
+
+
+def test_noop_fork_is_rejected_in_favour_of_replay() -> None:
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    manager.start(
+        "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 "
+        "to look for Common woodpigeon.",
+        thread_id="noop-fork",
+    )
+    source = manager.history(thread_id="noop-fork")[0].checkpoint_id
+    with pytest.raises(ValueError, match="use replay"):
+        manager.fork(
+            ForkRequest(
+                thread_id="noop-fork",
+                checkpoint_id=source,
+                updates={"search_radius_km": 5},
+            )
+        )
 
 
 def test_fixture_scripted_phase3_needs_no_openai_environment(

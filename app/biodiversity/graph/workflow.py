@@ -1,4 +1,4 @@
-"""Construction of the Phase 2 London biodiversity LangGraph."""
+"""Construction of the Phase 3 London biodiversity LangGraph."""
 
 from __future__ import annotations
 

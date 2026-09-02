@@ -1,10 +1,11 @@
-"""Deterministic, model-driven, HITL, and safety nodes for Phase 2."""
+"""Deterministic, model-driven, HITL, and safety nodes for Phase 3."""
 
 from __future__ import annotations
 
 import hashlib
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -30,7 +31,9 @@ from app.biodiversity.graph.prompts import (
 from app.biodiversity.graph.state import BiodiversityAgentState
 from app.biodiversity.models import (
     ConstraintStatus,
+    EvidenceItem,
     EvidenceOutcome,
+    EvidenceUse,
     ExpeditionEvidenceBundle,
     ExpeditionPlan,
     ExpeditionRequest,
@@ -404,6 +407,8 @@ def taxon_selection_interrupt(state: BiodiversityAgentState) -> dict[str, Any]:
     )
     return {
         "resolved_taxon": resolved.model_dump(mode="json"),
+        "related_taxon_candidates": [],
+        "related_taxon_source_key": None,
         "pending_hitl_kind": None,
         "pending_hitl_payload": None,
         "taxon_evidence_previews": [],
@@ -579,17 +584,17 @@ def source_resolution_failure(state: BiodiversityAgentState) -> dict[str, Any]:
     return {**_terminal(reason), "visited_nodes": ["source_resolution_failure"]}
 
 
-def _decision_names(state: BiodiversityAgentState) -> set[str]:
-    return {str(item.get("option")) for item in state.get("applied_user_decisions", []) if item.get("option")}
-
-
 def _actionable_tradeoff(
     state: BiodiversityAgentState,
     request: ExpeditionRequest,
     bundle: ExpeditionEvidenceBundle,
     related_candidates: list[RelatedTaxonCandidate],
 ) -> dict[str, Any] | None:
-    decisions = _decision_names(state)
+    decisions = {
+        str(item.get("option"))
+        for item in state.get("applied_user_decisions", [])
+        if item.get("option")
+    }
     sites = bundle.site_search
     actions = set(sites.suggested_actions)
     if sites.status == PublicSiteSearchStatus.no_suitable_public_sites and SiteSearchAction.expand_search_radius in actions and "expand_search_radius" not in decisions:
@@ -600,19 +605,13 @@ def _actionable_tradeoff(
             "options": [{"option": "expand_search_radius", "current_radius_km": request.search_radius_km, "maximum_radius_km": 25.0}],
             "resume_schema": {"option": "expand_search_radius", "search_radius_km": "number greater than current radius and at most 25"},
         }
-    low_evidence_decisions = {
-        "widen_seasonal_window",
-        "consider_related_taxa",
-        "keep_constraints_accept_low_confidence",
-        "accept_context_only",
-    }
     if (
         bundle.evidence_outcome
         in {
             EvidenceOutcome.limited_contextual_evidence,
             EvidenceOutcome.insufficient_evidence,
         }
-        and not low_evidence_decisions.intersection(decisions)
+        and not state.get("low_confidence_accepted", False)
     ):
         options: list[dict[str, Any]] = []
         if request.seasonal_window_radius_months < 3:
@@ -698,12 +697,19 @@ def deterministic_validation(
             "visited_nodes": ["deterministic_validation"],
         }
     related_candidates: list[RelatedTaxonCandidate] = []
+    related_taxon_source_key: int | None = None
     if bundle.evidence_outcome in {
         EvidenceOutcome.limited_contextual_evidence,
         EvidenceOutcome.insufficient_evidence,
     }:
-        raw_related = list(state.get("related_taxon_candidates") or [])
-        if not raw_related and dependencies is not None:
+        related_taxon_source_key = taxon.accepted_taxon_key
+        saved_source_key = state.get("related_taxon_source_key")
+        raw_related = (
+            list(state.get("related_taxon_candidates") or [])
+            if saved_source_key == taxon.accepted_taxon_key
+            else []
+        )
+        if saved_source_key != taxon.accepted_taxon_key and dependencies is not None:
             try:
                 raw_related = dependencies.taxonomy.related(
                     taxon.accepted_taxon_key or 0,
@@ -733,6 +739,7 @@ def deterministic_validation(
         "related_taxon_candidates": [
             item.model_dump(mode="json") for item in related_candidates
         ],
+        "related_taxon_source_key": related_taxon_source_key,
         "terminal_status": None,
         "visited_nodes": ["deterministic_validation"],
     }
@@ -775,6 +782,7 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
         "grounding_errors": [],
         "terminal_status": None,
         "terminal_result": None,
+        "low_confidence_accepted": False,
         "visited_nodes": ["apply_validated_user_choice"],
     }
     if option == "expand_search_radius":
@@ -811,9 +819,17 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
                 "public_site_search": None,
                 "invalidated_evidence": ["occurrence", "public_sites"],
                 "decision_route": "refresh_invalidated_evidence",
+                "low_confidence_accepted": False,
             }
         )
     elif option == "consider_related_taxa":
+        current_key = (state.get("resolved_taxon") or {}).get(
+            "accepted_taxon_key"
+        )
+        if state.get("related_taxon_source_key") != current_key:
+            raise ValueError(
+                "Saved related candidates do not belong to the current taxon"
+            )
         candidates = [
             RelatedTaxonCandidate.model_validate(item)
             for item in state.get("related_taxon_candidates", [])
@@ -825,6 +841,7 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
                 "pending_hitl_kind": "related_taxon_selection",
                 "pending_hitl_payload": {
                     "kind": "related_taxon_selection",
+                    "related_to_taxon_key": current_key,
                     "question": (
                         "Which deterministic GBIF-related taxon should replace the target? "
                         "Taxonomic relation is not ecological interchangeability."
@@ -841,6 +858,7 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
                     },
                 },
                 "decision_route": "related_taxon_selection_interrupt",
+                "low_confidence_accepted": False,
             }
         )
     elif option == "revise_rain_preference":
@@ -853,6 +871,11 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
         "accept_uncertain_access",
     }:
         raise ValueError("Unsupported deterministic trade-off option")
+    elif option in {
+        "keep_constraints_accept_low_confidence",
+        "accept_context_only",
+    }:
+        update["low_confidence_accepted"] = True
     return update
 
 
@@ -864,6 +887,9 @@ def related_taxon_selection_interrupt(
     payload = state.get("pending_hitl_payload")
     if state.get("pending_hitl_kind") != "related_taxon_selection" or not payload:
         raise ValueError("Related-taxon selection interrupt has no pending payload")
+    current_key = (state.get("resolved_taxon") or {}).get("accepted_taxon_key")
+    if payload.get("related_to_taxon_key") != current_key:
+        raise ValueError("Related-taxon payload does not match the current taxon")
     resumed = interrupt(payload)
     if not isinstance(resumed, dict) or set(resumed) != {"accepted_taxon_key"}:
         raise ValueError("Resume must contain only accepted_taxon_key")
@@ -883,6 +909,37 @@ def related_taxon_selection_interrupt(
         raise ValueError("accepted_taxon_key is not present in related candidates")
     previous = ResolvedTaxon.model_validate(state["resolved_taxon"])
     request = ExpeditionRequest.model_validate(state["expedition_request"])
+    provenance = previous.provenance
+    if provenance is not None:
+        provenance = provenance.model_copy(
+            update={
+                "source_record_type": "accepted_related_taxon_selection",
+                "retrieved_at": datetime.now(UTC),
+                "use_classification": EvidenceUse.validation,
+                "limitations": list(
+                    dict.fromkeys(
+                        [
+                            *provenance.limitations,
+                            "The selected species came from a bounded GBIF related-taxon query.",
+                            "Taxonomic relation does not imply ecological interchangeability.",
+                        ]
+                    )
+                ),
+            }
+        )
+    else:
+        provenance = EvidenceItem(
+            source="GBIF Species API",
+            source_record_type="accepted_related_taxon_selection",
+            retrieved_at=datetime.now(UTC),
+            licence="GBIF API terms; source datasets retain their own terms",
+            attribution="GBIF.org",
+            use_classification=EvidenceUse.validation,
+            limitations=[
+                "Taxonomic relation does not imply ecological interchangeability."
+            ],
+            source_reference="https://www.gbif.org/developer/species",
+        )
     resolved = ResolvedTaxon(
         status=TaxonStatus.resolved,
         original_input=request.bird_input,
@@ -900,7 +957,7 @@ def related_taxon_selection_interrupt(
         resolution_method=selected.resolution_method,
         confidence=selected.confidence,
         candidates=[],
-        provenance=previous.provenance,
+        provenance=provenance,
         rationale=(
             "The user selected a candidate returned by the deterministic GBIF "
             f"{selected.relation_level} query; related does not imply ecological "
@@ -914,6 +971,8 @@ def related_taxon_selection_interrupt(
     return {
         "expedition_request": updated_request.model_dump(mode="json"),
         "resolved_taxon": resolved.model_dump(mode="json"),
+        "related_taxon_candidates": [],
+        "related_taxon_source_key": None,
         "occurrence_evidence": None,
         "public_site_search": None,
         "deterministic_constraints": [],
@@ -924,6 +983,7 @@ def related_taxon_selection_interrupt(
         "final_validated_plan": None,
         "terminal_status": None,
         "terminal_result": None,
+        "low_confidence_accepted": False,
         "pending_hitl_kind": None,
         "pending_hitl_payload": None,
         "invalidated_evidence": ["occurrence", "public_sites"],
@@ -1084,7 +1144,13 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
     def compose_expedition_plan(state: BiodiversityAgentState) -> dict[str, Any]:
         bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
         phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
-        payload = compact_plan_payload(bundle, phase1_plan)
+        payload = compact_plan_payload(
+            bundle,
+            phase1_plan,
+            low_confidence_accepted=state.get(
+                "low_confidence_accepted", False
+            ),
+        )
         try:
             response = structured_composer.invoke(
                 [SystemMessage(content=PLAN_COMPOSER_PROMPT), HumanMessage(content=json.dumps(payload, ensure_ascii=False, indent=2))]
@@ -1105,7 +1171,13 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
         bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
         phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
         payload = {
-            "validated_evidence": compact_plan_payload(bundle, phase1_plan),
+            "validated_evidence": compact_plan_payload(
+                bundle,
+                phase1_plan,
+                low_confidence_accepted=state.get(
+                    "low_confidence_accepted", False
+                ),
+            ),
             "rejected_draft": state.get("draft_llm_plan"),
             "validation_errors": state.get("grounding_errors", []),
         }
@@ -1136,7 +1208,14 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
     except ValidationError as exc:
         errors = [f"Draft plan schema validation failed: {exc}"]
     else:
-        errors = validate_grounded_plan(bundle, phase1_plan, draft)
+        errors = validate_grounded_plan(
+            bundle,
+            phase1_plan,
+            draft,
+            low_confidence_accepted=state.get(
+                "low_confidence_accepted", False
+            ),
+        )
     if errors:
         return {"grounding_errors": errors, "visited_nodes": ["grounding_and_safety_checks"]}
     return {
@@ -1150,7 +1229,11 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
 def deterministic_plan_fallback(state: BiodiversityAgentState) -> dict[str, Any]:
     bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
     phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
-    fallback = deterministic_safe_plan(bundle, phase1_plan)
+    fallback = deterministic_safe_plan(
+        bundle,
+        phase1_plan,
+        low_confidence_accepted=state.get("low_confidence_accepted", False),
+    )
     return {
         "final_validated_plan": fallback.model_dump(mode="json"),
         "terminal_status": "completed_with_deterministic_fallback",

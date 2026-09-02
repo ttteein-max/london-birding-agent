@@ -13,10 +13,22 @@ from app.biodiversity.agent_models import (
     PlanWeatherContext,
 )
 from app.biodiversity.models import (
+    EvidenceOutcome,
     ExpeditionEvidenceBundle,
     ExpeditionPlan,
     ExpeditionPlanStatus,
 )
+
+
+LOW_CONFIDENCE_NOTICE = (
+    "The deterministic historical-evidence gate did not pass. The user chose "
+    "to keep the current constraints and accept a low-confidence, "
+    "non-recommendation result."
+)
+
+
+def evidence_gate_passed(bundle: ExpeditionEvidenceBundle) -> bool:
+    return bundle.evidence_outcome == EvidenceOutcome.strong_map_evidence
 
 
 def _site_view(site: Any) -> dict[str, Any]:
@@ -89,6 +101,8 @@ def weather_plan_context(bundle: ExpeditionEvidenceBundle) -> dict[str, Any] | N
 def compact_plan_payload(
     bundle: ExpeditionEvidenceBundle,
     phase1_plan: ExpeditionPlan,
+    *,
+    low_confidence_accepted: bool = False,
 ) -> dict[str, Any]:
     """Return only validated coordinate-free facts needed by the composer."""
 
@@ -113,6 +127,11 @@ def compact_plan_payload(
         "provenance_references": provenance_references(bundle),
         "evidence_attributions": evidence_attributions(bundle),
         "required_evidence_citations": required_evidence_citations(bundle),
+        "evidence_gate_passed": evidence_gate_passed(bundle),
+        "low_confidence_accepted": low_confidence_accepted,
+        "low_confidence_notice": (
+            LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
+        ),
         "phase1_evidence_explanation": phase1_plan.evidence_explanation,
     }
 
@@ -162,6 +181,8 @@ def validate_grounded_plan(
     bundle: ExpeditionEvidenceBundle,
     phase1_plan: ExpeditionPlan,
     draft: BiodiversityExpeditionPlan,
+    *,
+    low_confidence_accepted: bool = False,
 ) -> list[str]:
     """Reject any LLM output that disagrees with deterministic evidence."""
 
@@ -174,6 +195,15 @@ def validate_grounded_plan(
         errors.append("Target date was altered.")
     if draft.duration_hours != bundle.request.duration_hours:
         errors.append("Duration was altered.")
+    if draft.evidence_gate_passed != evidence_gate_passed(bundle):
+        errors.append("Historical-evidence gate status was altered.")
+    if draft.low_confidence_accepted != low_confidence_accepted:
+        errors.append("Low-confidence user acceptance was altered.")
+    expected_notice = (
+        LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
+    )
+    if draft.low_confidence_notice != expected_notice:
+        errors.append("The required low-confidence notice was omitted or altered.")
     if draft.resolved_london_start_context != london_start_context(bundle):
         errors.append("Resolved London start context was altered or invented.")
 
@@ -254,6 +284,8 @@ def validate_grounded_plan(
 def deterministic_safe_plan(
     bundle: ExpeditionEvidenceBundle,
     phase1_plan: ExpeditionPlan,
+    *,
+    low_confidence_accepted: bool = False,
 ) -> BiodiversityExpeditionPlan:
     """Assemble a model-independent plan that is safe by construction."""
 
@@ -285,6 +317,11 @@ def deterministic_safe_plan(
         provenance_references=provenance_references(bundle),
         evidence_attributions=evidence_attributions(bundle),
         evidence_citations=required_evidence_citations(bundle),
+        evidence_gate_passed=evidence_gate_passed(bundle),
+        low_confidence_accepted=low_confidence_accepted,
+        low_confidence_notice=(
+            LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
+        ),
         explanation=(
             f"{status_explanation} Candidate distances are approximate straight-line "
             "projected distances, not walking distances. Access and opening must be checked independently."

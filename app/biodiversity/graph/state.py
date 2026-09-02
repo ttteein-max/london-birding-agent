@@ -1,4 +1,4 @@
-"""JSON-safe typed state and explicit reducers for the biodiversity graph."""
+"""JSON-safe typed state and explicit reducers for the Phase 3 graph."""
 
 from __future__ import annotations
 
@@ -103,10 +103,18 @@ class BiodiversityAgentState(TypedDict, total=False):
     ]
     terminal_status: NotRequired[str | None]
     terminal_result: NotRequired[dict[str, Any] | None]
+    run_manifest: NotRequired[dict[str, Any]]
     branch_id: NotRequired[str]
+    branch_created_at: NotRequired[str]
     parent_branch_id: NotRequired[str | None]
     forked_from_checkpoint_id: NotRequired[str | None]
     fork_updates: NotRequired[dict[str, Any]]
     fork_created_at: NotRequired[str | None]
     branch_label: NotRequired[str | None]
+    execution_id: NotRequired[str]
+    parent_execution_id: NotRequired[str | None]
+    replayed_from_checkpoint_id: NotRequired[str | None]
+    execution_created_at: NotRequired[str]
+    low_confidence_accepted: NotRequired[bool]
+    related_taxon_source_key: NotRequired[int | None]
     visited_nodes: NotRequired[Annotated[list[str], operator.add]]

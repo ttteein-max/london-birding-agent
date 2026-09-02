@@ -12,8 +12,9 @@ from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 
-DEFAULT_BIODIVERSITY_CHECKPOINT_PATH = Path(
-    "data/runtime/biodiversity-checkpoints.sqlite"
+PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_BIODIVERSITY_CHECKPOINT_PATH = (
+    PROJECT_ROOT / "data/runtime/biodiversity-checkpoints.sqlite"
 )
 
 
@@ -46,10 +47,13 @@ def open_biodiversity_sqlite_checkpointer(
 
     checkpoint_path = Path(path).expanduser()
     checkpoint_path.parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(str(checkpoint_path), check_same_thread=False)
+    connection = sqlite3.connect(
+        str(checkpoint_path), check_same_thread=False, timeout=30
+    )
     try:
         connection.execute("PRAGMA journal_mode=WAL")
         connection.execute("PRAGMA foreign_keys=ON")
+        connection.execute("PRAGMA busy_timeout=30000")
         yield SqliteSaver(connection, serde=_strict_serializer())
         connection.commit()
     finally:

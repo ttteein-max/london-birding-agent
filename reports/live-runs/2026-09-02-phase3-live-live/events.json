@@ -1,0 +1,772 @@
+{
+  "schema_version": 1,
+  "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+  "events": [
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 1,
+      "event_type": "run_started",
+      "span_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:37.844200Z",
+      "started_at": "2026-09-02T09:01:37.844200Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-live-example-20260902-managed"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 2,
+      "event_type": "node_started",
+      "span_id": "01a0615a-39a5-7110-9547-96f474fecff8",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:38.085672Z",
+      "started_at": "2026-09-02T09:01:38.085672Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 1
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 3,
+      "event_type": "model_started",
+      "span_id": "01a0615a-39a6-7440-882f-df6c56a3d6db",
+      "parent_span_id": "01a0615a-39a5-7110-9547-970255e4f1f6",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:38.086366Z",
+      "started_at": "2026-09-02T09:01:38.086366Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 4,
+      "event_type": "model_completed",
+      "span_id": "01a0615a-39a6-7440-882f-df6c56a3d6db",
+      "parent_span_id": "01a0615a-39a5-7110-9547-970255e4f1f6",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:43.417798Z",
+      "started_at": "2026-09-02T09:01:38.086366Z",
+      "finished_at": "2026-09-02T09:01:43.417798Z",
+      "duration_ms": 5331.434541,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 5,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-39a5-7110-9547-96f474fecff8",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:43.419822Z",
+      "started_at": "2026-09-02T09:01:38.085672Z",
+      "finished_at": "2026-09-02T09:01:43.419822Z",
+      "duration_ms": 5334.115458,
+      "payload": {
+        "langgraph_step": 1
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 6,
+      "event_type": "node_started",
+      "span_id": "01a0615a-4e7c-76d0-ae4d-db64df8f6738",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "resolve_location",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:43.420628Z",
+      "started_at": "2026-09-02T09:01:43.420628Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 2
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 7,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-4e7c-76d0-ae4d-db64df8f6738",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "resolve_location",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:43.939576Z",
+      "started_at": "2026-09-02T09:01:43.420628Z",
+      "finished_at": "2026-09-02T09:01:43.939576Z",
+      "duration_ms": 518.953167,
+      "payload": {
+        "langgraph_step": 2
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 8,
+      "event_type": "node_started",
+      "span_id": "01a0615a-5084-7801-bceb-af5786fd6054",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "resolve_taxon",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:43.940217Z",
+      "started_at": "2026-09-02T09:01:43.940217Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 3
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 9,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-5084-7801-bceb-af5786fd6054",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "resolve_taxon",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:47.158486Z",
+      "started_at": "2026-09-02T09:01:43.940217Z",
+      "finished_at": "2026-09-02T09:01:47.158486Z",
+      "duration_ms": 3218.250542,
+      "payload": {
+        "langgraph_step": 3
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 10,
+      "event_type": "node_started",
+      "span_id": "01a0615a-5d17-7570-b122-1381633198cd",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:47.159072Z",
+      "started_at": "2026-09-02T09:01:47.159072Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 4
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 11,
+      "event_type": "model_started",
+      "span_id": "01a0615a-5d17-7570-b122-139073aa96ca",
+      "parent_span_id": "01a0615a-5d17-7570-b122-1381633198cd",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:47.159534Z",
+      "started_at": "2026-09-02T09:01:47.159534Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 12,
+      "event_type": "model_completed",
+      "span_id": "01a0615a-5d17-7570-b122-139073aa96ca",
+      "parent_span_id": "01a0615a-5d17-7570-b122-1381633198cd",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:51.618949Z",
+      "started_at": "2026-09-02T09:01:47.159534Z",
+      "finished_at": "2026-09-02T09:01:51.618949Z",
+      "duration_ms": 4459.398666,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 13,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-5d17-7570-b122-1381633198cd",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:51.619648Z",
+      "started_at": "2026-09-02T09:01:47.159072Z",
+      "finished_at": "2026-09-02T09:01:51.619648Z",
+      "duration_ms": 4460.55175,
+      "payload": {
+        "langgraph_step": 4
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 14,
+      "event_type": "node_started",
+      "span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:51.620797Z",
+      "started_at": "2026-09-02T09:01:51.620797Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 5
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 15,
+      "event_type": "tool_started",
+      "span_id": "01a0615a-6e85-7842-8791-1cfd01f77470",
+      "parent_span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "node_id": "evidence_tools",
+      "tool_name": "search_occurrences",
+      "tool_call_id": "toolu_custom_r9EXSP4c9jb1KqKKfoITVbws",
+      "timestamp": "2026-09-02T09:01:51.621839Z",
+      "started_at": "2026-09-02T09:01:51.621839Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 16,
+      "event_type": "tool_started",
+      "span_id": "01a0615a-6e88-7942-afa1-482490c04020",
+      "parent_span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "node_id": "evidence_tools",
+      "tool_name": "get_weather_context",
+      "tool_call_id": "toolu_custom_D6lmxO7xsNjM2YCE1c31DXeC",
+      "timestamp": "2026-09-02T09:01:51.624618Z",
+      "started_at": "2026-09-02T09:01:51.624618Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 17,
+      "event_type": "tool_completed",
+      "span_id": "01a0615a-6e88-7942-afa1-482490c04020",
+      "parent_span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "node_id": "evidence_tools",
+      "tool_name": "get_weather_context",
+      "tool_call_id": "toolu_custom_D6lmxO7xsNjM2YCE1c31DXeC",
+      "timestamp": "2026-09-02T09:01:53.182296Z",
+      "started_at": "2026-09-02T09:01:51.624618Z",
+      "finished_at": "2026-09-02T09:01:53.182296Z",
+      "duration_ms": 1557.643458,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 18,
+      "event_type": "tool_completed",
+      "span_id": "01a0615a-6e85-7842-8791-1cfd01f77470",
+      "parent_span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "node_id": "evidence_tools",
+      "tool_name": "search_occurrences",
+      "tool_call_id": "toolu_custom_r9EXSP4c9jb1KqKKfoITVbws",
+      "timestamp": "2026-09-02T09:01:55.756998Z",
+      "started_at": "2026-09-02T09:01:51.621839Z",
+      "finished_at": "2026-09-02T09:01:55.756998Z",
+      "duration_ms": 4135.110042,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 19,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-6e84-7363-8198-b57e646aa02f",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:55.760556Z",
+      "started_at": "2026-09-02T09:01:51.620797Z",
+      "finished_at": "2026-09-02T09:01:55.760556Z",
+      "duration_ms": 4139.681334,
+      "payload": {
+        "langgraph_step": 5
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 20,
+      "event_type": "node_started",
+      "span_id": "01a0615a-7eb1-77d3-b18d-ebe119d56e64",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:55.761631Z",
+      "started_at": "2026-09-02T09:01:55.761631Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 6
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 21,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-7eb1-77d3-b18d-ebe119d56e64",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:55.762091Z",
+      "started_at": "2026-09-02T09:01:55.761631Z",
+      "finished_at": "2026-09-02T09:01:55.762091Z",
+      "duration_ms": 0.444542,
+      "payload": {
+        "langgraph_step": 6
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 22,
+      "event_type": "node_started",
+      "span_id": "01a0615a-7eb2-7353-83e3-302f09b7516d",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:55.762593Z",
+      "started_at": "2026-09-02T09:01:55.762593Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 7
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 23,
+      "event_type": "model_started",
+      "span_id": "01a0615a-7eb3-73f1-a3ef-f485c8628ae2",
+      "parent_span_id": "01a0615a-7eb2-7353-83e3-302f09b7516d",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:55.763021Z",
+      "started_at": "2026-09-02T09:01:55.763021Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 24,
+      "event_type": "model_completed",
+      "span_id": "01a0615a-7eb3-73f1-a3ef-f485c8628ae2",
+      "parent_span_id": "01a0615a-7eb2-7353-83e3-302f09b7516d",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:57.639226Z",
+      "started_at": "2026-09-02T09:01:55.763021Z",
+      "finished_at": "2026-09-02T09:01:57.639226Z",
+      "duration_ms": 1876.2005,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 25,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-7eb2-7353-83e3-302f09b7516d",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:57.639722Z",
+      "started_at": "2026-09-02T09:01:55.762593Z",
+      "finished_at": "2026-09-02T09:01:57.639722Z",
+      "duration_ms": 1877.118083,
+      "payload": {
+        "langgraph_step": 7
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 26,
+      "event_type": "node_started",
+      "span_id": "01a0615a-8608-7b40-9c54-4ebd2f690bde",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:57.640293Z",
+      "started_at": "2026-09-02T09:01:57.640293Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 8
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 27,
+      "event_type": "tool_started",
+      "span_id": "01a0615a-8609-7263-b188-cdc9f32d0223",
+      "parent_span_id": "01a0615a-8608-7b40-9c54-4ebd2f690bde",
+      "node_id": "evidence_tools",
+      "tool_name": "find_public_green_spaces",
+      "tool_call_id": "toolu_custom_BC50SUGhxNii69wz5qK7Au43",
+      "timestamp": "2026-09-02T09:01:57.641130Z",
+      "started_at": "2026-09-02T09:01:57.641130Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 28,
+      "event_type": "tool_completed",
+      "span_id": "01a0615a-8609-7263-b188-cdc9f32d0223",
+      "parent_span_id": "01a0615a-8608-7b40-9c54-4ebd2f690bde",
+      "node_id": "evidence_tools",
+      "tool_name": "find_public_green_spaces",
+      "tool_call_id": "toolu_custom_BC50SUGhxNii69wz5qK7Au43",
+      "timestamp": "2026-09-02T09:01:59.540746Z",
+      "started_at": "2026-09-02T09:01:57.641130Z",
+      "finished_at": "2026-09-02T09:01:59.540746Z",
+      "duration_ms": 1899.586,
+      "payload": {}
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 29,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-8608-7b40-9c54-4ebd2f690bde",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:59.541333Z",
+      "started_at": "2026-09-02T09:01:57.640293Z",
+      "finished_at": "2026-09-02T09:01:59.541333Z",
+      "duration_ms": 1901.02275,
+      "payload": {
+        "langgraph_step": 8
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 30,
+      "event_type": "node_started",
+      "span_id": "01a0615a-8d75-7c22-8a03-a47512c28bed",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:59.541654Z",
+      "started_at": "2026-09-02T09:01:59.541654Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 9
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 31,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-8d75-7c22-8a03-a47512c28bed",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:59.541824Z",
+      "started_at": "2026-09-02T09:01:59.541654Z",
+      "finished_at": "2026-09-02T09:01:59.541824Z",
+      "duration_ms": 0.161542,
+      "payload": {
+        "langgraph_step": 9
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 32,
+      "event_type": "node_started",
+      "span_id": "01a0615a-8d76-7103-a838-3c4484f419f5",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:59.542030Z",
+      "started_at": "2026-09-02T09:01:59.542030Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 10
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 33,
+      "event_type": "model_started",
+      "span_id": "01a0615a-8d76-7103-a838-3c533fdfb279",
+      "parent_span_id": "01a0615a-8d76-7103-a838-3c4484f419f5",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:01:59.542151Z",
+      "started_at": "2026-09-02T09:01:59.542151Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 34,
+      "event_type": "model_completed",
+      "span_id": "01a0615a-8d76-7103-a838-3c533fdfb279",
+      "parent_span_id": "01a0615a-8d76-7103-a838-3c4484f419f5",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.785015Z",
+      "started_at": "2026-09-02T09:01:59.542151Z",
+      "finished_at": "2026-09-02T09:02:01.785015Z",
+      "duration_ms": 2242.8615,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 35,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-8d76-7103-a838-3c4484f419f5",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.785612Z",
+      "started_at": "2026-09-02T09:01:59.542030Z",
+      "finished_at": "2026-09-02T09:02:01.785612Z",
+      "duration_ms": 2243.578292,
+      "payload": {
+        "langgraph_step": 10
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 36,
+      "event_type": "node_started",
+      "span_id": "01a0615a-963a-7f73-902e-b18c110a69d3",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.786684Z",
+      "started_at": "2026-09-02T09:02:01.786684Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 11
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 37,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-963a-7f73-902e-b18c110a69d3",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.789211Z",
+      "started_at": "2026-09-02T09:02:01.786684Z",
+      "finished_at": "2026-09-02T09:02:01.789211Z",
+      "duration_ms": 2.47675,
+      "payload": {
+        "langgraph_step": 11
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 38,
+      "event_type": "node_started",
+      "span_id": "01a0615a-963e-70b0-b3e9-96fe25af5bc9",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.790154Z",
+      "started_at": "2026-09-02T09:02:01.790154Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 12
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 39,
+      "event_type": "model_started",
+      "span_id": "01a0615a-9644-7bb3-b24e-81c06f11608e",
+      "parent_span_id": "01a0615a-9640-76b1-91e6-651cc932b871",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:01.796872Z",
+      "started_at": "2026-09-02T09:02:01.796872Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 40,
+      "event_type": "model_completed",
+      "span_id": "01a0615a-9644-7bb3-b24e-81c06f11608e",
+      "parent_span_id": "01a0615a-9640-76b1-91e6-651cc932b871",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.515424Z",
+      "started_at": "2026-09-02T09:02:01.796872Z",
+      "finished_at": "2026-09-02T09:02:20.515424Z",
+      "duration_ms": 18718.441375,
+      "payload": {
+        "model": "gemini-3.7-flash",
+        "provider": "openai"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 41,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-963e-70b0-b3e9-96fe25af5bc9",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.517953Z",
+      "started_at": "2026-09-02T09:02:01.790154Z",
+      "finished_at": "2026-09-02T09:02:20.517953Z",
+      "duration_ms": 18727.717708,
+      "payload": {
+        "langgraph_step": 12
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 42,
+      "event_type": "node_started",
+      "span_id": "01a0615a-df68-7273-946a-09170d636f9e",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.520041Z",
+      "started_at": "2026-09-02T09:02:20.520041Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 13
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 43,
+      "event_type": "node_completed",
+      "span_id": "01a0615a-df68-7273-946a-09170d636f9e",
+      "parent_span_id": "01a0615a-39a4-7c71-a9d1-09862e2fd1fe",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.522884Z",
+      "started_at": "2026-09-02T09:02:20.520041Z",
+      "finished_at": "2026-09-02T09:02:20.522884Z",
+      "duration_ms": 2.818042,
+      "payload": {
+        "langgraph_step": 13
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 44,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.534813Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-live-example-20260902-managed",
+        "checkpoint_id": "1f1a6ad0-1388-6784-800d-d058b2c382cc",
+        "branch_id": "4c546bf5dafb425a9237636d1ea8edf7",
+        "execution_id": "9870ef9e8a3745c0891452f152ce3351"
+      }
+    },
+    {
+      "run_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "sequence": 45,
+      "event_type": "run_completed",
+      "span_id": "4ad291660bea47f0b8e94525e35c8e25",
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T09:02:20.539445Z",
+      "started_at": "2026-09-02T09:01:37.844200Z",
+      "finished_at": "2026-09-02T09:02:20.539445Z",
+      "duration_ms": 42695.11225,
+      "payload": {
+        "terminal_status": "completed"
+      }
+    }
+  ]
+}

@@ -4,6 +4,16 @@ Phase 3 makes the London biodiversity graph resumable across Python processes an
 
 The workflow remains London-only, English-only and birds-first. Historical occurrence evidence is not a sighting probability, and record counts are not abundance or population estimates.
 
+## Architecture
+
+The editable Mermaid source is in
+`docs/diagrams/phase-3-biodiversity-langgraph.mmd`. The rendered diagram uses
+separate colours and line styles for graph nodes, HITL nodes, ToolNode internals,
+state, reducers, checkpointing, streaming, cycles and the external time-travel
+management layer.
+
+![Phase 3 biodiversity LangGraph architecture](diagrams/phase-3-biodiversity-langgraph.svg)
+
 ## Durable checkpointer lifecycle
 
 `create_biodiversity_checkpointer()` still returns an isolated `InMemorySaver` for unit tests. Terminal workflows use `open_biodiversity_sqlite_checkpointer(path)`, a context manager around the official `langgraph-checkpoint-sqlite` `SqliteSaver`.
@@ -18,6 +28,8 @@ with open_biodiversity_sqlite_checkpointer(
 
 The connection remains open while the graph is compiled and used, commits on successful exit and always closes. The database path is injectable, and tests use `tmp_path`. SQLite, WAL and SHM files are ignored and are never committed.
 
+The default path is resolved from the repository root rather than the caller's current working directory. A 30-second SQLite busy timeout avoids immediate `database is locked` failures for brief local CLI overlap; SQLite is still not used as a multi-instance service.
+
 The serializer disables pickle fallback and sets JSON and msgpack module allowlists to strict mode. Checkpoint state therefore uses JSON dictionaries plus LangGraph/LangChain's known safe built-in message types; arbitrary Python modules cannot be revived from the database.
 
 SQLite is appropriate for this local portfolio/demo and synchronous CLI. It is not presented as a horizontally scaled or multi-instance production database.
@@ -29,10 +41,13 @@ The public contract uses typed models in `app.biodiversity.run_models`, not Lang
 - `thread_id` selects the durable checkpoint namespace for one logical expedition.
 - `checkpoint_id` selects one immutable historical graph state inside the thread.
 - `branch_id` identifies one original or forked trajectory inside that thread.
+- `execution_id` identifies one concrete execution of a branch. Replay creates a new execution ID without pretending that the user's constraints formed a new fork.
 - `parent_branch_id` identifies the trajectory from which a fork was created.
 - `forked_from_checkpoint_id` identifies the exact historical point selected for the fork.
 
 `CheckpointSummary` records checkpoint and parent IDs, creation time, graph step/source, next nodes, interrupt kind, terminal status, applied decisions and the branch's final checkpoint ID. `RunBranch` records its head and final checkpoint IDs plus fork updates. Initial runs and forks remain readable by exact checkpoint ID; a fork never overwrites the original final plan.
+
+Every new run also checkpoints a `RunManifest` containing the data mode, model mode, non-secret model identifier, a one-way endpoint fingerprint, workflow version and state-schema version. The endpoint URL and credentials themselves are not stored. Resume, replay and fork reuse that manifest. Explicitly supplying a conflicting mode, model or endpoint is rejected before graph execution, so one lineage cannot silently combine live evidence with fixture evidence or a different model runtime. Legacy checkpoints created before the manifest require both modes to be supplied explicitly.
 
 ## Taxonomy HITL
 
@@ -94,7 +109,7 @@ The deterministic validation node separates London-wide occurrence evidence from
 - `expand_search_radius` is offered only when strong occurrence evidence exists but no directly grounded public-site polygon exists inside the current radius. The new radius must increase and stay at or below 25 km. Only public-site evidence and downstream products are recomputed.
 - `widen_seasonal_window` is offered only while the request radius is below three months. The new value must increase. Seasonal months wrap across the year boundary and the actual list appears in canonical tool audit/provenance. Occurrence evidence, safe cells, sites, constraints, bundle and plan are recomputed; location, taxonomy and exact-date weather are retained.
 - `consider_related_taxa` is offered only when the bounded deterministic GBIF query saved candidates. Same-genus candidates precede same-family candidates and each payload labels its level. Selecting this option produces a second `related_taxon_selection` interrupt. A related taxon is not an ecological substitute and is not asserted to be easier to observe.
-- `keep_constraints_accept_low_confidence` records the user's acknowledgement and produces a `context_only` or otherwise low-confidence result with no recommended sites. Contextual sites may remain, and the explanation states that the evidence gate did not pass.
+- `keep_constraints_accept_low_confidence` records the user's acknowledgement and produces a non-recommendation result with no recommended sites. The authoritative Phase 1 status remains `context_only` for limited evidence and `cannot_recommend_sites` for insufficient evidence. In both cases the final plan contains `evidence_gate_passed: false`, `low_confidence_accepted: true` and a fixed `low_confidence_notice`; the model cannot alter these fields. Contextual sites may remain.
 
 Examples:
 
@@ -118,7 +133,7 @@ historical = selected_history_snapshot
 graph.invoke(None, historical.config)
 ```
 
-Replay re-executes nodes after the selected checkpoint. API, model and interrupt nodes after that point can run again. Replaying a final checkpoint is a no-op.
+Replay re-executes nodes after the selected checkpoint. API, model and interrupt nodes after that point can run again. A terminal checkpoint has no downstream node, so replay rejects it and asks the caller to select an earlier checkpoint instead of manufacturing an execution with no checkpoint. A new `execution_id` and `ReplayResult` identify each real replay output, while `RunBranch.final_checkpoint_id` continues to identify the original/fork execution's stable final rather than being silently replaced by a later replay. If a replay pauses at HITL and is then resumed, the replay execution identity remains authoritative across that resume.
 
 Fork:
 
@@ -215,11 +230,22 @@ python -m scripts.manage_biodiversity_runs compare \
   --checkpoint-a ORIGINAL_FINAL --checkpoint-b FORK_FINAL
 ```
 
-`start` refuses an existing thread. `resume` needs no original request and works after the first Python process exits. Missing threads/checkpoints are explicit errors. History and comparison are JSON-safe application contracts. Executing commands continue to save `events.json`, `timings.json`, `metadata.json`, `tool-audit.json` and `final-plan.json`; metadata includes checkpoint and branch lineage.
+If a thread has more than one pending branch/execution, resume refuses to guess. Select the exact interrupt checkpoint or an unambiguous branch:
+
+```bash
+python -m scripts.manage_biodiversity_runs resume \
+  --thread-id expedition-1 \
+  --checkpoint-id PENDING_CHECKPOINT_ID \
+  --resume-json '{"option":"keep_constraints_accept_low_confidence"}'
+```
+
+`start` refuses an existing thread. `resume` needs no original request or repeated runtime modes and works after the first Python process exits. Missing or ambiguous threads/checkpoints are explicit errors. History and comparison are JSON-safe application contracts. Executing commands (`start`, `resume`, `replay`, `fork`) save `events.json`, `timings.json`, `metadata.json`, `tool-audit.json` and, when a final plan exists, `final-plan.json`; metadata includes checkpoint, branch, execution and manifest data. Read-only `history` and `compare` do not create a report, avoiding low-value report proliferation. Failed executing commands save a failure report when a runtime profile is available.
+
+The repository's `reports/live-runs` directory is reserved for deliberately reviewed examples, not every live test. Automated tests write reports under `tmp_path`, and ordinary CLI reports go to the ignored `reports/runs` directory. One representative live/live Phase 3 run may be copied or written to `reports/live-runs` after checking its privacy-bounded contents.
 
 ## Fixture, live and privacy behavior
 
-Fixture/scripted mode reads no OpenAI environment variables and performs no network work. The taxonomy preview and related-taxa snapshots are saved API-shaped, checksummed fixtures. Live preview and related lookup enforce candidate, page and request budgets; default tests remain offline, and live tests remain opt-in.
+Fixture/scripted mode reads no OpenAI environment variables and performs no network work. The taxonomy preview and related-taxa snapshots are saved API-shaped, checksummed fixtures. Related candidates are bound to the accepted source taxon; changing taxon clears stale candidates and records fresh related-selection provenance. Live preview and related lookup enforce candidate, page and request budgets; default tests remain offline, and live tests remain opt-in. The opt-in runtime matrix covers all four data-mode × model-mode combinations; Phase 3 CLI/SQLite persistence remains covered offline as well.
 
 Public payloads, events, reports, history, fork results and comparisons do not contain occurrence coordinates, occurrence identifiers, `record_ref`, HMAC values or safe-cell associations. Observability events contain only safe IDs, statuses, interrupt kinds, changed field names and error types. They do not copy prompts, raw tool output or source records.
 

@@ -28,9 +28,9 @@ Phase 1.1 hardens site grounding: a candidate plan is ready only when strong evi
 
 Phase 1.2 separates directly grounded recommendations from contextual green spaces. A recommendation now requires an OSM polygon or multipolygon footprint intersecting a safe cell; nearby and ordinary ungrounded sites remain explicitly non-recommended. The occurrence fixture was rebuilt end-to-end with the hardened pipeline, restoring same-snapshot safe cells for House sparrow and `Turdus iliacus`.
 
-## Phase 2 quick start
+## Phase 3 LangGraph quick start
 
-Phase 2 adds a separate, checkpointed biodiversity LangGraph above the unchanged Phase 1.2 authority boundary. It parses natural English, uses a genuine ToolNode evidence loop, interrupts for validated human choices, composes a structured plan and applies deterministic grounding checks with one revision and a safe fallback. Fixture/scripted mode requires no API key:
+Phase 3 uses the Phase 2 biodiversity LangGraph above the unchanged Phase 1.2 authority boundary and adds durable SQLite HITL recovery, runtime manifests and time travel. It parses natural English, uses a genuine ToolNode evidence loop, interrupts for validated human choices, composes a structured plan and applies deterministic grounding checks with one revision and a safe fallback. Fixture/scripted mode requires no API key:
 
 ```bash
 python -m scripts.run_biodiversity_agent \
@@ -41,7 +41,7 @@ python -m scripts.run_biodiversity_agent \
 
 The CLI saves every node, model and tool lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
 
-Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 2 LangGraph documentation](docs/phase-2-biodiversity-langgraph.md) for the topology, state reducers, HITL payloads, safety boundary and all CLI commands.
+Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for the current topology, state reducers, HITL payloads, safety boundary and all CLI commands. The [Phase 2 document](docs/phase-2-biodiversity-langgraph.md) remains the implementation history for the original graph.
 
 ## Phase 3 durable HITL and time travel
 
