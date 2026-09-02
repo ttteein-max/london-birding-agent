@@ -55,6 +55,9 @@ main { max-width: 1920px; margin: 0 auto; padding: 18px 20px 30px; }
 textarea, input, select { width: 100%; border: 1px solid #b9bbb2; border-radius: 6px; padding: 9px 11px; color: var(--ink); background: #faf8f1; }
 textarea { resize: vertical; min-height: 72px; font-family: "Iowan Old Style", "Palatino Linotype", serif; font-size: 1.03rem; line-height: 1.45; }
 .composer-actions { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-top: 10px; }
+.run-controls { display: grid; grid-template-columns: minmax(150px, 1fr) auto; align-items: end; gap: 7px; }
+.run-controls label { grid-column: 1 / -1; margin-bottom: -3px; }
+.run-controls select { min-width: 164px; padding-block: 8px; }
 .example-row, .button-row { display: flex; flex-wrap: wrap; gap: 7px; }
 .example-row button, .button-row button, .text-action, .compare-controls button { border: 1px solid var(--line); border-radius: 5px; padding: 7px 10px; background: transparent; font-size: 0.72rem; font-weight: 650; cursor: pointer; }
 .example-row button:hover, .button-row button:hover, .text-action:hover { border-color: var(--green); background: var(--green-soft); }
@@ -265,6 +268,7 @@ footer { display: flex; justify-content: space-between; gap: 12px; border-top: 1
   main { padding: 10px; }
   .composer-card { padding: 14px; }
   .composer-actions, .hitl-form { align-items: stretch; flex-direction: column; }
+  .run-controls { grid-template-columns: minmax(0, 1fr) auto; width: 100%; }
   .example-row { display: grid; grid-template-columns: repeat(3, 1fr); width: 100%; }
   .example-row button { padding: 7px 4px; font-size: 0.61rem; }
   .hitl-panel { grid-template-columns: 1fr; }
@@ -290,6 +294,9 @@ footer { display: flex; justify-content: space-between; gap: 12px; border-top: 1
   .brand-mark { width: 39px; }
   .mode-chip { padding: 5px 7px; font-size: 0.64rem; }
   .composer-card { border-radius: 7px; }
+  .run-controls { grid-template-columns: 1fr; }
+  .run-controls label { grid-column: auto; }
+  .run-controls select, .run-controls .primary-action { width: 100%; }
   .language-tag { display: none; }
   .metrics-grid { grid-template-columns: repeat(2, 1fr); }
   .metric:nth-child(3n) { border-right: 1px solid var(--line); }

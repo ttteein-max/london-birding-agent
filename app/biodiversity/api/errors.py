@@ -79,6 +79,26 @@ def invalid_operation(message: str) -> APIError:
     return APIError(422, "invalid_operation", message)
 
 
+def forbidden(message: str) -> APIError:
+    return APIError(403, "mode_not_allowed", message)
+
+
+def rate_limited() -> APIError:
+    return APIError(
+        429,
+        "rate_limited",
+        "The public demo mutation limit has been reached. Try again shortly.",
+    )
+
+
+def service_busy() -> APIError:
+    return APIError(
+        503,
+        "service_busy",
+        "The public demo is currently at capacity. Try again shortly.",
+    )
+
+
 def unavailable() -> APIError:
     return APIError(
         503,

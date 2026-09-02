@@ -596,6 +596,10 @@ export interface components {
              * @enum {string}
              */
             default_model_mode: "scripted" | "live";
+            /** Allowed Run Modes */
+            allowed_run_modes: components["schemas"]["RunModeView"][];
+            /** Public Demo */
+            public_demo: boolean;
         };
         /** HistoryView */
         HistoryView: {
@@ -994,6 +998,19 @@ export interface components {
             terminal_status?: string | null;
             /** Interrupt Kind */
             interrupt_kind?: string | null;
+        };
+        /** RunModeView */
+        RunModeView: {
+            /**
+             * Data Mode
+             * @enum {string}
+             */
+            data_mode: "fixture" | "live";
+            /**
+             * Model Mode
+             * @enum {string}
+             */
+            model_mode: "scripted" | "live";
         };
         /** RunSummary */
         RunSummary: {

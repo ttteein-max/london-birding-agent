@@ -6,6 +6,7 @@ import asyncio
 import hashlib
 import json
 import os
+from contextlib import suppress
 from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
@@ -26,6 +27,7 @@ from app.biodiversity.api.schemas import (
     RunDetail,
     RunSummary,
 )
+from app.biodiversity.api.services.public_demo import DemoRetention, PublicDemoGuard
 from app.biodiversity.api.services.views import SafeCheckpointViews
 from app.biodiversity.graph import build_biodiversity_graph
 from app.biodiversity.observability import (
@@ -158,6 +160,9 @@ class GraphRuntime:
                 return False
             raise
         return True
+
+    def delete_thread(self, thread_id: str) -> None:
+        self.checkpointer.delete_thread(thread_id)
 
 
 class OperationEngine:
@@ -343,6 +348,7 @@ class OperationCoordinator:
         self._guard = asyncio.Lock()
         self._active_threads: set[str] = set()
         self._tasks: set[asyncio.Task[None]] = set()
+        self._demo_guard = PublicDemoGuard(settings, catalog)
 
     async def submit(
         self,
@@ -359,6 +365,9 @@ class OperationCoordinator:
                 raise RuntimeError("same_thread_mutation_conflict")
             if kind == "start" and self.catalog.thread_exists(thread_id):
                 raise RuntimeError("thread_already_exists")
+            if len(self._active_threads) >= self.settings.max_concurrent_operations:
+                raise RuntimeError("operation_capacity")
+            self._demo_guard.admit(kind=kind)
             operation_id = uuid4().hex
             self.catalog.create_operation(
                 operation_id=operation_id,
@@ -439,12 +448,35 @@ class Phase4Application:
             catalog=catalog,
             settings=settings,
         )
+        self.retention = DemoRetention(
+            settings=settings,
+            catalog=catalog,
+            runtime=self.runtime,
+        )
+        self._housekeeping_task: asyncio.Task[None] | None = None
+
+    def _ensure_mode_allowed(self, data_mode: str, model_mode: str) -> None:
+        if (data_mode, model_mode) not in self.settings.allowed_run_modes:
+            raise PermissionError("run_mode_not_allowed")
 
     def start_profile(self, data_mode: str, model_mode: str) -> RunProfile:
+        self._ensure_mode_allowed(data_mode, model_mode)
         return _profile(data_mode, model_mode)
 
     def thread_profile(self, thread_id: str) -> RunProfile:
-        return self.runtime.profile_for_thread(thread_id)
+        profile = self.runtime.profile_for_thread(thread_id)
+        self._ensure_mode_allowed(profile.data_mode, profile.model_mode)
+        return profile
+
+    async def start(self) -> None:
+        await asyncio.to_thread(self.retention.cleanup)
+        if self.settings.public_demo and self.settings.run_retention_seconds:
+            self._housekeeping_task = asyncio.create_task(self._housekeeping_loop())
+
+    async def _housekeeping_loop(self) -> None:
+        while True:
+            await asyncio.sleep(self.settings.cleanup_interval_seconds)
+            await asyncio.to_thread(self.retention.cleanup)
 
     def thread_exists(self, thread_id: str) -> bool:
         return self.catalog.thread_exists(thread_id) or self.runtime.thread_exists(thread_id)
@@ -664,4 +696,8 @@ class Phase4Application:
         )
 
     async def close(self) -> None:
+        if self._housekeeping_task is not None:
+            self._housekeeping_task.cancel()
+            with suppress(asyncio.CancelledError):
+                await self._housekeeping_task
         await self.coordinator.close()

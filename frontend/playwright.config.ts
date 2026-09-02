@@ -1,6 +1,10 @@
 import { defineConfig, devices } from "@playwright/test";
 
 const tempRoot = `/tmp/london-biodiversity-phase4-e2e-${process.pid}`;
+const apiPort = Number(process.env.PHASE4_E2E_API_PORT ?? "18004");
+const frontendPort = Number(process.env.PHASE4_E2E_FRONTEND_PORT ?? "15173");
+const apiOrigin = `http://127.0.0.1:${apiPort}`;
+const frontendOrigin = `http://127.0.0.1:${frontendPort}`;
 
 export default defineConfig({
   testDir: "./e2e",
@@ -10,14 +14,14 @@ export default defineConfig({
   expect: { timeout: 20_000 },
   reporter: "list",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: frontendOrigin,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
   webServer: [
     {
-      command: "python -m uvicorn app.biodiversity.api.main:app --host 127.0.0.1 --port 8000",
+      command: `python -m uvicorn app.biodiversity.api.main:app --host 127.0.0.1 --port ${apiPort}`,
       cwd: "..",
       env: {
         BIODIVERSITY_CHECKPOINT_DB: `${tempRoot}-checkpoints.sqlite`,
@@ -25,15 +29,19 @@ export default defineConfig({
         BIODIVERSITY_REPORT_ROOT: `${tempRoot}-reports`,
         BIODIVERSITY_DATA_MODE: "fixture",
         BIODIVERSITY_MODEL_MODE: "scripted",
+        BIODIVERSITY_CORS_ORIGINS: frontendOrigin,
       },
-      url: "http://127.0.0.1:8000/api/v1/health",
+      url: `${apiOrigin}/api/v1/health`,
       reuseExistingServer: false,
       timeout: 30_000,
     },
     {
-      command: "npm run dev -- --port 5173",
+      command: `npm run dev -- --port ${frontendPort}`,
       cwd: ".",
-      url: "http://127.0.0.1:5173",
+      env: {
+        VITE_API_BASE_URL: apiOrigin,
+      },
+      url: frontendOrigin,
       reuseExistingServer: false,
       timeout: 30_000,
     },
