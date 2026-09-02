@@ -6,7 +6,6 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     healthCheckPath: /api/v1/health
-    maxShutdownDelaySeconds: 60
     envVars:
       - key: BIODIVERSITY_PUBLIC_DEMO
         value: "true"
