@@ -1,9 +1,11 @@
-"""Deterministic, model-driven, HITL, and safety nodes for Phase 2."""
+"""Deterministic, model-driven, HITL, and safety nodes for Phase 3."""
 
 from __future__ import annotations
 
+import hashlib
 import json
 from collections.abc import Callable
+from datetime import UTC, datetime
 from typing import Any
 
 from langchain.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -28,9 +30,10 @@ from app.biodiversity.graph.prompts import (
 )
 from app.biodiversity.graph.state import BiodiversityAgentState
 from app.biodiversity.models import (
-    AccessCertainty,
     ConstraintStatus,
+    EvidenceItem,
     EvidenceOutcome,
+    EvidenceUse,
     ExpeditionEvidenceBundle,
     ExpeditionPlan,
     ExpeditionRequest,
@@ -41,8 +44,10 @@ from app.biodiversity.models import (
     RainPreference,
     ResolvedLocation,
     ResolvedTaxon,
+    RelatedTaxonCandidate,
     SiteSearchAction,
     TaxonStatus,
+    TaxonEvidencePreview,
     WeatherEvidence,
 )
 from app.biodiversity.orchestration import (
@@ -51,8 +56,11 @@ from app.biodiversity.orchestration import (
 )
 from app.biodiversity.tools import (
     build_expedition_evidence_bundle,
+    find_public_green_spaces,
+    get_weather_context,
     lookup_uk_postcode,
     resolve_bird_taxon,
+    search_occurrences,
     validate_expedition_constraints,
 )
 
@@ -240,25 +248,9 @@ def build_resolve_taxon_node(dependencies: BackendDependencies) -> Callable[[Bio
         kind = None
         payload = None
         if taxon.status == TaxonStatus.human_selection_required:
-            kind = "taxon_selection"
-            payload = {
-                "kind": kind,
-                "question": "Which GBIF candidate is the intended species?",
-                "candidates": [
-                    {
-                        "accepted_taxon_key": item.accepted_taxon_key,
-                        "common_name": item.common_name,
-                        "scientific_name": item.scientific_name,
-                        "canonical_name": item.canonical_name,
-                        "rank": item.rank,
-                        "taxonomic_status": item.taxonomic_status,
-                        "resolution_method": item.resolution_method,
-                        "confidence": item.confidence,
-                    }
-                    for item in taxon.candidates
-                ],
-                "resume_schema": {"accepted_taxon_key": "one listed integer key"},
-            }
+            # Evidence preview is deliberately a separate checkpointed node. The
+            # interrupt node itself performs no I/O and is safe to re-enter.
+            kind = "taxon_preview_pending"
         elif taxon.status == TaxonStatus.taxon_not_found:
             kind = "bird_input_correction"
             payload = {
@@ -276,6 +268,107 @@ def build_resolve_taxon_node(dependencies: BackendDependencies) -> Callable[[Bio
         }
 
     return resolve_taxon
+
+
+def build_prepare_taxon_selection_node(
+    dependencies: BackendDependencies,
+    *,
+    candidate_budget: int = 3,
+) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
+    """Collect bounded, coordinate-free previews before the interrupt checkpoint."""
+
+    if not 1 <= candidate_budget <= 3:
+        raise ValueError("candidate preview budget must be between 1 and 3")
+
+    def prepare_taxon_selection(state: BiodiversityAgentState) -> dict[str, Any]:
+        taxon = ResolvedTaxon.model_validate(state["resolved_taxon"])
+        request = ExpeditionRequest.model_validate(state["expedition_request"])
+        if taxon.status != TaxonStatus.human_selection_required:
+            raise ValueError("Taxon evidence preview requires ambiguous candidates")
+        candidates: list[dict[str, Any]] = []
+        previews: list[dict[str, Any]] = []
+        for index, item in enumerate(taxon.candidates):
+            if index >= candidate_budget:
+                preview = TaxonEvidencePreview(
+                    status="not_evaluated_budget",
+                    target_months=[],
+                    source_status="not_evaluated_budget",
+                    limitations=[
+                        "The strict candidate/request budget was exhausted; this is not a no-evidence result."
+                    ],
+                )
+            else:
+                candidate_taxon = ResolvedTaxon(
+                    status=TaxonStatus.resolved,
+                    original_input=taxon.original_input,
+                    normalised_input=taxon.normalised_input,
+                    accepted_taxon_key=item.accepted_taxon_key,
+                    common_name=item.common_name,
+                    scientific_name=item.scientific_name,
+                    canonical_name=item.canonical_name,
+                    rank=item.rank,
+                    taxonomic_status=item.taxonomic_status,
+                    class_name=item.class_name,
+                    order=item.order,
+                    family=item.family,
+                    genus=item.genus,
+                    resolution_method=item.resolution_method,
+                    confidence=item.confidence,
+                    rationale="Candidate-only bounded historical evidence preview.",
+                )
+                evidence = search_occurrences(
+                    candidate_taxon,
+                    target_month=request.seasonal_target_month,
+                    seasonal_window_radius_months=request.seasonal_window_radius_months,
+                    repository=dependencies.occurrences,
+                    preview=True,
+                )
+                item_provenance = evidence.evidence_items[0] if evidence.evidence_items else None
+                preview = TaxonEvidencePreview(
+                    status="source_failure" if evidence.tool_error else "evaluated",
+                    evidence_outcome=evidence.outcome,
+                    sampled_count=evidence.counts.sampled_count,
+                    retained_count=evidence.counts.retained_total_count,
+                    ranking_eligible_count=evidence.counts.ranking_eligible_count,
+                    dataset_count=evidence.quality.retained_dataset_count,
+                    target_months=evidence.seasonal_months,
+                    source_status=(
+                        evidence.tool_error.code.value
+                        if evidence.tool_error
+                        else "available"
+                    ),
+                    limitations=evidence.limitations,
+                    provenance_reference=(
+                        item_provenance.source_reference if item_provenance else None
+                    ),
+                )
+            preview_json = preview.model_dump(mode="json")
+            previews.append(
+                {
+                    "accepted_taxon_key": item.accepted_taxon_key,
+                    "preview": preview_json,
+                }
+            )
+            candidate = item.model_dump(mode="json")
+            candidate["class"] = candidate.pop("class_name")
+            candidate["evidence_preview"] = preview_json
+            candidates.append(candidate)
+        payload = {
+            "kind": "taxon_selection",
+            "question": "Which GBIF candidate is the intended species?",
+            "candidates": candidates,
+            "candidate_budget": candidate_budget,
+            "request_budget": candidate_budget,
+            "resume_schema": {"accepted_taxon_key": "one listed integer key"},
+        }
+        return {
+            "taxon_evidence_previews": previews,
+            "pending_hitl_kind": "taxon_selection",
+            "pending_hitl_payload": payload,
+            "visited_nodes": ["prepare_taxon_selection"],
+        }
+
+    return prepare_taxon_selection
 
 
 def taxon_selection_interrupt(state: BiodiversityAgentState) -> dict[str, Any]:
@@ -302,6 +395,10 @@ def taxon_selection_interrupt(state: BiodiversityAgentState) -> dict[str, Any]:
         canonical_name=selected.canonical_name,
         rank=selected.rank,
         taxonomic_status=selected.taxonomic_status,
+        class_name=selected.class_name,
+        order=selected.order,
+        family=selected.family,
+        genus=selected.genus,
         resolution_method=selected.resolution_method,
         confidence=selected.confidence,
         candidates=taxon.candidates,
@@ -310,8 +407,11 @@ def taxon_selection_interrupt(state: BiodiversityAgentState) -> dict[str, Any]:
     )
     return {
         "resolved_taxon": resolved.model_dump(mode="json"),
+        "related_taxon_candidates": [],
+        "related_taxon_source_key": None,
         "pending_hitl_kind": None,
         "pending_hitl_payload": None,
+        "taxon_evidence_previews": [],
         "applied_user_decisions": [{"kind": "taxon_selection", "accepted_taxon_key": key}],
         "visited_nodes": ["taxon_selection_interrupt"],
     }
@@ -484,16 +584,17 @@ def source_resolution_failure(state: BiodiversityAgentState) -> dict[str, Any]:
     return {**_terminal(reason), "visited_nodes": ["source_resolution_failure"]}
 
 
-def _decision_names(state: BiodiversityAgentState) -> set[str]:
-    return {str(item.get("option")) for item in state.get("applied_user_decisions", []) if item.get("option")}
-
-
 def _actionable_tradeoff(
     state: BiodiversityAgentState,
     request: ExpeditionRequest,
     bundle: ExpeditionEvidenceBundle,
+    related_candidates: list[RelatedTaxonCandidate],
 ) -> dict[str, Any] | None:
-    decisions = _decision_names(state)
+    decisions = {
+        str(item.get("option"))
+        for item in state.get("applied_user_decisions", [])
+        if item.get("option")
+    }
     sites = bundle.site_search
     actions = set(sites.suggested_actions)
     if sites.status == PublicSiteSearchStatus.no_suitable_public_sites and SiteSearchAction.expand_search_radius in actions and "expand_search_radius" not in decisions:
@@ -504,16 +605,48 @@ def _actionable_tradeoff(
             "options": [{"option": "expand_search_radius", "current_radius_km": request.search_radius_km, "maximum_radius_km": 25.0}],
             "resume_schema": {"option": "expand_search_radius", "search_radius_km": "number greater than current radius and at most 25"},
         }
-    if bundle.evidence_outcome in {EvidenceOutcome.limited_contextual_evidence, EvidenceOutcome.insufficient_evidence} and "accept_context_only" not in decisions and "change_target_month" not in decisions:
-        options: list[dict[str, Any]] = [{"option": "accept_context_only"}]
-        if SiteSearchAction.change_target_month in actions:
-            options.insert(0, {"option": "change_target_month", "allowed_months": list(range(1, 13))})
+    if (
+        bundle.evidence_outcome
+        in {
+            EvidenceOutcome.limited_contextual_evidence,
+            EvidenceOutcome.insufficient_evidence,
+        }
+        and not state.get("low_confidence_accepted", False)
+    ):
+        options: list[dict[str, Any]] = []
+        if request.seasonal_window_radius_months < 3:
+            options.append(
+                {
+                    "option": "widen_seasonal_window",
+                    "current_radius_months": request.seasonal_window_radius_months,
+                    "maximum_radius_months": 3,
+                }
+            )
+        if related_candidates:
+            options.append(
+                {
+                    "option": "consider_related_taxa",
+                    "candidate_count": len(related_candidates),
+                    "relation_levels": sorted(
+                        {item.relation_level for item in related_candidates}
+                    ),
+                }
+            )
+        options.append({"option": "keep_constraints_accept_low_confidence"})
         return {
             "kind": "actionable_tradeoff",
-            "question": "Would you like to change the target month or accept a context-only result?",
-            "reason": "The deterministic evidence gate does not support site recommendations for the current month.",
+            "question": "How should the low historical-evidence result continue?",
+            "reason": (
+                "London-wide occurrence evidence does not pass the deterministic gate; "
+                "expanding the local site radius would not solve this condition."
+            ),
             "options": options,
-            "resume_schema": {"option": "listed option", "target_month": "required only for change_target_month"},
+            "resume_schema": {
+                "option": "one listed option",
+                "seasonal_window_radius_months": (
+                    "required only for widen_seasonal_window"
+                ),
+            },
         }
     rain = next((item for item in bundle.constraints if item.code == "rain_preference" and item.status == ConstraintStatus.unresolved), None)
     if rain and not {"revise_rain_preference", "continue_with_weather_acknowledgement"}.intersection(decisions):
@@ -536,7 +669,11 @@ def _actionable_tradeoff(
     return None
 
 
-def deterministic_validation(state: BiodiversityAgentState) -> dict[str, Any]:
+def deterministic_validation(
+    state: BiodiversityAgentState,
+    *,
+    dependencies: BackendDependencies | None = None,
+) -> dict[str, Any]:
     request = ExpeditionRequest.model_validate(state["expedition_request"])
     location = ResolvedLocation.model_validate(state["resolved_location"])
     taxon = ResolvedTaxon.model_validate(state["resolved_taxon"])
@@ -559,7 +696,39 @@ def deterministic_validation(state: BiodiversityAgentState) -> dict[str, Any]:
             "deterministic_phase1_plan": phase1_plan.model_dump(mode="json"),
             "visited_nodes": ["deterministic_validation"],
         }
-    tradeoff = _actionable_tradeoff(state, request, bundle)
+    related_candidates: list[RelatedTaxonCandidate] = []
+    related_taxon_source_key: int | None = None
+    if bundle.evidence_outcome in {
+        EvidenceOutcome.limited_contextual_evidence,
+        EvidenceOutcome.insufficient_evidence,
+    }:
+        related_taxon_source_key = taxon.accepted_taxon_key
+        saved_source_key = state.get("related_taxon_source_key")
+        raw_related = (
+            list(state.get("related_taxon_candidates") or [])
+            if saved_source_key == taxon.accepted_taxon_key
+            else []
+        )
+        if saved_source_key != taxon.accepted_taxon_key and dependencies is not None:
+            try:
+                raw_related = dependencies.taxonomy.related(
+                    taxon.accepted_taxon_key or 0,
+                    limit=6,
+                    request_budget=3,
+                )
+            except Exception:
+                # Related taxa are an optional deterministic trade-off. A source
+                # failure removes that option; it is never reported as no evidence.
+                raw_related = []
+        related_candidates = [
+            RelatedTaxonCandidate.model_validate(item) for item in raw_related
+        ]
+    tradeoff = _actionable_tradeoff(
+        state,
+        request,
+        bundle,
+        related_candidates,
+    )
     return {
         "deterministic_constraints": [item.model_dump(mode="json") for item in constraints],
         "evidence_bundle": bundle.model_dump(mode="json"),
@@ -567,6 +736,10 @@ def deterministic_validation(state: BiodiversityAgentState) -> dict[str, Any]:
         "deterministic_phase1_plan": phase1_plan.model_dump(mode="json"),
         "pending_hitl_kind": "actionable_tradeoff" if tradeoff else None,
         "pending_hitl_payload": tradeoff,
+        "related_taxon_candidates": [
+            item.model_dump(mode="json") for item in related_candidates
+        ],
+        "related_taxon_source_key": related_taxon_source_key,
         "terminal_status": None,
         "visited_nodes": ["deterministic_validation"],
     }
@@ -600,6 +773,16 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
         "pending_user_choice": None,
         "applied_user_decisions": [{"kind": "actionable_tradeoff", **choice}],
         "decision_route": "deterministic_validation",
+        "deterministic_constraints": [],
+        "evidence_bundle": None,
+        "deterministic_plan_status": None,
+        "deterministic_phase1_plan": None,
+        "draft_llm_plan": None,
+        "final_validated_plan": None,
+        "grounding_errors": [],
+        "terminal_status": None,
+        "terminal_result": None,
+        "low_confidence_accepted": False,
         "visited_nodes": ["apply_validated_user_choice"],
     }
     if option == "expand_search_radius":
@@ -607,19 +790,349 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
         if isinstance(radius, bool) or not isinstance(radius, (int, float)) or not request.search_radius_km < float(radius) <= 25:
             raise ValueError("Expanded radius must be greater than the current radius and at most 25 km")
         request = _validated_request_update(request, {"search_radius_km": float(radius)})
-        update.update({"expedition_request": request.model_dump(mode="json"), "public_site_search": None, "decision_route": "evidence_agent"})
-    elif option == "change_target_month":
-        month = choice.get("target_month")
-        if isinstance(month, bool) or not isinstance(month, int) or month not in range(1, 13) or month == request.seasonal_target_month:
-            raise ValueError("target_month must be a different integer from 1 to 12")
-        request = _validated_request_update(request, {"target_month_override": month})
-        update.update({"expedition_request": request.model_dump(mode="json"), "occurrence_evidence": None, "public_site_search": None, "decision_route": "evidence_agent"})
+        update.update(
+            {
+                "expedition_request": request.model_dump(mode="json"),
+                "public_site_search": None,
+                "invalidated_evidence": ["public_sites"],
+                "decision_route": "refresh_invalidated_evidence",
+            }
+        )
+    elif option == "widen_seasonal_window":
+        radius = choice.get("seasonal_window_radius_months")
+        if (
+            isinstance(radius, bool)
+            or not isinstance(radius, int)
+            or not request.seasonal_window_radius_months < radius <= 3
+        ):
+            raise ValueError(
+                "seasonal_window_radius_months must increase and be at most 3"
+            )
+        request = _validated_request_update(
+            request,
+            {"seasonal_window_radius_months": radius},
+        )
+        update.update(
+            {
+                "expedition_request": request.model_dump(mode="json"),
+                "occurrence_evidence": None,
+                "public_site_search": None,
+                "invalidated_evidence": ["occurrence", "public_sites"],
+                "decision_route": "refresh_invalidated_evidence",
+                "low_confidence_accepted": False,
+            }
+        )
+    elif option == "consider_related_taxa":
+        current_key = (state.get("resolved_taxon") or {}).get(
+            "accepted_taxon_key"
+        )
+        if state.get("related_taxon_source_key") != current_key:
+            raise ValueError(
+                "Saved related candidates do not belong to the current taxon"
+            )
+        candidates = [
+            RelatedTaxonCandidate.model_validate(item)
+            for item in state.get("related_taxon_candidates", [])
+        ]
+        if not candidates:
+            raise ValueError("No validated related taxa are available")
+        update.update(
+            {
+                "pending_hitl_kind": "related_taxon_selection",
+                "pending_hitl_payload": {
+                    "kind": "related_taxon_selection",
+                    "related_to_taxon_key": current_key,
+                    "question": (
+                        "Which deterministic GBIF-related taxon should replace the target? "
+                        "Taxonomic relation is not ecological interchangeability."
+                    ),
+                    "candidates": [
+                        {
+                            **item.model_dump(mode="json", exclude={"class_name"}),
+                            "class": item.class_name,
+                        }
+                        for item in candidates
+                    ],
+                    "resume_schema": {
+                        "accepted_taxon_key": "one listed integer key"
+                    },
+                },
+                "decision_route": "related_taxon_selection_interrupt",
+                "low_confidence_accepted": False,
+            }
+        )
     elif option == "revise_rain_preference":
         request = _validated_request_update(request, {"rain_preference": RainPreference.no_preference})
         update["expedition_request"] = request.model_dump(mode="json")
-    elif option not in {"accept_context_only", "continue_with_weather_acknowledgement", "accept_uncertain_access"}:
+    elif option not in {
+        "keep_constraints_accept_low_confidence",
+        "accept_context_only",
+        "continue_with_weather_acknowledgement",
+        "accept_uncertain_access",
+    }:
         raise ValueError("Unsupported deterministic trade-off option")
+    elif option in {
+        "keep_constraints_accept_low_confidence",
+        "accept_context_only",
+    }:
+        update["low_confidence_accepted"] = True
     return update
+
+
+def related_taxon_selection_interrupt(
+    state: BiodiversityAgentState,
+) -> dict[str, Any]:
+    """Apply only a related accepted key already saved in the payload."""
+
+    payload = state.get("pending_hitl_payload")
+    if state.get("pending_hitl_kind") != "related_taxon_selection" or not payload:
+        raise ValueError("Related-taxon selection interrupt has no pending payload")
+    current_key = (state.get("resolved_taxon") or {}).get("accepted_taxon_key")
+    if payload.get("related_to_taxon_key") != current_key:
+        raise ValueError("Related-taxon payload does not match the current taxon")
+    resumed = interrupt(payload)
+    if not isinstance(resumed, dict) or set(resumed) != {"accepted_taxon_key"}:
+        raise ValueError("Resume must contain only accepted_taxon_key")
+    key = resumed["accepted_taxon_key"]
+    if isinstance(key, bool) or not isinstance(key, int):
+        raise ValueError("accepted_taxon_key must be an integer")
+    candidates = []
+    for raw in payload.get("candidates", []):
+        item = dict(raw)
+        item["class_name"] = item.pop("class", None)
+        candidates.append(RelatedTaxonCandidate.model_validate(item))
+    selected = next(
+        (item for item in candidates if item.accepted_taxon_key == key),
+        None,
+    )
+    if selected is None:
+        raise ValueError("accepted_taxon_key is not present in related candidates")
+    previous = ResolvedTaxon.model_validate(state["resolved_taxon"])
+    request = ExpeditionRequest.model_validate(state["expedition_request"])
+    provenance = previous.provenance
+    if provenance is not None:
+        provenance = provenance.model_copy(
+            update={
+                "source_record_type": "accepted_related_taxon_selection",
+                "retrieved_at": datetime.now(UTC),
+                "use_classification": EvidenceUse.validation,
+                "limitations": list(
+                    dict.fromkeys(
+                        [
+                            *provenance.limitations,
+                            "The selected species came from a bounded GBIF related-taxon query.",
+                            "Taxonomic relation does not imply ecological interchangeability.",
+                        ]
+                    )
+                ),
+            }
+        )
+    else:
+        provenance = EvidenceItem(
+            source="GBIF Species API",
+            source_record_type="accepted_related_taxon_selection",
+            retrieved_at=datetime.now(UTC),
+            licence="GBIF API terms; source datasets retain their own terms",
+            attribution="GBIF.org",
+            use_classification=EvidenceUse.validation,
+            limitations=[
+                "Taxonomic relation does not imply ecological interchangeability."
+            ],
+            source_reference="https://www.gbif.org/developer/species",
+        )
+    resolved = ResolvedTaxon(
+        status=TaxonStatus.resolved,
+        original_input=request.bird_input,
+        normalised_input=selected.canonical_name.casefold(),
+        accepted_taxon_key=selected.accepted_taxon_key,
+        common_name=selected.common_name,
+        scientific_name=selected.scientific_name,
+        canonical_name=selected.canonical_name,
+        rank=selected.rank,
+        taxonomic_status=selected.taxonomic_status,
+        class_name=selected.class_name,
+        order=selected.order,
+        family=selected.family,
+        genus=selected.genus,
+        resolution_method=selected.resolution_method,
+        confidence=selected.confidence,
+        candidates=[],
+        provenance=provenance,
+        rationale=(
+            "The user selected a candidate returned by the deterministic GBIF "
+            f"{selected.relation_level} query; related does not imply ecological "
+            "interchangeability or easier observation."
+        ),
+    )
+    updated_request = _validated_request_update(
+        request,
+        {"bird_input": selected.common_name or selected.canonical_name},
+    )
+    return {
+        "expedition_request": updated_request.model_dump(mode="json"),
+        "resolved_taxon": resolved.model_dump(mode="json"),
+        "related_taxon_candidates": [],
+        "related_taxon_source_key": None,
+        "occurrence_evidence": None,
+        "public_site_search": None,
+        "deterministic_constraints": [],
+        "evidence_bundle": None,
+        "deterministic_plan_status": None,
+        "deterministic_phase1_plan": None,
+        "draft_llm_plan": None,
+        "final_validated_plan": None,
+        "terminal_status": None,
+        "terminal_result": None,
+        "low_confidence_accepted": False,
+        "pending_hitl_kind": None,
+        "pending_hitl_payload": None,
+        "invalidated_evidence": ["occurrence", "public_sites"],
+        "applied_user_decisions": [
+            {
+                "kind": "related_taxon_selection",
+                "accepted_taxon_key": key,
+                "relation_level": selected.relation_level,
+                "rationale": selected.relation_basis,
+            }
+        ],
+        "visited_nodes": ["related_taxon_selection_interrupt"],
+    }
+
+
+def _refresh_audit(
+    tool_name: str,
+    canonical_arguments: dict[str, Any],
+    summary: dict[str, Any],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    canonical = json.dumps(canonical_arguments, sort_keys=True)
+    digest = hashlib.sha256(f"{tool_name}:{canonical}".encode()).hexdigest()[:16]
+    call_id = f"phase3-refresh-{digest}"
+    audit = {
+        "call_id": call_id,
+        "tool_name": tool_name,
+        "canonical_arguments": canonical,
+        "status": "success",
+        "retryable": False,
+    }
+    log = {
+        "evidence_id": f"{tool_name}:{call_id}",
+        "source_tool": tool_name,
+        "status": "success",
+        "summary": summary,
+        "provenance": [],
+    }
+    return audit, log
+
+
+def build_refresh_invalidated_evidence_node(
+    dependencies: BackendDependencies,
+) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
+    """Recompute only state declared invalid by a validated HITL/fork update."""
+
+    def refresh_invalidated_evidence(
+        state: BiodiversityAgentState,
+    ) -> dict[str, Any]:
+        invalidated = set(state.get("invalidated_evidence", []))
+        if not invalidated:
+            raise ValueError("No deterministic evidence was marked for refresh")
+        request = ExpeditionRequest.model_validate(state["expedition_request"])
+        location = ResolvedLocation.model_validate(state["resolved_location"])
+        taxon = ResolvedTaxon.model_validate(state["resolved_taxon"])
+        update: dict[str, Any] = {
+            "invalidated_evidence": [],
+            "deterministic_constraints": [],
+            "evidence_bundle": None,
+            "deterministic_plan_status": None,
+            "deterministic_phase1_plan": None,
+            "draft_llm_plan": None,
+            "final_validated_plan": None,
+            "grounding_errors": [],
+            "terminal_status": None,
+            "terminal_result": None,
+            "visited_nodes": ["refresh_invalidated_evidence"],
+        }
+        audits: list[dict[str, Any]] = []
+        logs: list[dict[str, Any]] = []
+        occurrence = (
+            OccurrenceEvidence.model_validate(state["occurrence_evidence"])
+            if state.get("occurrence_evidence")
+            else None
+        )
+        if "occurrence" in invalidated:
+            occurrence = search_occurrences(
+                taxon,
+                target_month=request.seasonal_target_month,
+                seasonal_window_radius_months=request.seasonal_window_radius_months,
+                repository=dependencies.occurrences,
+            )
+            update["occurrence_evidence"] = occurrence.model_dump(mode="json")
+            audit, log = _refresh_audit(
+                "search_occurrences",
+                {
+                    "accepted_taxon_key": taxon.accepted_taxon_key,
+                    "target_month": request.seasonal_target_month,
+                    "seasonal_months": occurrence.seasonal_months,
+                },
+                {
+                    "outcome": occurrence.outcome.value,
+                    "sampled_count": occurrence.counts.sampled_count,
+                    "retained_count": occurrence.counts.retained_total_count,
+                    "ranking_eligible_count": occurrence.counts.ranking_eligible_count,
+                },
+            )
+            audits.append(audit)
+            logs.append(log)
+        if "weather" in invalidated:
+            weather = get_weather_context(
+                location,
+                request.target_local_date,
+                repository=dependencies.weather,
+            )
+            update["weather_evidence"] = weather.model_dump(mode="json")
+            audit, log = _refresh_audit(
+                "get_weather_context",
+                {"requested_date": request.target_local_date.isoformat()},
+                {"status": weather.status.value},
+            )
+            audits.append(audit)
+            logs.append(log)
+        if "public_sites" in invalidated:
+            if occurrence is None:
+                raise ValueError("Occurrence evidence is required for site refresh")
+            sites = find_public_green_spaces(
+                location,
+                search_radius_km=request.search_radius_km,
+                occurrence=occurrence,
+                repository=dependencies.green_spaces,
+            )
+            update["public_site_search"] = sites.model_dump(mode="json")
+            audit, log = _refresh_audit(
+                "find_public_green_spaces",
+                {
+                    "search_radius_km": request.search_radius_km,
+                    "occurrence_outcome": occurrence.outcome.value,
+                    "seasonal_months": occurrence.seasonal_months,
+                },
+                {
+                    "status": sites.status.value,
+                    "recommended_candidate_count": len(sites.candidates),
+                    "contextual_site_count": len(sites.contextual_sites),
+                },
+            )
+            audits.append(audit)
+            logs.append(log)
+        update["executed_tool_call_audit"] = audits
+        update["structured_evidence_log"] = logs
+        return update
+
+    return refresh_invalidated_evidence
+
+
+def apply_fork_updates(state: BiodiversityAgentState) -> dict[str, Any]:
+    """Graph anchor used only as the validated ``update_state(..., as_node=...)`` writer."""
+
+    del state
+    return {}
 
 
 def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
@@ -631,7 +1144,14 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
     def compose_expedition_plan(state: BiodiversityAgentState) -> dict[str, Any]:
         bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
         phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
-        payload = compact_plan_payload(bundle, phase1_plan)
+        payload = compact_plan_payload(
+            bundle,
+            phase1_plan,
+            low_confidence_accepted=state.get(
+                "low_confidence_accepted", False
+            ),
+        )
+        payload["generated_by"] = "llm_composer"
         try:
             response = structured_composer.invoke(
                 [SystemMessage(content=PLAN_COMPOSER_PROMPT), HumanMessage(content=json.dumps(payload, ensure_ascii=False, indent=2))]
@@ -651,8 +1171,16 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
     def revise_expedition_plan(state: BiodiversityAgentState) -> dict[str, Any]:
         bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
         phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
+        validated_evidence = compact_plan_payload(
+                bundle,
+                phase1_plan,
+                low_confidence_accepted=state.get(
+                    "low_confidence_accepted", False
+                ),
+            )
+        validated_evidence["generated_by"] = "llm_revision"
         payload = {
-            "validated_evidence": compact_plan_payload(bundle, phase1_plan),
+            "validated_evidence": validated_evidence,
             "rejected_draft": state.get("draft_llm_plan"),
             "validation_errors": state.get("grounding_errors", []),
         }
@@ -683,7 +1211,21 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
     except ValidationError as exc:
         errors = [f"Draft plan schema validation failed: {exc}"]
     else:
-        errors = validate_grounded_plan(bundle, phase1_plan, draft)
+        errors = validate_grounded_plan(
+            bundle,
+            phase1_plan,
+            draft,
+            low_confidence_accepted=state.get(
+                "low_confidence_accepted", False
+            ),
+        )
+        expected_generator = (
+            "llm_revision"
+            if state.get("plan_revision_count", 0)
+            else "llm_composer"
+        )
+        if draft.generated_by != expected_generator:
+            errors.append("Plan generator label was omitted or altered.")
     if errors:
         return {"grounding_errors": errors, "visited_nodes": ["grounding_and_safety_checks"]}
     return {
@@ -697,7 +1239,11 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
 def deterministic_plan_fallback(state: BiodiversityAgentState) -> dict[str, Any]:
     bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
     phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
-    fallback = deterministic_safe_plan(bundle, phase1_plan)
+    fallback = deterministic_safe_plan(
+        bundle,
+        phase1_plan,
+        low_confidence_accepted=state.get("low_confidence_accepted", False),
+    )
     return {
         "final_validated_plan": fallback.model_dump(mode="json"),
         "terminal_status": "completed_with_deterministic_fallback",

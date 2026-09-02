@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import date, datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, model_validator
 
@@ -157,6 +157,7 @@ class ExpeditionRequest(StrictModel):
     maximum_walking_distance_km: float | None = Field(default=None, gt=0, le=50)
     rain_preference: RainPreference = RainPreference.no_preference
     target_month_override: int | None = Field(default=None, ge=1, le=12)
+    seasonal_window_radius_months: int = Field(default=1, ge=1, le=3)
     search_radius_km: float = Field(default=5.0, gt=0, le=25)
     timezone: str = Field(default="Europe/London", pattern=r"^Europe/London$")
 
@@ -183,6 +184,7 @@ class EvidenceItem(StrictModel):
     limitations: list[NonEmptyText] = Field(default_factory=list)
     source_reference: str | None = None
     dataset_references: list[str] = Field(default_factory=list)
+    query_months: list[int] = Field(default_factory=list)
 
 
 class ResolvedLocation(StrictModel):
@@ -216,8 +218,34 @@ class TaxonCandidate(StrictModel):
     canonical_name: NonEmptyText
     rank: NonEmptyText
     taxonomic_status: NonEmptyText
+    class_name: str | None = None
+    order: str | None = None
+    family: str | None = None
+    genus: str | None = None
     resolution_method: NonEmptyText
     confidence: int | None = Field(default=None, ge=0, le=100)
+
+
+class TaxonEvidencePreview(StrictModel):
+    """Coordinate-free, bounded evidence context for one taxonomy candidate."""
+
+    status: Literal["evaluated", "source_failure", "not_evaluated_budget"]
+    evidence_outcome: EvidenceOutcome | None = None
+    sampled_count: int | None = Field(default=None, ge=0)
+    retained_count: int | None = Field(default=None, ge=0)
+    ranking_eligible_count: int | None = Field(default=None, ge=0)
+    dataset_count: int | None = Field(default=None, ge=0)
+    target_months: list[int] = Field(default_factory=list)
+    source_status: NonEmptyText
+    limitations: list[NonEmptyText] = Field(default_factory=list)
+    provenance_reference: str | None = None
+
+
+class RelatedTaxonCandidate(TaxonCandidate):
+    """Accepted GBIF bird species related by an explicit taxonomy level."""
+
+    relation_level: Literal["same_genus", "same_family"]
+    relation_basis: NonEmptyText
 
 
 class ResolvedTaxon(StrictModel):
@@ -230,6 +258,10 @@ class ResolvedTaxon(StrictModel):
     canonical_name: str | None = None
     rank: str | None = None
     taxonomic_status: str | None = None
+    class_name: str | None = None
+    order: str | None = None
+    family: str | None = None
+    genus: str | None = None
     resolution_method: str | None = None
     confidence: int | None = Field(default=None, ge=0, le=100)
     candidates: list[TaxonCandidate] = Field(default_factory=list)

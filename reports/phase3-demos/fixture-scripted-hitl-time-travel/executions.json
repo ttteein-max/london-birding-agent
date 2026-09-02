@@ -1,0 +1,38 @@
+[
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "head_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+    "created_at": "2026-09-02T10:37:54.553304Z",
+    "terminal_status": "completed",
+    "interrupt_kind": null
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "head_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+    "final_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+    "created_at": "2026-09-02T10:37:54.543073Z",
+    "terminal_status": "completed",
+    "interrupt_kind": null
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "head_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.424083Z",
+    "terminal_status": "completed",
+    "interrupt_kind": null
+  }
+]

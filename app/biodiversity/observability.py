@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, Protocol
 from uuid import uuid4
 
 from langchain_core.callbacks import BaseCallbackHandler
@@ -27,6 +27,18 @@ AgentRunEventType = Literal[
     "tool_started",
     "tool_completed",
     "tool_failed",
+    "interrupt_requested",
+    "run_resumed",
+    "checkpoint_selected",
+    "checkpoint_created",
+    "replay_started",
+    "replay_completed",
+    "replay_failed",
+    "fork_created",
+    "fork_started",
+    "fork_completed",
+    "fork_failed",
+    "comparison_created",
     "run_completed",
     "run_failed",
 ]
@@ -57,6 +69,118 @@ class AgentRunEvent(BaseModel):
         if value is not None and (value.tzinfo is None or value.utcoffset() is None):
             raise ValueError("event timestamps must include a timezone")
         return value
+
+
+class AgentRunEventSink(Protocol):
+    """Immediate delivery boundary for SSE, durable logs, or external brokers."""
+
+    def publish(self, event: AgentRunEvent) -> None:
+        """Publish one already-redacted event without changing its sequence."""
+
+
+class AgentRunEventBatch(BaseModel):
+    """Reconnect-safe event batch returned after a known sequence."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    run_id: str = Field(min_length=1)
+    after_sequence: int = Field(ge=0)
+    latest_sequence: int = Field(ge=0)
+    terminal: bool
+    events: list[AgentRunEvent] = Field(default_factory=list)
+
+
+class InMemoryAgentEventBroker:
+    """Thread-safe live channel with sequence-based replay for local SSE use.
+
+    It intentionally stores only :class:`AgentRunEvent`, never prompts, graph
+    state, model output, or tool payloads. A future distributed sink can
+    implement the same ``publish`` boundary without changing the recorder.
+    """
+
+    def __init__(self) -> None:
+        self._condition = threading.Condition(threading.RLock())
+        self._events: dict[str, list[AgentRunEvent]] = {}
+        self._terminal_runs: set[str] = set()
+
+    def publish(self, event: AgentRunEvent) -> None:
+        saved = event.model_copy(deep=True)
+        with self._condition:
+            events = self._events.setdefault(saved.run_id, [])
+            expected = len(events) + 1
+            if saved.sequence != expected:
+                if 1 <= saved.sequence <= len(events):
+                    existing = events[saved.sequence - 1]
+                    if existing == saved:
+                        return
+                raise ValueError(
+                    f"event sequence must be contiguous; expected {expected}, "
+                    f"received {saved.sequence}"
+                )
+            events.append(saved)
+            if saved.event_type in {"run_completed", "run_failed"}:
+                self._terminal_runs.add(saved.run_id)
+            self._condition.notify_all()
+
+    def events_after(
+        self,
+        run_id: str,
+        *,
+        after_sequence: int = 0,
+    ) -> AgentRunEventBatch:
+        """Return retained events for an initial connection or reconnect."""
+
+        if after_sequence < 0:
+            raise ValueError("after_sequence must be non-negative")
+        with self._condition:
+            events = list(self._events.get(run_id, []))
+            latest = events[-1].sequence if events else 0
+            if after_sequence > latest:
+                raise ValueError(
+                    "after_sequence is newer than the latest retained event"
+                )
+            return AgentRunEventBatch(
+                run_id=run_id,
+                after_sequence=after_sequence,
+                latest_sequence=latest,
+                terminal=run_id in self._terminal_runs,
+                events=[
+                    event.model_copy(deep=True)
+                    for event in events
+                    if event.sequence > after_sequence
+                ],
+            )
+
+    def wait_for_events(
+        self,
+        run_id: str,
+        *,
+        after_sequence: int,
+        timeout_seconds: float = 15.0,
+    ) -> AgentRunEventBatch:
+        """Block until an event arrives, the run ends, or an SSE heartbeat is due."""
+
+        if timeout_seconds < 0:
+            raise ValueError("timeout_seconds must be non-negative")
+        with self._condition:
+            current = self._events.get(run_id, [])
+            latest = current[-1].sequence if current else 0
+            if after_sequence > latest:
+                raise ValueError(
+                    "after_sequence is newer than the latest retained event"
+                )
+            self._condition.wait_for(
+                lambda: (
+                    bool(self._events.get(run_id))
+                    and self._events[run_id][-1].sequence > after_sequence
+                )
+                or run_id in self._terminal_runs,
+                timeout=timeout_seconds,
+            )
+            return self.events_after(
+                run_id,
+                after_sequence=after_sequence,
+            )
 
 
 class AgentRunSpan(BaseModel):
@@ -139,9 +263,17 @@ class AgentRunRecorder(BaseCallbackHandler):
 
     run_inline = True
 
-    def __init__(self, *, run_id: str | None = None, thread_id: str | None = None) -> None:
+    def __init__(
+        self,
+        *,
+        run_id: str | None = None,
+        thread_id: str | None = None,
+        event_sink: AgentRunEventSink | None = None,
+    ) -> None:
         self.run_id = run_id or uuid4().hex
         self.thread_id = thread_id
+        self._event_sink = event_sink
+        self._event_sink_error_types: list[str] = []
         self._lock = threading.RLock()
         self._started_at = datetime.now(UTC)
         self._started_ns = time.perf_counter_ns()
@@ -169,6 +301,11 @@ class AgentRunRecorder(BaseCallbackHandler):
     def spans(self) -> list[AgentRunSpan]:
         with self._lock:
             return list(self._spans)
+
+    @property
+    def event_sink_error_types(self) -> list[str]:
+        with self._lock:
+            return list(self._event_sink_error_types)
 
     def _append_event(
         self,
@@ -202,7 +339,54 @@ class AgentRunRecorder(BaseCallbackHandler):
             payload=payload or {},
         )
         self._events.append(event)
+        if self._event_sink is not None:
+            try:
+                self._event_sink.publish(event)
+            except Exception as exc:
+                # Observability transport failure must not change graph results.
+                self._event_sink_error_types.append(type(exc).__name__)
         return event
+
+    def record_event(
+        self,
+        event_type: AgentRunEventType,
+        *,
+        node_id: str | None = None,
+        payload: dict[str, Any] | None = None,
+    ) -> AgentRunEvent:
+        """Record a safe application event without graph state or tool payloads."""
+
+        blocked_fragments = {
+            "api_key",
+            "prompt",
+            "raw_tool",
+            "coordinate",
+            "occurrence_id",
+            "occurrenceid",
+            "record_ref",
+            "hmac",
+            "safe_cell",
+        }
+
+        def validate(value: Any, path: str = "payload") -> None:
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    normalised = str(key).casefold()
+                    if any(fragment in normalised for fragment in blocked_fragments):
+                        raise ValueError(f"Unsafe observability field: {path}.{key}")
+                    validate(item, f"{path}.{key}")
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    validate(item, f"{path}[{index}]")
+
+        safe_payload = dict(payload or {})
+        validate(safe_payload)
+        with self._lock:
+            return self._append_event(
+                event_type,
+                node_id=node_id,
+                payload=safe_payload,
+            )
 
     def _begin(
         self,
@@ -334,7 +518,7 @@ class AgentRunRecorder(BaseCallbackHandler):
     ) -> None:
         del messages
         metadata = _metadata(kwargs)
-        provider = metadata.get("ls_provider")
+        adapter = metadata.get("ls_provider")
         invocation = kwargs.get("invocation_params") or {}
         model_name = str(
             invocation.get("model_name")
@@ -343,8 +527,10 @@ class AgentRunRecorder(BaseCallbackHandler):
             or "chat_model"
         )
         payload = {"model": model_name}
-        if provider:
-            payload["provider"] = str(provider)
+        if adapter:
+            payload["api_adapter"] = str(adapter)
+            if str(adapter).casefold() == "openai":
+                payload["api_protocol"] = "openai-compatible"
         self._begin(
             callback_run_id=kwargs["run_id"],
             parent_run_id=kwargs.get("parent_run_id"),

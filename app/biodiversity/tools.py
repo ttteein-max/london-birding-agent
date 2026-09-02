@@ -272,6 +272,10 @@ def resolve_bird_taxon(
             canonical_name=item.canonical_name,
             rank=item.rank,
             taxonomic_status=item.taxonomic_status,
+            class_name=item.class_name,
+            order=item.order,
+            family=item.family,
+            genus=item.genus,
             resolution_method=item.search_method,
             confidence=item.match_confidence,
         )
@@ -287,6 +291,10 @@ def resolve_bird_taxon(
         canonical_name=outcome.canonical_name,
         rank=outcome.rank,
         taxonomic_status=outcome.taxonomic_status,
+        class_name=outcome.class_name,
+        order=outcome.order,
+        family=outcome.family,
+        genus=outcome.genus,
         resolution_method=outcome.match_method,
         confidence=outcome.match_confidence,
         candidates=candidates,
@@ -301,8 +309,17 @@ def _empty_occurrence(
     target_month: int,
     reference_year: int,
     tool_error: ToolError | None = None,
+    seasonal_window_radius_months: int = 1,
 ) -> OccurrenceEvidence:
-    months = sorted({((target_month + offset - 1) % 12) + 1 for offset in (-1, 0, 1)})
+    months = sorted(
+        {
+            ((target_month + offset - 1) % 12) + 1
+            for offset in range(
+                -seasonal_window_radius_months,
+                seasonal_window_radius_months + 1,
+            )
+        }
+    )
     year = reference_year
     return OccurrenceEvidence(
         outcome=outcome,
@@ -342,6 +359,8 @@ def search_occurrences(
     *,
     target_month: int,
     repository: OccurrenceRepository,
+    seasonal_window_radius_months: int = 1,
+    preview: bool = False,
 ) -> OccurrenceEvidence:
     """Retrieve and translate bounded occurrence evidence without public coordinates."""
 
@@ -351,6 +370,7 @@ def search_occurrences(
             taxon.rationale,
             target_month,
             getattr(repository, "reference_year", _now().year),
+            seasonal_window_radius_months=seasonal_window_radius_months,
         )
     if taxon.status == TaxonStatus.taxon_not_found:
         return _empty_occurrence(
@@ -358,6 +378,7 @@ def search_occurrences(
             taxon.rationale,
             target_month,
             getattr(repository, "reference_year", _now().year),
+            seasonal_window_radius_months=seasonal_window_radius_months,
         )
     if taxon.status != TaxonStatus.resolved:
         return _empty_occurrence(
@@ -365,6 +386,7 @@ def search_occurrences(
             taxon.rationale,
             target_month,
             getattr(repository, "reference_year", _now().year),
+            seasonal_window_radius_months=seasonal_window_radius_months,
         )
     taxonomy = TaxonomyOutcome(
         outcome="resolved",
@@ -376,12 +398,29 @@ def search_occurrences(
         accepted_taxon_key=taxon.accepted_taxon_key,
         rank=taxon.rank,
         taxonomic_status=taxon.taxonomic_status,
+        class_name=taxon.class_name,
+        order=taxon.order,
+        family=taxon.family,
+        genus=taxon.genus,
         match_method=taxon.resolution_method,
         match_confidence=taxon.confidence,
         rationale=taxon.rationale,
     )
     try:
-        raw = repository.search(taxonomy, target_month=target_month)
+        if preview:
+            raw = repository.preview(
+                taxonomy,
+                target_month=target_month,
+                seasonal_window_radius_months=seasonal_window_radius_months,
+            )
+        elif seasonal_window_radius_months == 1:
+            raw = repository.search(taxonomy, target_month=target_month)
+        else:
+            raw = repository.search(
+                taxonomy,
+                target_month=target_month,
+                seasonal_window_radius_months=seasonal_window_radius_months,
+            )
     except SourceFailure as exc:
         return _empty_occurrence(
             EvidenceOutcome.source_unavailable,
@@ -389,6 +428,7 @@ def search_occurrences(
             target_month,
             getattr(repository, "reference_year", _now().year),
             _failure("search_occurrences", exc),
+            seasonal_window_radius_months=seasonal_window_radius_months,
         )
 
     counts = raw.get("counts") or {}
@@ -559,7 +599,14 @@ def search_occurrences(
             or retrieval.get("deduplication_rule")
             or "Publisher identifier hierarchy with deterministic fallback."
         ),
-        evidence_items=evidence_items,
+        evidence_items=[
+            item.model_copy(
+                update={
+                    "query_months": list(retrieval.get("seasonal_months") or [])
+                }
+            )
+            for item in evidence_items
+        ],
         limitations=limitations,
     )
 
@@ -1204,16 +1251,22 @@ def build_expedition_evidence_bundle(
                 message=weather.limitations[0],
             )
         )
-    limitations = [
-        "Historical occurrence evidence does not guarantee a sighting.",
-        "The backend does not estimate bird populations or abundance.",
-        "No individual occurrence coordinates are included.",
-        "Candidate-site access and opening are not guaranteed.",
-        "Projected proximity is not a walking route or walking-distance validation.",
-        "This output is not legal or conservation advice and executes no field action.",
-    ]
-    if occurrence:
-        limitations.extend(occurrence.limitations)
+    limitations = list(
+        occurrence.limitations
+        if occurrence
+        else [
+            "Historical occurrence evidence does not guarantee a sighting.",
+            "The backend does not estimate bird populations or abundance.",
+        ]
+    )
+    limitations.extend(
+        [
+            "No individual occurrence coordinates are included.",
+            "Candidate-site access and opening are not guaranteed.",
+            "Projected proximity is not a walking route or walking-distance validation.",
+            "This output is not legal or conservation advice and executes no field action.",
+        ]
+    )
     return ExpeditionEvidenceBundle(
         request=request,
         location=location,

@@ -1,0 +1,33 @@
+{
+  "schema_version": 2,
+  "run_id": "3cc8b728ce6d4a68b5a6cca532e58305",
+  "thread_id": "phase3-live-final2-20260902",
+  "checkpoint_id": "1f1a6b83-6170-6ca4-800d-2feb0f274c92",
+  "execution_id": "f249e33e3e4f4e99a5602b7118fbedcc",
+  "parent_execution_id": null,
+  "replayed_from_checkpoint_id": null,
+  "branch_id": "4356d310b4cc426a85f9a2a797c5ff9b",
+  "parent_branch_id": null,
+  "forked_from_checkpoint_id": null,
+  "request": "Plan a two-hour expedition from SW11 4NJ on 2026-09-02 to look for Common woodpigeon.",
+  "data_mode": "live",
+  "model_mode": "live",
+  "run_manifest": {
+    "workflow_version": "phase-3.1",
+    "state_schema_version": 2,
+    "data_mode": "live",
+    "model_mode": "live",
+    "model_identifier": "gemini-3.7-flash",
+    "endpoint_fingerprint": "f5a9a9ddfe1b4dac",
+    "created_at": "2026-09-02T10:21:27.494757Z"
+  },
+  "status": "completed",
+  "terminal_status": "completed",
+  "started_at": "2026-09-02T10:21:27.258332+00:00",
+  "finished_at": "2026-09-02T10:22:33.702185+00:00",
+  "duration_ms": 66443.469792,
+  "event_count": 59,
+  "span_count": 21,
+  "event_sink_error_types": [],
+  "privacy_note": "Timing artifacts exclude prompts, model outputs, tool inputs, tool outputs, raw occurrence coordinates, occurrence identifiers and HMAC references."
+}

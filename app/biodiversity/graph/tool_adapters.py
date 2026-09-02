@@ -106,10 +106,27 @@ def build_evidence_tools(dependencies: BackendDependencies) -> list[Any]:
 
         request_data = runtime.state.get("expedition_request") or {}
         taxon_data = runtime.state.get("resolved_taxon") or {}
+        target_month = request_data.get("target_month_override") or str(
+            request_data.get("target_local_date", "")
+        )[5:7]
+        radius = request_data.get("seasonal_window_radius_months", 1)
+        try:
+            month_number = int(target_month)
+            radius_number = int(radius)
+            seasonal_months = sorted(
+                {
+                    ((month_number + offset - 1) % 12) + 1
+                    for offset in range(-radius_number, radius_number + 1)
+                }
+            )
+        except (TypeError, ValueError):
+            seasonal_months = []
         canonical = json.dumps(
             {
                 "accepted_taxon_key": taxon_data.get("accepted_taxon_key"),
-                "target_month": request_data.get("target_month_override") or str(request_data.get("target_local_date", ""))[5:7],
+                "target_month": target_month,
+                "seasonal_window_radius_months": radius,
+                "seasonal_months": seasonal_months,
             },
             sort_keys=True,
         )
@@ -132,6 +149,7 @@ def build_evidence_tools(dependencies: BackendDependencies) -> list[Any]:
         evidence = phase1_search_occurrences(
             taxon,
             target_month=request.seasonal_target_month,
+            seasonal_window_radius_months=request.seasonal_window_radius_months,
             repository=dependencies.occurrences,
         )
         error = evidence.tool_error.model_dump(mode="json") if evidence.tool_error else None
@@ -147,6 +165,7 @@ def build_evidence_tools(dependencies: BackendDependencies) -> list[Any]:
                 "outcome": evidence.outcome.value,
                 "reason": evidence.reason,
                 "seasonal_target_month": evidence.seasonal_target_month,
+                "seasonal_months": evidence.seasonal_months,
                 "retained_record_count": evidence.counts.retained_total_count,
                 "ranking_eligible_count": evidence.counts.ranking_eligible_count,
                 "safe_map_cell_count": len(evidence.safe_map_cells),

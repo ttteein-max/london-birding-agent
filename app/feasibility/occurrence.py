@@ -38,6 +38,7 @@ class RetrievalPolicy:
     request_budget: int = 3
     complete_years: int = 5
     target_month: int = 6
+    seasonal_window_radius_months: int = 1
 
     def __post_init__(self) -> None:
         if not 1 <= self.page_size <= 300:
@@ -46,6 +47,8 @@ class RetrievalPolicy:
             raise ValueError("page and request budgets must be positive")
         if not 1 <= self.target_month <= 12:
             raise ValueError("target_month must be between 1 and 12")
+        if not 1 <= self.seasonal_window_radius_months <= 3:
+            raise ValueError("seasonal_window_radius_months must be between 1 and 3")
 
     @property
     def effective_page_budget(self) -> int:
@@ -56,7 +59,13 @@ class RetrievalPolicy:
         return year - self.complete_years, year
 
     def seasonal_months(self) -> list[int]:
-        return sorted({((self.target_month + offset - 1) % 12) + 1 for offset in (-1, 0, 1)})
+        radius = self.seasonal_window_radius_months
+        return sorted(
+            {
+                ((self.target_month + offset - 1) % 12) + 1
+                for offset in range(-radius, radius + 1)
+            }
+        )
 
 
 def _normalised_identifier(value: Any) -> str | None:

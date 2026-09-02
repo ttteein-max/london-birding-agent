@@ -1,19 +1,25 @@
-"""Run the Phase 2 London biodiversity LangGraph in the terminal."""
+"""Run the Phase 3 London biodiversity LangGraph in the terminal."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
+from contextlib import ExitStack
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from uuid import uuid4
 
 from langchain.messages import AIMessage
 from langgraph.types import Command
 
 from app.biodiversity.model_factory import create_live_chat_model
 from app.biodiversity.graph import (
+    DEFAULT_BIODIVERSITY_CHECKPOINT_PATH,
     build_biodiversity_graph,
-    create_biodiversity_checkpointer,
+    open_biodiversity_sqlite_checkpointer,
 )
 from app.biodiversity.orchestration import BackendDependencies
 from app.biodiversity.observability import AgentRunRecorder
@@ -21,6 +27,8 @@ from app.biodiversity.reporting import (
     default_report_directory,
     save_biodiversity_run_report,
 )
+from app.biodiversity.run_models import RunManifest, RunProfile
+from app.biodiversity.runs import checkpoint_node_id
 from app.biodiversity.testing import make_scripted_biodiversity_models
 
 
@@ -37,13 +45,80 @@ def _update_fragments(update: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _print_updates(graph: Any, graph_input: Any, config: dict[str, Any]) -> None:
+def _print_updates(
+    graph: Any,
+    graph_input: Any,
+    config: dict[str, Any],
+    *,
+    recorder: AgentRunRecorder | None = None,
+    recorded_checkpoint_ids: set[str] | None = None,
+    checkpoint_next_nodes: dict[str, list[str]] | None = None,
+) -> None:
+    if recorded_checkpoint_ids is None:
+        recorded_checkpoint_ids = set()
+    if checkpoint_next_nodes is None:
+        checkpoint_next_nodes = {}
     for event in graph.stream(
         graph_input,
         config,
-        stream_mode="updates",
+        stream_mode=["updates", "checkpoints"],
         version="v2",
     ):
+        if event.get("type") == "checkpoints":
+            checkpoint = dict(event["data"])
+            checkpoint_config = dict(checkpoint.get("config") or {})
+            configurable = dict(checkpoint_config.get("configurable") or {})
+            checkpoint_id = str(configurable.get("checkpoint_id") or "")
+            if (
+                recorder is not None
+                and checkpoint_id
+                and checkpoint_id not in recorded_checkpoint_ids
+            ):
+                metadata = dict(checkpoint.get("metadata") or {})
+                values = dict(checkpoint.get("values") or {})
+                parent_config = dict(checkpoint.get("parent_config") or {})
+                parent_checkpoint_id = parent_config.get(
+                    "configurable", {}
+                ).get("checkpoint_id")
+                recorder.record_event(
+                    "checkpoint_created",
+                    node_id=checkpoint_node_id(
+                        metadata,
+                        values,
+                        parent_next_nodes=checkpoint_next_nodes.get(
+                            str(parent_checkpoint_id)
+                        ),
+                    ),
+                    payload={
+                        "thread_id": str(
+                            configurable.get("thread_id")
+                            or recorder.thread_id
+                            or "unknown"
+                        ),
+                        "checkpoint_id": checkpoint_id,
+                        "branch_id": str(
+                            values.get("branch_id")
+                            or metadata.get("branch_id")
+                            or config.get("metadata", {}).get("branch_id")
+                            or "main"
+                        ),
+                        "execution_id": str(
+                            metadata.get("execution_id")
+                            or values.get("execution_id")
+                            or values.get("branch_id")
+                            or config.get("metadata", {}).get("execution_id")
+                            or "main"
+                        ),
+                        "graph_step": metadata.get("step"),
+                        "source": metadata.get("source"),
+                        "next_nodes": list(checkpoint.get("next") or []),
+                    },
+                )
+                recorded_checkpoint_ids.add(checkpoint_id)
+                checkpoint_next_nodes[checkpoint_id] = list(
+                    checkpoint.get("next") or []
+                )
+            continue
         data = event.get("data", {})
         for node_name, update in data.items():
             if node_name == "__interrupt__":
@@ -75,12 +150,15 @@ def _automatic_resume(payload: dict[str, Any]) -> dict[str, Any]:
                 radius = min(option["maximum_radius_km"], option["current_radius_km"] + 1.0)
             return {"option": "expand_search_radius", "search_radius_km": radius}
         for name in (
+            "keep_constraints_accept_low_confidence",
             "accept_context_only",
             "accept_uncertain_access",
             "continue_with_weather_acknowledgement",
         ):
             if name in options:
                 return {"option": name}
+    if kind == "related_taxon_selection":
+        return {"accepted_taxon_key": payload["candidates"][0]["accepted_taxon_key"]}
     raise RuntimeError(f"No safe automatic response is available for {kind}")
 
 
@@ -89,7 +167,16 @@ def main() -> None:
     parser.add_argument("--request", required=True, help="Natural English expedition request.")
     parser.add_argument("--data-mode", choices=("fixture", "live"), default="fixture")
     parser.add_argument("--model-mode", choices=("scripted", "live"), default="scripted")
-    parser.add_argument("--thread-id", default="biodiversity-cli")
+    parser.add_argument(
+        "--thread-id",
+        help="Stable checkpoint thread; defaults to a unique CLI thread.",
+    )
+    parser.add_argument(
+        "--checkpoint-db",
+        type=Path,
+        default=DEFAULT_BIODIVERSITY_CHECKPOINT_PATH,
+        help="Durable local SQLite checkpoint database.",
+    )
     parser.add_argument("--resume-json", help="JSON resume object for the first interrupt.")
     parser.add_argument("--auto-resume", action="store_true", help="Use the safe scripted demonstration choice at each interrupt.")
     parser.add_argument("--compact", action="store_true", help="Print a compact final plan summary after node progress.")
@@ -104,7 +191,37 @@ def main() -> None:
         help="Do not save the default local run report under reports/runs.",
     )
     args = parser.parse_args()
+    args.thread_id = args.thread_id or f"biodiversity-cli-{uuid4().hex[:8]}"
+    model_identifier = (
+        "scripted-biodiversity-v1"
+        if args.model_mode == "scripted"
+        else os.getenv("OPENAI_MODEL") or "live-model-not-configured"
+    )
+    endpoint = (
+        "local-scripted"
+        if args.model_mode == "scripted"
+        else os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+    )
+    endpoint_fingerprint = (
+        "local-scripted"
+        if args.model_mode == "scripted"
+        else hashlib.sha256(endpoint.encode()).hexdigest()[:16]
+    )
+    run_profile = RunProfile(
+        data_mode=args.data_mode,
+        model_mode=args.model_mode,
+        model_identifier=model_identifier,
+        endpoint_fingerprint=endpoint_fingerprint,
+    )
+    run_manifest = RunManifest(
+        **run_profile.model_dump(mode="python"),
+        created_at=datetime.now(UTC),
+    )
 
+    stack = ExitStack()
+    checkpointer = stack.enter_context(
+        open_biodiversity_sqlite_checkpointer(args.checkpoint_db)
+    )
     dependencies = BackendDependencies.fixture() if args.data_mode == "fixture" else BackendDependencies.live()
     if args.model_mode == "scripted":
         parser_model, evidence_model, composer_model = make_scripted_biodiversity_models()
@@ -113,25 +230,63 @@ def main() -> None:
             evidence_model=evidence_model,
             composer_model=composer_model,
             dependencies=dependencies,
-            checkpointer=create_biodiversity_checkpointer(),
+            checkpointer=checkpointer,
         )
     else:
         graph = build_biodiversity_graph(
             create_live_chat_model(),
             dependencies=dependencies,
-            checkpointer=create_biodiversity_checkpointer(),
+            checkpointer=checkpointer,
         )
     recorder = AgentRunRecorder(thread_id=args.thread_id)
+    branch_id = uuid4().hex
+    execution_id = uuid4().hex
+    created_at = datetime.now(UTC).isoformat()
     config = {
         "configurable": {"thread_id": args.thread_id},
         "callbacks": [recorder],
+        "metadata": {
+            "execution_id": execution_id,
+            "execution_created_at": created_at,
+            "branch_id": branch_id,
+        },
     }
-    graph_input: Any = {"original_request_text": args.request}
+    if list(graph.get_state_history(config)):
+        stack.close()
+        raise ValueError(
+            "thread_id already exists in the checkpoint database; use "
+            "scripts.manage_biodiversity_runs resume or choose a new thread_id"
+        )
+    graph_input: Any = {
+        "original_request_text": args.request,
+        "run_manifest": run_manifest.model_dump(mode="json"),
+        "branch_id": branch_id,
+        "branch_created_at": created_at,
+        "parent_branch_id": None,
+        "forked_from_checkpoint_id": None,
+        "fork_updates": {},
+        "fork_created_at": None,
+        "execution_id": execution_id,
+        "parent_execution_id": None,
+        "replayed_from_checkpoint_id": None,
+        "execution_created_at": created_at,
+        "low_confidence_accepted": False,
+        "related_taxon_source_key": None,
+    }
     supplied_resume = json.loads(args.resume_json) if args.resume_json else None
     result: dict[str, Any] = {}
+    recorded_checkpoint_ids: set[str] = set()
+    checkpoint_next_nodes: dict[str, list[str]] = {}
     try:
         while True:
-            _print_updates(graph, graph_input, config)
+            _print_updates(
+                graph,
+                graph_input,
+                config,
+                recorder=recorder,
+                recorded_checkpoint_ids=recorded_checkpoint_ids,
+                checkpoint_next_nodes=checkpoint_next_nodes,
+            )
             snapshot = graph.get_state(config)
             interrupts = [interrupt for task in snapshot.tasks for interrupt in task.interrupts]
             if not interrupts:
@@ -150,6 +305,15 @@ def main() -> None:
             print(f"RESUME {json.dumps(resume, ensure_ascii=False)}")
             graph_input = Command(resume=resume)
     except Exception as error:
+        try:
+            latest_snapshot = graph.get_state(config)
+            if latest_snapshot.values:
+                snapshot = latest_snapshot
+                result = dict(latest_snapshot.values)
+        except Exception:
+            # Preserve the original execution failure if even checkpoint
+            # inspection is unavailable.
+            pass
         recorder.finish(
             "failed",
             payload={"error_type": type(error).__name__},
@@ -167,9 +331,24 @@ def main() -> None:
                 request=args.request,
                 data_mode=args.data_mode,
                 model_mode=args.model_mode,
+                checkpoint_id=(
+                    str(
+                        snapshot.config.get("configurable", {}).get(
+                            "checkpoint_id"
+                        )
+                        or ""
+                    )
+                    or None
+                    if "snapshot" in locals()
+                    else None
+                ),
+                execution_id=execution_id,
+                run_manifest=run_manifest.model_dump(mode="json"),
             )
             print(f"RUN REPORT {report_dir.resolve()}")
         raise
+    finally:
+        stack.close()
 
     recorder.finish(
         "completed",
@@ -209,6 +388,12 @@ def main() -> None:
             request=args.request,
             data_mode=args.data_mode,
             model_mode=args.model_mode,
+            checkpoint_id=str(
+                snapshot.config.get("configurable", {}).get("checkpoint_id") or ""
+            )
+            or None,
+            execution_id=execution_id,
+            run_manifest=run_manifest.model_dump(mode="json"),
         )
         print(f"RUN REPORT {report_dir.resolve()}")
 

@@ -1,0 +1,64 @@
+{
+  "schema_version": 2,
+  "provenance": {
+    "source_name": "GBIF Occurrence Search API",
+    "source_url": "https://www.gbif.org/developer/occurrence",
+    "endpoint": "https://api.gbif.org/v1/occurrence/search",
+    "request_parameters": {
+      "candidate_limit": 3,
+      "page_size": 1,
+      "maximum_pages_per_candidate": 1,
+      "request_budget_per_candidate": 1,
+      "request_count": 3
+    },
+    "retrieved_at_utc": "2026-09-02T03:45:00Z",
+    "snapshot_version": "2026-09-02",
+    "licence": "Each occurrence record and media object retains its own licence field",
+    "attribution": "GBIF.org and contributing datasets",
+    "checksum_sha256": "4433001040802d98be17e97579ea27e3faf7bc5b971528ef04f576cca80f4a83",
+    "record_counts": {
+      "server_match_count": 0,
+      "sampled_count": 0,
+      "deduplicated_count": 0,
+      "duplicates_removed": 0,
+      "ranking_eligible_count": 0,
+      "weak_count": 0,
+      "context_only_count": 0,
+      "unknown_uncertainty_count": 0,
+      "rejected_count": 0,
+      "retained_total_count": 0,
+      "rejection_counts_by_reason": {}
+    },
+    "filtering_rules": [
+      "London boundary only",
+      "One page and request per evaluated candidate",
+      "No occurrence coordinates, identifiers, record references or safe-cell associations persisted"
+    ],
+    "known_limitations": [
+      "A bounded zero-record result is not an abundance statement",
+      "Candidates after the budget are marked not_evaluated_budget"
+    ]
+  },
+  "payload": {
+    "results": [
+      {
+        "accepted_taxon_key": 2489281,
+        "target_month": 1,
+        "seasonal_window_radius_months": 1,
+        "api_response": {"offset": 0, "limit": 1, "endOfRecords": true, "count": 0, "results": []}
+      },
+      {
+        "accepted_taxon_key": 2489280,
+        "target_month": 1,
+        "seasonal_window_radius_months": 1,
+        "api_response": {"offset": 0, "limit": 1, "endOfRecords": true, "count": 0, "results": []}
+      },
+      {
+        "accepted_taxon_key": 2493189,
+        "target_month": 1,
+        "seasonal_window_radius_months": 1,
+        "api_response": {"offset": 0, "limit": 1, "endOfRecords": true, "count": 0, "results": []}
+      }
+    ]
+  }
+}

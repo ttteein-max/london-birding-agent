@@ -39,9 +39,14 @@ def save_biodiversity_run_report(
     *,
     recorder: AgentRunRecorder,
     result: dict[str, Any],
-    request: str,
+    request: str | None,
     data_mode: str,
     model_mode: str,
+    checkpoint_id: str | None = None,
+    execution_id: str | None = None,
+    parent_execution_id: str | None = None,
+    replayed_from_checkpoint_id: str | None = None,
+    run_manifest: dict[str, Any] | None = None,
 ) -> dict[str, Path]:
     """Save safe Phase 4 inputs, excluding raw occurrences and model prompts."""
 
@@ -55,12 +60,24 @@ def save_biodiversity_run_report(
     _write_json(
         metadata_path,
         {
-            "schema_version": 1,
+            "schema_version": 2,
             "run_id": recorder.run_id,
             "thread_id": recorder.thread_id,
+            "checkpoint_id": checkpoint_id,
+            "execution_id": execution_id or result.get("execution_id"),
+            "parent_execution_id": parent_execution_id
+            or result.get("parent_execution_id"),
+            "replayed_from_checkpoint_id": replayed_from_checkpoint_id
+            or result.get("replayed_from_checkpoint_id"),
+            "branch_id": result.get("branch_id"),
+            "parent_branch_id": result.get("parent_branch_id"),
+            "forked_from_checkpoint_id": result.get(
+                "forked_from_checkpoint_id"
+            ),
             "request": request,
             "data_mode": data_mode,
             "model_mode": model_mode,
+            "run_manifest": run_manifest or result.get("run_manifest"),
             "status": timing.status,
             "terminal_status": result.get("terminal_status"),
             "started_at": timing.started_at.isoformat(),
@@ -68,6 +85,7 @@ def save_biodiversity_run_report(
             "duration_ms": timing.duration_ms,
             "event_count": timing.event_count,
             "span_count": timing.span_count,
+            "event_sink_error_types": recorder.event_sink_error_types,
             "privacy_note": (
                 "Timing artifacts exclude prompts, model outputs, tool inputs, tool outputs, "
                 "raw occurrence coordinates, occurrence identifiers and HMAC references."
@@ -78,6 +96,8 @@ def save_biodiversity_run_report(
     final_plan = result.get("final_validated_plan")
     if final_plan is not None:
         _write_json(final_plan_path, final_plan)
+    elif final_plan_path.exists():
+        final_plan_path.unlink()
 
     paths = {
         "metadata": metadata_path,

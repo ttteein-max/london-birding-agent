@@ -1,4 +1,4 @@
-"""Strict, model-facing contracts for the Phase 2 biodiversity agent."""
+"""Strict, model-facing contracts for the Phase 3 biodiversity agent."""
 
 from __future__ import annotations
 
@@ -12,7 +12,6 @@ from app.biodiversity.models import (
     ConstraintSeverity,
     ConstraintStatus,
     ExpeditionPlanStatus,
-    RainPreference,
     SiteEvidenceTier,
     SiteSearchAction,
     StrictModel,
@@ -38,6 +37,7 @@ class ExpeditionRequestDraft(StrictModel):
     maximum_walking_distance_km: float | None = None
     rain_preference: str | None = None
     target_month_override: int | None = None
+    seasonal_window_radius_months: int | None = None
     search_radius_km: float | None = None
 
 
@@ -69,7 +69,7 @@ class PlanConstraint(StrictModel):
 
 
 class BiodiversityExpeditionPlan(StrictModel):
-    """Strict Phase 2 plan returned only after deterministic grounding checks."""
+    """Strict Phase 3 plan returned only after deterministic grounding checks."""
 
     status: ExpeditionPlanStatus
     target_species: NonEmptyText
@@ -85,12 +85,19 @@ class BiodiversityExpeditionPlan(StrictModel):
     provenance_references: list[NonEmptyText] = Field(default_factory=list)
     evidence_attributions: list[NonEmptyText] = Field(default_factory=list)
     evidence_citations: list[NonEmptyText] = Field(default_factory=list)
+    evidence_gate_passed: bool
+    low_confidence_accepted: bool = False
+    low_confidence_notice: NonEmptyText | None = None
     explanation: NonEmptyText
     generated_by: Literal[
+        "llm_composer",
+        "llm_revision",
+        "deterministic_fallback",
+        # Legacy values remain readable for already-persisted Phase 2/3 reports.
         "llm_phase_2_composer",
         "llm_phase_2_revision",
         "deterministic_phase_2_fallback",
-    ] = "llm_phase_2_composer"
+    ] = "llm_composer"
 
     @model_validator(mode="after")
     def site_tiers_match_sections(self) -> "BiodiversityExpeditionPlan":
@@ -104,6 +111,23 @@ class BiodiversityExpeditionPlan(StrictModel):
             for site in self.contextual_sites
         ):
             raise ValueError("contextual sites must not be directly grounded")
+        if self.low_confidence_accepted:
+            if self.evidence_gate_passed:
+                raise ValueError(
+                    "accepted low confidence requires a failed historical-evidence gate"
+                )
+            if self.recommended_sites:
+                raise ValueError(
+                    "accepted low confidence cannot contain recommended sites"
+                )
+            if not self.low_confidence_notice:
+                raise ValueError(
+                    "accepted low confidence requires an explicit final-plan notice"
+                )
+        elif self.low_confidence_notice is not None:
+            raise ValueError(
+                "low-confidence notice requires an explicit user acceptance"
+            )
         return self
 
 
