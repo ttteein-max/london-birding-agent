@@ -8,6 +8,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.biodiversity.api.dependencies import APISettings
 from app.biodiversity.api.errors import (
@@ -41,6 +42,7 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
             )
             app.state.phase4 = phase4
             try:
+                await phase4.start()
                 yield
             finally:
                 await phase4.close()
@@ -54,6 +56,9 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
             "agent execution, human decisions, and checkpoint time travel."
         ),
         lifespan=lifespan,
+        docs_url="/docs" if configured.expose_api_docs else None,
+        redoc_url="/redoc" if configured.expose_api_docs else None,
+        openapi_url="/openapi.json" if configured.expose_api_docs else None,
     )
     app.add_middleware(
         CORSMiddleware,
@@ -68,6 +73,14 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
     app.include_router(health_router, prefix="/api/v1")
     app.include_router(run_router, prefix="/api/v1")
     app.include_router(operation_router, prefix="/api/v1")
+    if configured.serve_frontend:
+        if not configured.frontend_dist.is_dir():
+            raise ValueError("The configured frontend production build does not exist")
+        app.mount(
+            "/",
+            StaticFiles(directory=configured.frontend_dist, html=True),
+            name="frontend",
+        )
     return app
 
 

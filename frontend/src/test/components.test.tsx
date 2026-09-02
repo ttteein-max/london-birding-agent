@@ -157,9 +157,38 @@ describe("loading, empty, error, and accessibility states", () => {
   });
 
   it("provides labelled request input and fixture example controls", () => {
-    render(<RequestComposer busy={false} onSubmit={vi.fn().mockResolvedValue(undefined)} />);
+    render(<RequestComposer
+      busy={false}
+      allowedModes={[
+        { data_mode: "fixture", model_mode: "scripted" },
+        { data_mode: "live", model_mode: "live" },
+      ]}
+      defaultMode={{ data_mode: "fixture", model_mode: "scripted" }}
+      onSubmit={vi.fn().mockResolvedValue(undefined)}
+    />);
     expect(screen.getByLabelText("Natural-language request")).toBeInTheDocument();
+    expect(screen.getByLabelText("Run mode")).toHaveValue("fixture/scripted");
+    expect(screen.getByRole("option", { name: "live/live" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Strong evidence" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Start expedition" })).toBeInTheDocument();
+  });
+
+  it("submits the selected live/live mode", async () => {
+    const onSubmit = vi.fn().mockResolvedValue(undefined);
+    render(<RequestComposer
+      busy={false}
+      allowedModes={[
+        { data_mode: "fixture", model_mode: "scripted" },
+        { data_mode: "live", model_mode: "live" },
+      ]}
+      defaultMode={{ data_mode: "fixture", model_mode: "scripted" }}
+      onSubmit={onSubmit}
+    />);
+    await userEvent.selectOptions(screen.getByLabelText("Run mode"), "live/live");
+    await userEvent.click(screen.getByRole("button", { name: "Start expedition" }));
+    expect(onSubmit).toHaveBeenCalledWith(
+      expect.stringContaining("Common woodpigeon"),
+      { data_mode: "live", model_mode: "live" },
+    );
   });
 });

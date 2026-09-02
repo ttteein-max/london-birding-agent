@@ -1,6 +1,7 @@
 import type { components } from "./schema";
 
 export type HealthView = components["schemas"]["HealthView"];
+export type RunModeView = components["schemas"]["RunModeView"];
 export type CreateRunRequest = components["schemas"]["CreateRunRequest"];
 export type OperationAccepted = components["schemas"]["OperationAccepted"];
 export type OperationView = components["schemas"]["OperationView"];

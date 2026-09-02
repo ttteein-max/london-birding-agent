@@ -41,6 +41,11 @@ EvidenceDisplayStatus = Literal[
 ]
 
 
+class RunModeView(StrictModel):
+    data_mode: Literal["fixture", "live"]
+    model_mode: Literal["scripted", "live"]
+
+
 class ErrorDetail(StrictModel):
     code: NonEmptyText
     message: NonEmptyText
@@ -60,6 +65,8 @@ class HealthView(StrictModel):
     workflow_version: NonEmptyText
     default_data_mode: Literal["fixture", "live"]
     default_model_mode: Literal["scripted", "live"]
+    allowed_run_modes: list[RunModeView]
+    public_demo: bool
 
 
 class CreateRunRequest(StrictModel):

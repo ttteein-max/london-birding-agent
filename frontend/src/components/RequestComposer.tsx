@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from "react";
+import type { RunModeView } from "../api/contracts";
 
 const EXAMPLES = {
   strong:
@@ -11,16 +12,30 @@ const EXAMPLES = {
 
 interface Props {
   busy: boolean;
-  onSubmit: (request: string) => Promise<void>;
+  allowedModes: RunModeView[];
+  defaultMode: RunModeView;
+  onSubmit: (request: string, mode: RunModeView) => Promise<void>;
 }
 
-export function RequestComposer({ busy, onSubmit }: Props) {
+function modeKey(mode: RunModeView): string {
+  return `${mode.data_mode}/${mode.model_mode}`;
+}
+
+export function RequestComposer({ busy, allowedModes, defaultMode, onSubmit }: Props) {
   const [value, setValue] = useState(EXAMPLES.strong);
+  const [selectedMode, setSelectedMode] = useState(modeKey(defaultMode));
+  const effectiveMode = allowedModes.some(
+    (mode) => modeKey(mode) === selectedMode,
+  )
+    ? selectedMode
+    : modeKey(defaultMode);
 
   const submit = async (event: FormEvent) => {
     event.preventDefault();
     if (!value.trim()) return;
-    await onSubmit(value.trim());
+    const mode = allowedModes.find((item) => modeKey(item) === effectiveMode);
+    if (!mode) return;
+    await onSubmit(value.trim(), mode);
   };
 
   return (
@@ -47,9 +62,24 @@ export function RequestComposer({ busy, onSubmit }: Props) {
             <button type="button" onClick={() => setValue(EXAMPLES.taxonomy)}>Taxonomy HITL</button>
             <button type="button" onClick={() => setValue(EXAMPLES.low)}>Low evidence</button>
           </div>
-          <button className="primary-action" type="submit" disabled={busy || !value.trim()}>
-            {busy ? "Starting…" : "Start expedition"}
-          </button>
+          <div className="run-controls">
+            <label htmlFor="run-mode">Run mode</label>
+            <select
+              id="run-mode"
+              value={effectiveMode}
+              onChange={(event) => setSelectedMode(event.target.value)}
+              disabled={busy || allowedModes.length < 2}
+            >
+              {allowedModes.map((mode) => (
+                <option key={modeKey(mode)} value={modeKey(mode)}>
+                  {modeKey(mode)}
+                </option>
+              ))}
+            </select>
+            <button className="primary-action" type="submit" disabled={busy || !value.trim()}>
+              {busy ? "Starting…" : "Start expedition"}
+            </button>
+          </div>
         </div>
       </form>
       <p className="microcopy">

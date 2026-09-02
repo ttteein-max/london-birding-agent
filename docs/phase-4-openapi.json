@@ -1657,6 +1657,17 @@
               "live"
             ],
             "title": "Default Model Mode"
+          },
+          "allowed_run_modes": {
+            "items": {
+              "$ref": "#/components/schemas/RunModeView"
+            },
+            "type": "array",
+            "title": "Allowed Run Modes"
+          },
+          "public_demo": {
+            "type": "boolean",
+            "title": "Public Demo"
           }
         },
         "additionalProperties": false,
@@ -1664,7 +1675,9 @@
         "required": [
           "workflow_version",
           "default_data_mode",
-          "default_model_mode"
+          "default_model_mode",
+          "allowed_run_modes",
+          "public_demo"
         ],
         "title": "HealthView"
       },
@@ -2914,6 +2927,33 @@
           "created_at"
         ],
         "title": "RunExecution"
+      },
+      "RunModeView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Data Mode"
+          },
+          "model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Model Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_mode",
+          "model_mode"
+        ],
+        "title": "RunModeView"
       },
       "RunSummary": {
         "properties": {

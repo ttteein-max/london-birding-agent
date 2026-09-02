@@ -6,6 +6,7 @@ import asyncio
 import json
 import time
 from collections.abc import Iterator
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -36,6 +37,24 @@ def _settings(tmp_path: Path, *, delay: float = 0) -> APISettings:
         sse_heartbeat_seconds=0.02,
         operation_start_delay_seconds=delay,
     )
+
+
+def _public_settings(tmp_path: Path, **updates: object) -> APISettings:
+    settings = APISettings(
+        checkpoint_db=tmp_path / "public-checkpoints.sqlite",
+        catalog_db=tmp_path / "public-catalog.sqlite",
+        report_root=tmp_path / "public-reports",
+        allowed_run_modes=(("fixture", "scripted"),),
+        public_demo=True,
+        expose_api_docs=False,
+        max_concurrent_operations=2,
+        mutations_per_minute=20,
+        max_demo_threads=100,
+        max_storage_bytes=192 * 1024 * 1024,
+        run_retention_seconds=24 * 3600,
+        cleanup_interval_seconds=300,
+    )
+    return replace(settings, **updates)
 
 
 @pytest.fixture
@@ -79,11 +98,122 @@ def test_app_lifespan_health_and_create_run_return_202(client: TestClient) -> No
     health = client.get("/api/v1/health")
     assert health.status_code == 200
     assert health.json()["product"] == "London Biodiversity Expedition Planner"
+    assert health.json()["allowed_run_modes"] == [
+        {"data_mode": "fixture", "model_mode": "scripted"},
+        {"data_mode": "live", "model_mode": "scripted"},
+        {"data_mode": "fixture", "model_mode": "live"},
+        {"data_mode": "live", "model_mode": "live"},
+    ]
+    assert health.json()["public_demo"] is False
     accepted = _create(client, "health-start", STRONG_REQUEST)
     assert accepted["events_url"].endswith(f"/{accepted['operation_id']}/events")
     operation = _wait(client, accepted["operation_id"])
     assert operation["status"] == "completed"
     assert operation["current_checkpoint_id"]
+
+
+def test_public_demo_enforces_mode_policy_and_hides_api_docs(tmp_path: Path) -> None:
+    with TestClient(create_app(_public_settings(tmp_path))) as client:
+        health = client.get("/api/v1/health")
+        assert health.json()["allowed_run_modes"] == [
+            {"data_mode": "fixture", "model_mode": "scripted"}
+        ]
+        assert health.json()["public_demo"] is True
+        denied = client.post(
+            "/api/v1/runs",
+            json={
+                "request": STRONG_REQUEST,
+                "data_mode": "live",
+                "model_mode": "live",
+            },
+        )
+        assert denied.status_code == 403
+        assert denied.json()["error"]["code"] == "mode_not_allowed"
+        assert client.get("/docs").status_code == 404
+        assert client.get("/openapi.json").status_code == 404
+
+
+def test_public_demo_rate_concurrency_run_and_storage_limits(tmp_path: Path) -> None:
+    rate_settings = _public_settings(
+        tmp_path / "rate",
+        mutations_per_minute=1,
+        operation_start_delay_seconds=0.2,
+    )
+    with TestClient(create_app(rate_settings)) as client:
+        assert _create(client, "rate-one", STRONG_REQUEST)["status"] == "queued"
+        limited = client.post(
+            "/api/v1/runs",
+            json={"thread_id": "rate-two", "request": STRONG_REQUEST},
+        )
+        assert limited.status_code == 429
+        assert limited.json()["error"]["code"] == "rate_limited"
+
+    concurrent_settings = _public_settings(
+        tmp_path / "concurrency",
+        max_concurrent_operations=1,
+        operation_start_delay_seconds=0.2,
+    )
+    with TestClient(create_app(concurrent_settings)) as client:
+        _create(client, "active-one", STRONG_REQUEST)
+        busy = client.post(
+            "/api/v1/runs",
+            json={"thread_id": "active-two", "request": STRONG_REQUEST},
+        )
+        assert busy.status_code == 503
+        assert busy.json()["error"]["code"] == "service_busy"
+
+    run_settings = _public_settings(tmp_path / "runs", max_demo_threads=1)
+    with TestClient(create_app(run_settings)) as client:
+        accepted = _create(client, "only-thread", STRONG_REQUEST)
+        assert _wait(client, accepted["operation_id"])["status"] == "completed"
+        full = client.post(
+            "/api/v1/runs",
+            json={"thread_id": "extra-thread", "request": STRONG_REQUEST},
+        )
+        assert full.status_code == 503
+
+    storage_settings = _public_settings(tmp_path / "storage", max_storage_bytes=1)
+    with TestClient(create_app(storage_settings)) as client:
+        full = client.post(
+            "/api/v1/runs",
+            json={"thread_id": "storage-thread", "request": STRONG_REQUEST},
+        )
+        assert full.status_code == 503
+
+
+def test_public_demo_retention_removes_catalog_checkpoints_and_reports(
+    tmp_path: Path,
+) -> None:
+    settings = _public_settings(tmp_path, run_retention_seconds=0.01)
+    with TestClient(create_app(settings)) as client:
+        accepted = _create(client, "expired-demo", STRONG_REQUEST)
+        operation = _wait(client, accepted["operation_id"])
+        report = settings.report_root / operation["operation_id"]
+        assert report.is_dir()
+        time.sleep(0.02)
+        service = client.app.state.phase4
+        assert service.retention.cleanup() == 1
+        assert client.get("/api/v1/runs/expired-demo").status_code == 404
+        assert not report.exists()
+        with pytest.raises(ValueError, match="No biodiversity run exists"):
+            service.runtime.reader().history(thread_id="expired-demo")
+
+
+def test_production_frontend_is_served_from_the_same_origin(tmp_path: Path) -> None:
+    frontend = tmp_path / "dist"
+    frontend.mkdir()
+    (frontend / "index.html").write_text(
+        '<!doctype html><title>Planner</title><div id="root">ready</div>',
+        encoding="utf-8",
+    )
+    settings = replace(
+        _settings(tmp_path),
+        serve_frontend=True,
+        frontend_dist=frontend,
+    )
+    with TestClient(create_app(settings)) as client:
+        assert client.get("/").text.endswith('<div id="root">ready</div>')
+        assert client.get("/api/v1/health").status_code == 200
 
 
 def test_fixture_scripted_hitl_resume_and_low_evidence_safety(client: TestClient) -> None:

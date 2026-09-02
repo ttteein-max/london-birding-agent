@@ -1,0 +1,28 @@
+services:
+  - type: web
+    name: london-biodiversity-expedition-planner
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/v1/health
+    maxShutdownDelaySeconds: 60
+    envVars:
+      - key: BIODIVERSITY_PUBLIC_DEMO
+        value: "true"
+      - key: BIODIVERSITY_ALLOWED_RUN_MODES
+        value: fixture/scripted
+      - key: BIODIVERSITY_SERVE_FRONTEND
+        value: "true"
+      - key: BIODIVERSITY_EXPOSE_API_DOCS
+        value: "false"
+      - key: BIODIVERSITY_MUTATIONS_PER_MINUTE
+        value: "20"
+      - key: BIODIVERSITY_MAX_CONCURRENT_OPERATIONS
+        value: "2"
+      - key: BIODIVERSITY_MAX_DEMO_THREADS
+        value: "100"
+      - key: BIODIVERSITY_MAX_STORAGE_MB
+        value: "192"
+      - key: BIODIVERSITY_RUN_RETENTION_HOURS
+        value: "24"

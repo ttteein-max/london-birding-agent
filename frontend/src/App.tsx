@@ -13,6 +13,7 @@ import type {
   PlanComparison,
   ResumeRunRequest,
   RunDetail,
+  RunModeView,
   RunSummary,
   StateView,
 } from "./api/contracts";
@@ -172,12 +173,12 @@ export default function App() {
     }
   };
 
-  const start = async (request: string) => {
+  const start = async (request: string, mode: RunModeView) => {
     setDetail(null);
     setHistory(null);
     setEvidence(null);
     setMapData(null);
-    await begin(() => api.createRun({ request, data_mode: "fixture", model_mode: "scripted" }));
+    await begin(() => api.createRun({ request, ...mode }));
   };
 
   const selectRun = async (threadId: string) => {
@@ -255,12 +256,22 @@ export default function App() {
   };
 
   const decision = detail?.pending_decisions?.[0];
+  const defaultMode: RunModeView = {
+    data_mode: health?.default_data_mode ?? "fixture",
+    model_mode: health?.default_model_mode ?? "scripted",
+  };
+  const allowedModes = health?.allowed_run_modes ?? [defaultMode];
 
   return (
     <div className="app-shell">
       <StatusHeader health={health} run={detail} evidence={evidence} connection={connection} operationStatus={activeOperationStatus} />
       <main>
-        <RequestComposer busy={busy} onSubmit={start} />
+        <RequestComposer
+          busy={busy}
+          allowedModes={allowedModes}
+          defaultMode={defaultMode}
+          onSubmit={start}
+        />
         {error && <div className="api-error" role="alert"><strong>Application notice</strong><span>{error}</span><button onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
         {decision && <HitlPanel decision={decision} busy={busy} onResume={resume} />}
         <div className="workspace-grid">

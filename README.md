@@ -8,7 +8,7 @@ Phase 4 adds a FastAPI application boundary, durable run catalog, reconnect-safe
 
 ## Phase 4 visual product quick start
 
-The shortest reproducible browser flow is entirely fixture/scripted and offline after dependency installation:
+The shortest reproducible browser flow is entirely fixture/scripted and offline after dependency installation. Local development exposes a run-mode selector with all four data/model combinations; the selected mode is still validated by the server.
 
 1. Install Python dependencies.
 
@@ -43,6 +43,38 @@ The shortest reproducible browser flow is entirely fixture/scripted and offline 
 5. Open `http://127.0.0.1:5173`, select **Strong evidence**, then choose **Start expedition**. For the complete fixture/scripted browser demonstration, run `npm run test:e2e` from `frontend/`.
 
 The browser receives an operation immediately, streams the existing Phase 3 node/model/tool/checkpoint events, and reads only allow-listed state/evidence/map DTOs. It supports typed HITL resume, replay, constrained fork and deterministic comparison without exposing raw LangGraph state or occurrence-level data. See [the Phase 4 visual product documentation](docs/phase-4-visual-product.md) and [OpenAPI contract](docs/phase-4-openapi.json).
+
+### Local live/live mode
+
+Set the model credentials in the shell that starts FastAPI, then select `live/live` in the browser. Do not prefix model settings with `VITE_`; they must remain server-side.
+
+```bash
+export OPENAI_API_KEY='your-key'
+export OPENAI_MODEL='your-model-id'
+# Optional for an OpenAI-compatible provider:
+export OPENAI_BASE_URL='https://provider.example/v1'
+
+python -m uvicorn app.biodiversity.api.main:app \
+  --host 127.0.0.1 \
+  --port 8000
+```
+
+The four choices mean:
+
+- `fixture/scripted`: versioned offline data and deterministic scripted models;
+- `live/scripted`: current upstream data APIs and scripted models;
+- `fixture/live`: versioned offline data and the configured live model;
+- `live/live`: current upstream data APIs and the configured live model.
+
+### Single-container public demo
+
+The production image builds React and serves it from the same FastAPI origin. The checked-in Compose configuration deliberately enables public-demo policy, so only `fixture/scripted` is accepted and no model key is needed.
+
+```bash
+docker compose up --build
+```
+
+Open `http://127.0.0.1:8080`. The public profile disables interactive API docs and enforces bounded concurrency, mutation rate, thread count, storage, and 24-hour stale-run cleanup. Local Docker data uses the named `biodiversity-demo-data` volume. See [the public demo and deployment guide](docs/phase-4-public-demo.md).
 
 ## Phase 1 quick start
 

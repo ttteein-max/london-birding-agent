@@ -42,6 +42,14 @@ class RunCatalog(Protocol):
 
     def has_active_mutation(self, thread_id: str) -> bool: ...
 
+    def thread_count(self) -> int: ...
+
+    def expired_threads(self, *, before: datetime) -> list[str]: ...
+
+    def report_directories_for_thread(self, thread_id: str) -> list[str]: ...
+
+    def delete_thread(self, thread_id: str) -> int: ...
+
     def update_operation(
         self,
         operation_id: str,
@@ -227,6 +235,47 @@ class SQLiteRunCatalog:
                 (thread_id,),
             )
         )
+
+    def thread_count(self) -> int:
+        rows = self._rows("SELECT COUNT(DISTINCT thread_id) AS total FROM phase4_operations")
+        return int(rows[0]["total"])
+
+    def expired_threads(self, *, before: datetime) -> list[str]:
+        return [
+            str(row["thread_id"])
+            for row in self._rows(
+                """
+                SELECT thread_id
+                FROM phase4_operations
+                GROUP BY thread_id
+                HAVING MAX(COALESCE(finished_at, started_at, created_at)) < ?
+                   AND SUM(CASE WHEN status IN ('queued', 'running') THEN 1 ELSE 0 END) = 0
+                ORDER BY MAX(COALESCE(finished_at, started_at, created_at)) ASC
+                """,
+                (before.isoformat(),),
+            )
+        ]
+
+    def report_directories_for_thread(self, thread_id: str) -> list[str]:
+        return [
+            str(row["report_directory"])
+            for row in self._rows(
+                """
+                SELECT report_directory FROM phase4_operations
+                WHERE thread_id = ? AND report_directory IS NOT NULL
+                """,
+                (thread_id,),
+            )
+        ]
+
+    def delete_thread(self, thread_id: str) -> int:
+        with self._lock:
+            cursor = self._connection.execute(
+                "DELETE FROM phase4_operations WHERE thread_id = ?",
+                (thread_id,),
+            )
+            self._connection.commit()
+            return cursor.rowcount
 
     def update_operation(
         self,

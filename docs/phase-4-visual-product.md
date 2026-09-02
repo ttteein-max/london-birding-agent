@@ -152,7 +152,7 @@ cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`, select **Strong evidence**, and choose **Start expedition**. The default fixture/scripted mode needs no network or API key.
+Open `http://127.0.0.1:5173`, select **Strong evidence**, choose a run mode, and select **Start expedition**. The default fixture/scripted mode needs no network or API key. Local development advertises all four modes through the health endpoint; the API remains authoritative and rejects any mode outside its configured allowlist.
 
 Configuration stays server-side unless prefixed `VITE_` below:
 
@@ -164,12 +164,16 @@ Configuration stays server-side unless prefixed `VITE_` below:
 | `BIODIVERSITY_CORS_ORIGINS` | localhost Vite origins | Explicit comma-separated browser origins; wildcard is rejected |
 | `BIODIVERSITY_DATA_MODE` | `fixture` | Default health/display mode |
 | `BIODIVERSITY_MODEL_MODE` | `scripted` | Default health/display mode |
+| `BIODIVERSITY_ALLOWED_RUN_MODES` | all four locally | Comma-separated server allowlist such as `fixture/scripted,live/live` |
+| `BIODIVERSITY_PUBLIC_DEMO` | `false` | Locks the service to fixture/scripted and requires public resource limits |
+| `BIODIVERSITY_SERVE_FRONTEND` | `false` | Serve a built `frontend/dist` from the FastAPI origin |
+| `BIODIVERSITY_EXPOSE_API_DOCS` | `true` locally | Enable `/docs`, `/redoc`, and `/openapi.json`; forced off in public-demo mode |
 | `BIODIVERSITY_SSE_HEARTBEAT_SECONDS` | `15` | Idle SSE heartbeat interval |
 | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL` | unset | Opt-in live model runtime; never returned to the browser |
 | `VITE_API_BASE_URL` | same origin | Optional public API origin |
 | `VITE_MAP_STYLE_URL` | local empty style | Optional public MapLibre style URL; must not contain a secret token |
 
-FastAPI and Vite bind to `127.0.0.1` in the documented development flow. Do not put paid map tokens or model credentials in any `VITE_` variable.
+FastAPI and Vite bind to `127.0.0.1` in the documented development flow. To use fixture/live or live/live, export `OPENAI_API_KEY` and `OPENAI_MODEL` (and optionally `OPENAI_BASE_URL`) before starting FastAPI, then choose that mode in the browser. Do not put paid map tokens or model credentials in any `VITE_` variable.
 
 ## Four run modes
 
@@ -180,7 +184,9 @@ FastAPI and Vite bind to `127.0.0.1` in the documented development flow. Do not 
 | fixture | live | Opt-in model integration over stable fixtures | No |
 | live | live | Opt-in end-to-end external integration | No |
 
-Only fixture/scripted runs are initiated by the Phase 4 UI and default test commands. Live checks retain the explicit opt-in rules documented for earlier phases.
+The local Phase 4 UI can initiate any mode advertised by the server. Default tests and the public deployment initiate only fixture/scripted; live checks retain the explicit opt-in rules documented for earlier phases.
+
+The single-container and public safety design is documented in [the Phase 4 public demo guide](phase-4-public-demo.md).
 
 ## Verification
 

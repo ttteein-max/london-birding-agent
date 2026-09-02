@@ -10,8 +10,11 @@ from fastapi import APIRouter, Depends, Query, status
 from app.biodiversity.api.dependencies import application
 from app.biodiversity.api.errors import (
     conflict,
+    forbidden,
     invalid_operation,
     not_found,
+    rate_limited,
+    service_busy,
     unavailable,
 )
 from app.biodiversity.api.schemas import (
@@ -72,6 +75,14 @@ async def _submit(
             raise conflict("Another mutation is already running for this thread.") from None
         if str(exc) == "thread_already_exists":
             raise conflict("The requested thread already exists.") from None
+        if str(exc) == "demo_rate_limit":
+            raise rate_limited() from None
+        if str(exc) in {
+            "operation_capacity",
+            "demo_run_capacity",
+            "demo_storage_capacity",
+        }:
+            raise service_busy() from None
         raise
 
 
@@ -89,6 +100,8 @@ async def create_run(
         raise conflict("The requested thread already exists.")
     try:
         profile = service.start_profile(body.data_mode, body.model_mode)
+    except PermissionError:
+        raise forbidden("This run mode is not enabled on this deployment.") from None
     except RuntimeError:
         raise unavailable() from None
     return await _submit(
@@ -210,6 +223,8 @@ async def resume_run(
             thread_id=thread_id,
             request=body,
         )
+    except PermissionError:
+        raise forbidden("This run mode is not enabled on this deployment.") from None
     except RuntimeError as exc:
         if str(exc) == "ambiguous_resume":
             raise conflict(
@@ -249,6 +264,8 @@ async def replay_run(
             thread_id=thread_id,
             checkpoint_id=body.checkpoint_id,
         )
+    except PermissionError:
+        raise forbidden("This run mode is not enabled on this deployment.") from None
     except RuntimeError:
         raise unavailable() from None
     except ValueError as exc:
@@ -282,6 +299,8 @@ async def fork_run(
             thread_id=thread_id,
             request=body,
         )
+    except PermissionError:
+        raise forbidden("This run mode is not enabled on this deployment.") from None
     except RuntimeError:
         raise unavailable() from None
     except ValueError as exc:
