@@ -4,7 +4,10 @@ import json
 from collections import Counter
 
 from app.biodiversity.graph import build_biodiversity_graph
-from app.biodiversity.observability import AgentRunRecorder
+from app.biodiversity.observability import (
+    AgentRunRecorder,
+    InMemoryAgentEventBroker,
+)
 from app.biodiversity.orchestration import BackendDependencies
 from app.biodiversity.reporting import save_biodiversity_run_report
 from app.biodiversity.testing import make_scripted_biodiversity_models
@@ -113,7 +116,8 @@ def test_recorder_captures_failed_model_without_saving_error_text() -> None:
         [],
         run_id="model-span",
         parent_run_id="node-span",
-        metadata={"langgraph_node": "example_node", "ls_provider": "example"},
+        metadata={"langgraph_node": "example_node", "ls_provider": "openai"},
+        invocation_params={"model": "gemini-3.7-flash"},
     )
     recorder.on_llm_error(RuntimeError("secret upstream message"), run_id="model-span")
     recorder.finish("failed", payload={"error_type": "RuntimeError"})
@@ -122,3 +126,57 @@ def test_recorder_captures_failed_model_without_saving_error_text() -> None:
     assert model_span.status == "failed"
     assert model_span.error_type == "RuntimeError"
     assert "secret upstream message" not in recorder.report().model_dump_json()
+    started = next(
+        event
+        for event in recorder.events
+        if event.event_type == "model_started"
+    )
+    assert started.payload == {
+        "model": "gemini-3.7-flash",
+        "api_adapter": "openai",
+        "api_protocol": "openai-compatible",
+    }
+    assert "provider" not in started.payload
+
+
+def test_live_event_broker_pushes_during_run_and_replays_after_sequence() -> None:
+    broker = InMemoryAgentEventBroker()
+    recorder = AgentRunRecorder(
+        run_id="broker-run",
+        thread_id="broker-thread",
+        event_sink=broker,
+    )
+
+    connected = broker.events_after("broker-run")
+    assert [event.event_type for event in connected.events] == ["run_started"]
+    assert connected.terminal is False
+
+    recorder.record_event(
+        "checkpoint_created",
+        node_id="parse_expedition_request",
+        payload={
+            "thread_id": "broker-thread",
+            "checkpoint_id": "checkpoint-1",
+            "branch_id": "branch-1",
+            "execution_id": "execution-1",
+            "graph_step": 1,
+            "next_nodes": ["resolve_location"],
+        },
+    )
+    during_run = broker.wait_for_events(
+        "broker-run",
+        after_sequence=1,
+        timeout_seconds=0,
+    )
+    assert [event.sequence for event in during_run.events] == [2]
+    assert during_run.events[0].node_id == "parse_expedition_request"
+    assert during_run.terminal is False
+
+    recorder.finish("completed")
+    reconnected = broker.events_after("broker-run", after_sequence=2)
+    assert [event.event_type for event in reconnected.events] == [
+        "run_completed"
+    ]
+    assert reconnected.terminal is True
+    assert reconnected.latest_sequence == 3
+    assert recorder.event_sink_error_types == []

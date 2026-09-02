@@ -326,5 +326,5 @@ def deterministic_safe_plan(
             f"{status_explanation} Candidate distances are approximate straight-line "
             "projected distances, not walking distances. Access and opening must be checked independently."
         ),
-        generated_by="deterministic_phase_2_fallback",
+        generated_by="deterministic_fallback",
     )

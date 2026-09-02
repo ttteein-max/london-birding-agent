@@ -28,6 +28,7 @@ from app.biodiversity.reporting import (
     save_biodiversity_run_report,
 )
 from app.biodiversity.run_models import RunManifest, RunProfile
+from app.biodiversity.runs import checkpoint_node_id
 from app.biodiversity.testing import make_scripted_biodiversity_models
 
 
@@ -44,13 +45,80 @@ def _update_fragments(update: Any) -> list[dict[str, Any]]:
     return []
 
 
-def _print_updates(graph: Any, graph_input: Any, config: dict[str, Any]) -> None:
+def _print_updates(
+    graph: Any,
+    graph_input: Any,
+    config: dict[str, Any],
+    *,
+    recorder: AgentRunRecorder | None = None,
+    recorded_checkpoint_ids: set[str] | None = None,
+    checkpoint_next_nodes: dict[str, list[str]] | None = None,
+) -> None:
+    if recorded_checkpoint_ids is None:
+        recorded_checkpoint_ids = set()
+    if checkpoint_next_nodes is None:
+        checkpoint_next_nodes = {}
     for event in graph.stream(
         graph_input,
         config,
-        stream_mode="updates",
+        stream_mode=["updates", "checkpoints"],
         version="v2",
     ):
+        if event.get("type") == "checkpoints":
+            checkpoint = dict(event["data"])
+            checkpoint_config = dict(checkpoint.get("config") or {})
+            configurable = dict(checkpoint_config.get("configurable") or {})
+            checkpoint_id = str(configurable.get("checkpoint_id") or "")
+            if (
+                recorder is not None
+                and checkpoint_id
+                and checkpoint_id not in recorded_checkpoint_ids
+            ):
+                metadata = dict(checkpoint.get("metadata") or {})
+                values = dict(checkpoint.get("values") or {})
+                parent_config = dict(checkpoint.get("parent_config") or {})
+                parent_checkpoint_id = parent_config.get(
+                    "configurable", {}
+                ).get("checkpoint_id")
+                recorder.record_event(
+                    "checkpoint_created",
+                    node_id=checkpoint_node_id(
+                        metadata,
+                        values,
+                        parent_next_nodes=checkpoint_next_nodes.get(
+                            str(parent_checkpoint_id)
+                        ),
+                    ),
+                    payload={
+                        "thread_id": str(
+                            configurable.get("thread_id")
+                            or recorder.thread_id
+                            or "unknown"
+                        ),
+                        "checkpoint_id": checkpoint_id,
+                        "branch_id": str(
+                            values.get("branch_id")
+                            or metadata.get("branch_id")
+                            or config.get("metadata", {}).get("branch_id")
+                            or "main"
+                        ),
+                        "execution_id": str(
+                            metadata.get("execution_id")
+                            or values.get("execution_id")
+                            or values.get("branch_id")
+                            or config.get("metadata", {}).get("execution_id")
+                            or "main"
+                        ),
+                        "graph_step": metadata.get("step"),
+                        "source": metadata.get("source"),
+                        "next_nodes": list(checkpoint.get("next") or []),
+                    },
+                )
+                recorded_checkpoint_ids.add(checkpoint_id)
+                checkpoint_next_nodes[checkpoint_id] = list(
+                    checkpoint.get("next") or []
+                )
+            continue
         data = event.get("data", {})
         for node_name, update in data.items():
             if node_name == "__interrupt__":
@@ -207,9 +275,18 @@ def main() -> None:
     }
     supplied_resume = json.loads(args.resume_json) if args.resume_json else None
     result: dict[str, Any] = {}
+    recorded_checkpoint_ids: set[str] = set()
+    checkpoint_next_nodes: dict[str, list[str]] = {}
     try:
         while True:
-            _print_updates(graph, graph_input, config)
+            _print_updates(
+                graph,
+                graph_input,
+                config,
+                recorder=recorder,
+                recorded_checkpoint_ids=recorded_checkpoint_ids,
+                checkpoint_next_nodes=checkpoint_next_nodes,
+            )
             snapshot = graph.get_state(config)
             interrupts = [interrupt for task in snapshot.tasks for interrupt in task.interrupts]
             if not interrupts:

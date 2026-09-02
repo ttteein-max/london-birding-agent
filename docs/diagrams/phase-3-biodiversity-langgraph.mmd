@@ -70,7 +70,8 @@ flowchart TB
                 MANIFEST["RunManifest<br/>data/model mode · model ID<br/>endpoint fingerprint · schema version"]
                 REDUCER["Reducers<br/>add_messages · merge_by_call_id<br/>unique append · explicit replace"]
                 CHECKPOINTER[("Checkpointer<br/>测试：InMemorySaver<br/>运行：SQLite SqliteSaver")]
-                STREAM["Streaming / Observability<br/>graph.stream · updates v2<br/>node/model/tool durations<br/>HITL/checkpoint/fork events"]
+                STREAM["Streaming / Observability<br/>graph.stream · checkpoints v2<br/>node/model/tool durations<br/>每个 checkpoint 实时事件"]
+                BROKER["EventSink / Broker<br/>sequence 实时发布<br/>断线后按 sequence 补发"]
             end
 
             subgraph CONTROL["Phase 3 图外运行管理层 · 不是 LangGraph Node"]
@@ -78,6 +79,7 @@ flowchart TB
                 MANAGER["BiodiversityRunManager"]
                 RESUME_OP["resume<br/>精确 checkpoint / branch"]
                 HISTORY["history<br/>CheckpointSummary + execution"]
+                STATE_VIEW["state-view<br/>node + step + checkpoint<br/>脱敏 StateView"]
                 REPLAY["replay<br/>新 execution_id<br/>终态拒绝；其余 invoke(None, historical config)"]
                 FORK["fork<br/>update_state + 定向失效"]
                 COMPARE["compare<br/>PlanComparison"]
@@ -147,15 +149,18 @@ flowchart TB
     MANIFEST --> STATE
     CHECKPOINTER -. "每个 superstep 持久化" .-> STATE
     STATE ~~~ STREAM
+    STREAM --> BROKER
     STREAM ~~~ LEGEND_BOX
 
     MANAGER --> HISTORY
+    MANAGER --> STATE_VIEW
     MANAGER --> RESUME_OP
     MANAGER --> REPLAY
     MANAGER --> FORK
     MANAGER --> COMPARE
 
     HISTORY -. "读取 checkpoint history" .-> CHECKPOINTER
+    STATE_VIEW -. "精确读取并 allow-list 脱敏" .-> CHECKPOINTER
     RESUME_OP -. "选择唯一 pending checkpoint" .-> CHECKPOINTER
     REPLAY -. "选择历史 checkpoint" .-> CHECKPOINTER
     FORK -. "创建新 checkpoint branch" .-> CHECKPOINTER
@@ -182,8 +187,8 @@ flowchart TB
     class STATE,MANIFEST state;
     class REDUCER reducer;
     class CHECKPOINTER checkpoint;
-    class STREAM streaming;
-    class MANAGER,RESUME_OP,HISTORY,REPLAY,FORK,COMPARE control;
+    class STREAM,BROKER streaming;
+    class MANAGER,RESUME_OP,HISTORY,STATE_VIEW,REPLAY,FORK,COMPARE control;
     class SOURCE_FAILURE,LOOP_LIMIT,FALLBACK terminal;
 
     class LEGEND_BOX legend;

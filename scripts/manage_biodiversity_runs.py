@@ -70,6 +70,12 @@ def _parser() -> argparse.ArgumentParser:
     history = subparsers.add_parser("history")
     _add_common(history)
 
+    state_view = subparsers.add_parser("state-view")
+    _add_common(state_view)
+    state_view.add_argument("--node-id", required=True)
+    state_view.add_argument("--graph-step", required=True, type=int)
+    state_view.add_argument("--checkpoint-id", required=True)
+
     replay = subparsers.add_parser("replay")
     _add_common(replay)
     replay.add_argument("--checkpoint-id", required=True)
@@ -276,6 +282,16 @@ def main() -> None:
                     item.model_dump(mode="json")
                     for item in reader.history(thread_id=args.thread_id)
                 ]
+                recorder.finish("completed")
+                print(json.dumps(output, ensure_ascii=False, indent=2))
+                return
+            if args.command == "state-view":
+                output = reader.state_view(
+                    thread_id=args.thread_id,
+                    node_id=args.node_id,
+                    graph_step=args.graph_step,
+                    checkpoint_id=args.checkpoint_id,
+                ).model_dump(mode="json")
                 recorder.finish("completed")
                 print(json.dumps(output, ensure_ascii=False, indent=2))
                 return

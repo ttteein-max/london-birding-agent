@@ -1,0 +1,26 @@
+[
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "head_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "fork_updates": {
+      "search_radius_km": 8.0
+    },
+    "created_at": "2026-09-02T10:37:54.553304Z",
+    "terminal_status": "completed"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "parent_branch_id": null,
+    "head_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "forked_from_checkpoint_id": null,
+    "fork_updates": {},
+    "created_at": "2026-09-02T10:37:54.424083Z",
+    "terminal_status": "completed"
+  }
+]

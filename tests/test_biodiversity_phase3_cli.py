@@ -81,6 +81,35 @@ def test_manage_cli_reuses_manifest_across_processes_and_records_spans(
         "model",
         "tool",
     }
+    history = _run_module(
+        "scripts.manage_biodiversity_runs",
+        "history",
+        "--thread-id",
+        "cross-process",
+        "--checkpoint-db",
+        str(database),
+    )
+    assert history.returncode == 0, history.stderr
+    selected = json.loads(history.stdout)[0]
+    viewed = _run_module(
+        "scripts.manage_biodiversity_runs",
+        "state-view",
+        "--thread-id",
+        "cross-process",
+        "--checkpoint-db",
+        str(database),
+        "--node-id",
+        selected["node_id"],
+        "--graph-step",
+        str(selected["graph_step"]),
+        "--checkpoint-id",
+        selected["checkpoint_id"],
+    )
+    assert viewed.returncode == 0, viewed.stderr
+    state_view = json.loads(viewed.stdout)
+    assert state_view["checkpoint_id"] == selected["checkpoint_id"]
+    assert "original_request_text" not in state_view
+    assert "messages" not in state_view
 
     mismatched = _run_module(
         "scripts.manage_biodiversity_runs",

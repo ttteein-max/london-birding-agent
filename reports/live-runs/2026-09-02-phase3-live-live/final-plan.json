@@ -123,10 +123,10 @@
   "weather_context": {
     "status": "available",
     "requested_date": "2026-09-02",
-    "maximum_temperature_c": 20.4,
+    "maximum_temperature_c": 20.5,
     "minimum_temperature_c": 16.9,
     "precipitation_probability_percent": 39,
-    "precipitation_amount_mm": 1.3,
+    "precipitation_amount_mm": 0.8,
     "explanation": "Exact-date weather context is available; it does not indicate the chance of seeing the bird."
   },
   "constraints": [
@@ -174,15 +174,13 @@
     }
   ],
   "unresolved_limitations": [
-    "Historical occurrence evidence does not guarantee a sighting.",
-    "The backend does not estimate bird populations or abundance.",
+    "Historical occurrence records do not predict or guarantee a sighting.",
+    "Record counts are not population or abundance estimates.",
+    "Only records with known uncertainty of at most 1,000 m support spatial ranking.",
     "No individual occurrence coordinates are included.",
     "Candidate-site access and opening are not guaranteed.",
     "Projected proximity is not a walking route or walking-distance validation.",
-    "This output is not legal or conservation advice and executes no field action.",
-    "Historical occurrence records do not predict or guarantee a sighting.",
-    "Record counts are not population or abundance estimates.",
-    "Only records with known uncertainty of at most 1,000 m support spatial ranking."
+    "This output is not legal or conservation advice and executes no field action."
   ],
   "suggested_next_actions": [],
   "provenance_references": [
@@ -210,5 +208,5 @@
   "low_confidence_accepted": false,
   "low_confidence_notice": null,
   "explanation": "The bounded historical sample passes the strong gate, and every candidate site has a source polygon intersecting an approved aggregated safe-map cell.",
-  "generated_by": "llm_phase_2_composer"
+  "generated_by": "llm_composer"
 }

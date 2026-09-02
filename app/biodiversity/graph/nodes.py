@@ -1151,6 +1151,7 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
                 "low_confidence_accepted", False
             ),
         )
+        payload["generated_by"] = "llm_composer"
         try:
             response = structured_composer.invoke(
                 [SystemMessage(content=PLAN_COMPOSER_PROMPT), HumanMessage(content=json.dumps(payload, ensure_ascii=False, indent=2))]
@@ -1170,14 +1171,16 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
     def revise_expedition_plan(state: BiodiversityAgentState) -> dict[str, Any]:
         bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
         phase1_plan = ExpeditionPlan.model_validate(state["deterministic_phase1_plan"])
-        payload = {
-            "validated_evidence": compact_plan_payload(
+        validated_evidence = compact_plan_payload(
                 bundle,
                 phase1_plan,
                 low_confidence_accepted=state.get(
                     "low_confidence_accepted", False
                 ),
-            ),
+            )
+        validated_evidence["generated_by"] = "llm_revision"
+        payload = {
+            "validated_evidence": validated_evidence,
             "rejected_draft": state.get("draft_llm_plan"),
             "validation_errors": state.get("grounding_errors", []),
         }
@@ -1216,6 +1219,13 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
                 "low_confidence_accepted", False
             ),
         )
+        expected_generator = (
+            "llm_revision"
+            if state.get("plan_revision_count", 0)
+            else "llm_composer"
+        )
+        if draft.generated_by != expected_generator:
+            errors.append("Plan generator label was omitted or altered.")
     if errors:
         return {"grounding_errors": errors, "visited_nodes": ["grounding_and_safety_checks"]}
     return {

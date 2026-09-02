@@ -85,6 +85,7 @@ def save_biodiversity_run_report(
             "duration_ms": timing.duration_ms,
             "event_count": timing.event_count,
             "span_count": timing.span_count,
+            "event_sink_error_types": recorder.event_sink_error_types,
             "privacy_note": (
                 "Timing artifacts exclude prompts, model outputs, tool inputs, tool outputs, "
                 "raw occurrence coordinates, occurrence identifiers and HMAC references."

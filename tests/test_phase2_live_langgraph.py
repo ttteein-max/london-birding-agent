@@ -65,8 +65,8 @@ def test_live_langgraph_completes_with_model_validated_grounded_plan() -> None:
     assert diagnostic["terminal_status"] == "completed", failure_context
     assert diagnostic["grounding_errors"] == [], failure_context
     assert diagnostic["generated_by"] in {
-        "llm_phase_2_composer",
-        "llm_phase_2_revision",
+        "llm_composer",
+        "llm_revision",
     }, failure_context
 
     node_spans = [span for span in recorder.spans if span.kind == "node"]

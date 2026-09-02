@@ -1,0 +1,150 @@
+{
+  "status": "cannot_recommend_sites",
+  "target_species": "Amalocichla incerta",
+  "target_date": "2026-01-15",
+  "duration_hours": 2.0,
+  "resolved_london_start_context": "Postcode centroid SW11 4NJ, Wandsworth, within Greater London.",
+  "recommended_sites": [],
+  "contextual_sites": [
+    {
+      "site_id": "osm-way-1187346499",
+      "name": "Sub-Tropical Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 0.27,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-225907207",
+      "name": "Chelsea Embankment Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 0.92,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-37798918",
+      "name": "Cremorne Gardens",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.27,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-relation-4109332",
+      "name": "Meadowbank Area SMI",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.3,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-804847432",
+      "name": "Mulberry Square",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.53,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-23066992",
+      "name": "Eden Nature Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.64,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-421889395",
+      "name": "Churchill Gardens Wildflower Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 1.74,
+      "evidence_tier": "ungrounded"
+    },
+    {
+      "site_id": "osm-way-154293379",
+      "name": "Yalta Memorial Garden",
+      "access_certainty": "explicit_public",
+      "approximate_straight_line_distance_km": 2.32,
+      "evidence_tier": "ungrounded"
+    }
+  ],
+  "weather_context": {
+    "status": "weather_unavailable_for_requested_date",
+    "requested_date": "2026-01-15",
+    "maximum_temperature_c": null,
+    "minimum_temperature_c": null,
+    "precipitation_probability_percent": null,
+    "precipitation_amount_mm": null,
+    "explanation": "Exact-date weather is unavailable and no different date has been substituted."
+  },
+  "constraints": [
+    {
+      "code": "greater_london_scope",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Postcode centroid resolved and validated within Greater London."
+    },
+    {
+      "code": "taxon_resolution",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "The user selected this accepted taxon from the exposed GBIF candidates."
+    },
+    {
+      "code": "historical_evidence_quality",
+      "status": "violated",
+      "severity": "warning",
+      "message": "Historical evidence outcome: insufficient_evidence (no_retained_records)."
+    },
+    {
+      "code": "contextual_sites_not_recommendations",
+      "status": "not_applicable",
+      "severity": "information",
+      "message": "Nearby green spaces are retained as contextual options only; they are not included in grounded recommendations or candidate-plan readiness."
+    },
+    {
+      "code": "duration_within_phase1_bounds",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Requested duration of 2 hours is accepted."
+    },
+    {
+      "code": "search_radius",
+      "status": "satisfied",
+      "severity": "information",
+      "message": "Candidate search uses a 5 km projected radius; this is distinct from walking distance."
+    }
+  ],
+  "unresolved_limitations": [
+    "Historical occurrence records do not predict or guarantee a sighting.",
+    "Record counts are not population or abundance estimates.",
+    "Only records with known uncertainty of at most 1,000 m support spatial ranking.",
+    "No individual occurrence coordinates are included.",
+    "Candidate-site access and opening are not guaranteed.",
+    "Projected proximity is not a walking route or walking-distance validation.",
+    "This output is not legal or conservation advice and executes no field action."
+  ],
+  "suggested_next_actions": [
+    "change_target_month",
+    "refresh_live_evidence"
+  ],
+  "provenance_references": [
+    "https://postcodes.io/",
+    "https://www.gbif.org/developer/species",
+    "https://www.gbif.org/developer/occurrence",
+    "data/osm/london-green-space-candidates-2026-08-31.geojson"
+  ],
+  "evidence_attributions": [
+    "Postcodes.io; Royal Mail; Ordnance Survey; Office for National Statistics",
+    "GBIF.org",
+    "GBIF.org and contributing datasets",
+    "© OpenStreetMap contributors"
+  ],
+  "evidence_citations": [
+    "location",
+    "taxonomy",
+    "occurrence",
+    "public_sites",
+    "weather"
+  ],
+  "evidence_gate_passed": false,
+  "low_confidence_accepted": true,
+  "low_confidence_notice": "The deterministic historical-evidence gate did not pass. The user chose to keep the current constraints and accept a low-confidence, non-recommendation result.",
+  "explanation": "No retained evidence or only isolated records were found; no site-level recommendation is supported. Candidate distances are approximate straight-line projected distances, not walking distances. Contextual sites are not recommendations, and access and opening must be checked independently.",
+  "generated_by": "llm_composer"
+}

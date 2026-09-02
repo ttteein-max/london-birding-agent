@@ -1,0 +1,2266 @@
+{
+  "schema_version": 1,
+  "run_id": "phase3-fixture-scripted-demo",
+  "events": [
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 1,
+      "event_type": "run_started",
+      "span_id": "phase3-fixture-scripted-demo",
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.423942Z",
+      "started_at": "2026-09-02T10:37:54.423942Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 2,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "__input__",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.425891Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae49-67de-bfff-b149f2442176",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": -1,
+        "source": "input",
+        "next_nodes": [
+          "__start__"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 3,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "__start__",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.426171Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae4a-6df0-8000-d4072be9e933",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 0,
+        "source": "loop",
+        "next_nodes": [
+          "parse_expedition_request"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 4,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d7a-7aa1-96c2-5f6db3232dc7",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.426202Z",
+      "started_at": "2026-09-02T10:37:54.426202Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 1
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 5,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d7a-7aa1-96c2-5f6db3232dc7",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.426625Z",
+      "started_at": "2026-09-02T10:37:54.426202Z",
+      "finished_at": "2026-09-02T10:37:54.426625Z",
+      "duration_ms": 0.417834,
+      "payload": {
+        "langgraph_step": 1
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 6,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "parse_expedition_request",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.426805Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae4c-6998-8001-2985b401d8b3",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 1,
+        "source": "loop",
+        "next_nodes": [
+          "resolve_location"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 7,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d7a-7aa1-96c2-5f8da835d944",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "resolve_location",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.426827Z",
+      "started_at": "2026-09-02T10:37:54.426827Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 2
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 8,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d7a-7aa1-96c2-5f8da835d944",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "resolve_location",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.432653Z",
+      "started_at": "2026-09-02T10:37:54.426827Z",
+      "finished_at": "2026-09-02T10:37:54.432653Z",
+      "duration_ms": 5.822916,
+      "payload": {
+        "langgraph_step": 2
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 9,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "resolve_location",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.432837Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae5b-64f2-8002-dc6bd72cec20",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 2,
+        "source": "loop",
+        "next_nodes": [
+          "resolve_taxon"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 10,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d80-7863-ae7a-5dc9829d91a4",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "resolve_taxon",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.432862Z",
+      "started_at": "2026-09-02T10:37:54.432862Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 3
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 11,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d80-7863-ae7a-5dc9829d91a4",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "resolve_taxon",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.433928Z",
+      "started_at": "2026-09-02T10:37:54.432862Z",
+      "finished_at": "2026-09-02T10:37:54.433928Z",
+      "duration_ms": 1.061333,
+      "payload": {
+        "langgraph_step": 3
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 12,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "resolve_taxon",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.434103Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae5e-6620-8003-4acc95d45c84",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 3,
+        "source": "loop",
+        "next_nodes": [
+          "prepare_taxon_selection"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 13,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d82-7581-9170-ae0d59fbd1cd",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "prepare_taxon_selection",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.434126Z",
+      "started_at": "2026-09-02T10:37:54.434126Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 4
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 14,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d82-7581-9170-ae0d59fbd1cd",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "prepare_taxon_selection",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.435522Z",
+      "started_at": "2026-09-02T10:37:54.434126Z",
+      "finished_at": "2026-09-02T10:37:54.435522Z",
+      "duration_ms": 1.393625,
+      "payload": {
+        "langgraph_step": 4
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 15,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "prepare_taxon_selection",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.435733Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae62-64fa-8004-4a167f314ea2",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 4,
+        "source": "loop",
+        "next_nodes": [
+          "taxon_selection_interrupt"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 16,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d83-79d1-9c07-b15da4eb3021",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "taxon_selection_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.435759Z",
+      "started_at": "2026-09-02T10:37:54.435759Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 5
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 17,
+      "event_type": "node_failed",
+      "span_id": "01a061b2-5d83-79d1-9c07-b15da4eb3021",
+      "parent_span_id": "01a061b2-5d79-7122-bed4-61bc28ab80aa",
+      "node_id": "taxon_selection_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.435810Z",
+      "started_at": "2026-09-02T10:37:54.435759Z",
+      "finished_at": "2026-09-02T10:37:54.435810Z",
+      "duration_ms": 0.046458,
+      "payload": {
+        "langgraph_step": 5,
+        "error_type": "GraphInterrupt"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 18,
+      "event_type": "interrupt_requested",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.436964Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae62-64fa-8004-4a167f314ea2",
+        "interrupt_kind": "taxon_selection"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 19,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d87-7e10-ae2b-877e4655b7ef",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "taxon_selection_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.439982Z",
+      "started_at": "2026-09-02T10:37:54.439982Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 5
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 20,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d87-7e10-ae2b-877e4655b7ef",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "taxon_selection_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.440080Z",
+      "started_at": "2026-09-02T10:37:54.439982Z",
+      "finished_at": "2026-09-02T10:37:54.440080Z",
+      "duration_ms": 0.091583,
+      "payload": {
+        "langgraph_step": 5
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 21,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "taxon_selection_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.440324Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae6d-66ca-8005-3f341462e84b",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 5,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_agent"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 22,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d88-7ad2-aed5-0147bff66ce7",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.440347Z",
+      "started_at": "2026-09-02T10:37:54.440347Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 6
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 23,
+      "event_type": "model_started",
+      "span_id": "01a061b2-5d88-7ad2-aed5-015ae7953096",
+      "parent_span_id": "01a061b2-5d88-7ad2-aed5-0147bff66ce7",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.440527Z",
+      "started_at": "2026-09-02T10:37:54.440527Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 24,
+      "event_type": "model_completed",
+      "span_id": "01a061b2-5d88-7ad2-aed5-015ae7953096",
+      "parent_span_id": "01a061b2-5d88-7ad2-aed5-0147bff66ce7",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.441241Z",
+      "started_at": "2026-09-02T10:37:54.440527Z",
+      "finished_at": "2026-09-02T10:37:54.441241Z",
+      "duration_ms": 0.710292,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 25,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d88-7ad2-aed5-0147bff66ce7",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.441342Z",
+      "started_at": "2026-09-02T10:37:54.440347Z",
+      "finished_at": "2026-09-02T10:37:54.441342Z",
+      "duration_ms": 0.991125,
+      "payload": {
+        "langgraph_step": 6
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 26,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.441514Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae70-67c6-8006-18b5ec47239e",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 6,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_tools"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 27,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d89-7c33-9bd5-23e9c123011f",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.441535Z",
+      "started_at": "2026-09-02T10:37:54.441535Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 7
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 28,
+      "event_type": "tool_started",
+      "span_id": "01a061b2-5d89-7c33-9bd5-23fb9c683acb",
+      "parent_span_id": "01a061b2-5d89-7c33-9bd5-23e9c123011f",
+      "node_id": "evidence_tools",
+      "tool_name": "search_occurrences",
+      "tool_call_id": "scripted-occurrence-1",
+      "timestamp": "2026-09-02T10:37:54.441728Z",
+      "started_at": "2026-09-02T10:37:54.441728Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 29,
+      "event_type": "tool_completed",
+      "span_id": "01a061b2-5d89-7c33-9bd5-23fb9c683acb",
+      "parent_span_id": "01a061b2-5d89-7c33-9bd5-23e9c123011f",
+      "node_id": "evidence_tools",
+      "tool_name": "search_occurrences",
+      "tool_call_id": "scripted-occurrence-1",
+      "timestamp": "2026-09-02T10:37:54.458017Z",
+      "started_at": "2026-09-02T10:37:54.441728Z",
+      "finished_at": "2026-09-02T10:37:54.458017Z",
+      "duration_ms": 16.2825,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 30,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d89-7c33-9bd5-23e9c123011f",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.458205Z",
+      "started_at": "2026-09-02T10:37:54.441535Z",
+      "finished_at": "2026-09-02T10:37:54.458205Z",
+      "duration_ms": 16.66775,
+      "payload": {
+        "langgraph_step": 7
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 31,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.458480Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae99-6cb6-8007-c61640bdad66",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 7,
+        "source": "loop",
+        "next_nodes": [
+          "record_structured_evidence"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 32,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9a-7a82-b1ae-7a7356c9edc0",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.458510Z",
+      "started_at": "2026-09-02T10:37:54.458510Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 8
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 33,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9a-7a82-b1ae-7a7356c9edc0",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.458759Z",
+      "started_at": "2026-09-02T10:37:54.458510Z",
+      "finished_at": "2026-09-02T10:37:54.458759Z",
+      "duration_ms": 0.244583,
+      "payload": {
+        "langgraph_step": 8
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 34,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459021Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae9b-6458-8008-f150ab99af9c",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 8,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_agent"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 35,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9b-79c2-9589-b96c21a6a1fc",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459042Z",
+      "started_at": "2026-09-02T10:37:54.459042Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 9
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 36,
+      "event_type": "model_started",
+      "span_id": "01a061b2-5d9b-79c2-9589-b97801707f8f",
+      "parent_span_id": "01a061b2-5d9b-79c2-9589-b96c21a6a1fc",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459131Z",
+      "started_at": "2026-09-02T10:37:54.459131Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 37,
+      "event_type": "model_completed",
+      "span_id": "01a061b2-5d9b-79c2-9589-b97801707f8f",
+      "parent_span_id": "01a061b2-5d9b-79c2-9589-b96c21a6a1fc",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459182Z",
+      "started_at": "2026-09-02T10:37:54.459131Z",
+      "finished_at": "2026-09-02T10:37:54.459182Z",
+      "duration_ms": 0.047709,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 38,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9b-79c2-9589-b96c21a6a1fc",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459274Z",
+      "started_at": "2026-09-02T10:37:54.459042Z",
+      "finished_at": "2026-09-02T10:37:54.459274Z",
+      "duration_ms": 0.22925,
+      "payload": {
+        "langgraph_step": 9
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 39,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459415Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae9c-6416-8009-4f032d1467ab",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 9,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_tools"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 40,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9b-79c2-9589-b9916399f77a",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.459434Z",
+      "started_at": "2026-09-02T10:37:54.459434Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 10
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 41,
+      "event_type": "tool_started",
+      "span_id": "01a061b2-5d9b-79c2-9589-b9aa62f798c5",
+      "parent_span_id": "01a061b2-5d9b-79c2-9589-b9916399f77a",
+      "node_id": "evidence_tools",
+      "tool_name": "get_weather_context",
+      "tool_call_id": "scripted-weather-2",
+      "timestamp": "2026-09-02T10:37:54.459556Z",
+      "started_at": "2026-09-02T10:37:54.459556Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 42,
+      "event_type": "tool_completed",
+      "span_id": "01a061b2-5d9b-79c2-9589-b9aa62f798c5",
+      "parent_span_id": "01a061b2-5d9b-79c2-9589-b9916399f77a",
+      "node_id": "evidence_tools",
+      "tool_name": "get_weather_context",
+      "tool_call_id": "scripted-weather-2",
+      "timestamp": "2026-09-02T10:37:54.460629Z",
+      "started_at": "2026-09-02T10:37:54.459556Z",
+      "finished_at": "2026-09-02T10:37:54.460629Z",
+      "duration_ms": 1.066875,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 43,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9b-79c2-9589-b9916399f77a",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.460730Z",
+      "started_at": "2026-09-02T10:37:54.459434Z",
+      "finished_at": "2026-09-02T10:37:54.460730Z",
+      "duration_ms": 1.293042,
+      "payload": {
+        "langgraph_step": 10
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 44,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.460912Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-ae9f-6ddc-800a-1dde81ec9588",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 10,
+        "source": "loop",
+        "next_nodes": [
+          "record_structured_evidence"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 45,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9c-79b0-a3a1-967908f445db",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.460936Z",
+      "started_at": "2026-09-02T10:37:54.460936Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 11
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 46,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9c-79b0-a3a1-967908f445db",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.460981Z",
+      "started_at": "2026-09-02T10:37:54.460936Z",
+      "finished_at": "2026-09-02T10:37:54.460981Z",
+      "duration_ms": 0.041541,
+      "payload": {
+        "langgraph_step": 11
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 47,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461177Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-aea0-6782-800b-dffdfae0e274",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 11,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_agent"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 48,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9d-7382-a5d6-4160c902c7e6",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461197Z",
+      "started_at": "2026-09-02T10:37:54.461197Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 12
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 49,
+      "event_type": "model_started",
+      "span_id": "01a061b2-5d9d-7382-a5d6-417293dc460b",
+      "parent_span_id": "01a061b2-5d9d-7382-a5d6-4160c902c7e6",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461263Z",
+      "started_at": "2026-09-02T10:37:54.461263Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 50,
+      "event_type": "model_completed",
+      "span_id": "01a061b2-5d9d-7382-a5d6-417293dc460b",
+      "parent_span_id": "01a061b2-5d9d-7382-a5d6-4160c902c7e6",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461300Z",
+      "started_at": "2026-09-02T10:37:54.461263Z",
+      "finished_at": "2026-09-02T10:37:54.461300Z",
+      "duration_ms": 0.034,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 51,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9d-7382-a5d6-4160c902c7e6",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461383Z",
+      "started_at": "2026-09-02T10:37:54.461197Z",
+      "finished_at": "2026-09-02T10:37:54.461383Z",
+      "duration_ms": 0.183208,
+      "payload": {
+        "langgraph_step": 12
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 52,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461648Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-aea1-6b00-800c-8796eb0ac9e4",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 12,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_tools"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 53,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5d9d-7382-a5d6-4193909e8984",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.461669Z",
+      "started_at": "2026-09-02T10:37:54.461669Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 13
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 54,
+      "event_type": "tool_started",
+      "span_id": "01a061b2-5d9d-7382-a5d6-41ae4ced8c28",
+      "parent_span_id": "01a061b2-5d9d-7382-a5d6-4193909e8984",
+      "node_id": "evidence_tools",
+      "tool_name": "find_public_green_spaces",
+      "tool_call_id": "scripted-sites-3",
+      "timestamp": "2026-09-02T10:37:54.461778Z",
+      "started_at": "2026-09-02T10:37:54.461778Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 55,
+      "event_type": "tool_completed",
+      "span_id": "01a061b2-5d9d-7382-a5d6-41ae4ced8c28",
+      "parent_span_id": "01a061b2-5d9d-7382-a5d6-4193909e8984",
+      "node_id": "evidence_tools",
+      "tool_name": "find_public_green_spaces",
+      "tool_call_id": "scripted-sites-3",
+      "timestamp": "2026-09-02T10:37:54.515607Z",
+      "started_at": "2026-09-02T10:37:54.461778Z",
+      "finished_at": "2026-09-02T10:37:54.515607Z",
+      "duration_ms": 53.825667,
+      "payload": {}
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 56,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5d9d-7382-a5d6-4193909e8984",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516286Z",
+      "started_at": "2026-09-02T10:37:54.461669Z",
+      "finished_at": "2026-09-02T10:37:54.516286Z",
+      "duration_ms": 54.614042,
+      "payload": {
+        "langgraph_step": 13
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 57,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_tools",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516604Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af27-6b88-800d-9e7f12d21d2f",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 13,
+        "source": "loop",
+        "next_nodes": [
+          "record_structured_evidence"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 58,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dd4-78c2-9334-6d1acae3d5ae",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516635Z",
+      "started_at": "2026-09-02T10:37:54.516635Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 14
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 59,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5dd4-78c2-9334-6d1acae3d5ae",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516743Z",
+      "started_at": "2026-09-02T10:37:54.516635Z",
+      "finished_at": "2026-09-02T10:37:54.516743Z",
+      "duration_ms": 0.103959,
+      "payload": {
+        "langgraph_step": 14
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 60,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "record_structured_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516938Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af28-6a9c-800e-31783cd439f2",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 14,
+        "source": "loop",
+        "next_nodes": [
+          "evidence_agent"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 61,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dd4-78c2-9334-6d2a5b1bf6a4",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.516959Z",
+      "started_at": "2026-09-02T10:37:54.516959Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 15
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 62,
+      "event_type": "model_started",
+      "span_id": "01a061b2-5dd5-7103-869c-07ec1f13ebca",
+      "parent_span_id": "01a061b2-5dd4-78c2-9334-6d2a5b1bf6a4",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.517061Z",
+      "started_at": "2026-09-02T10:37:54.517061Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 63,
+      "event_type": "model_completed",
+      "span_id": "01a061b2-5dd5-7103-869c-07ec1f13ebca",
+      "parent_span_id": "01a061b2-5dd4-78c2-9334-6d2a5b1bf6a4",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.517113Z",
+      "started_at": "2026-09-02T10:37:54.517061Z",
+      "finished_at": "2026-09-02T10:37:54.517113Z",
+      "duration_ms": 0.048083,
+      "payload": {
+        "model": "ScriptedEvidenceModel",
+        "api_adapter": "scriptedevidencemodel"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 64,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5dd4-78c2-9334-6d2a5b1bf6a4",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.517211Z",
+      "started_at": "2026-09-02T10:37:54.516959Z",
+      "finished_at": "2026-09-02T10:37:54.517211Z",
+      "duration_ms": 0.248625,
+      "payload": {
+        "langgraph_step": 15
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 65,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "evidence_agent",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.517370Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af29-6b68-800f-7a2f2276bc58",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 15,
+        "source": "loop",
+        "next_nodes": [
+          "deterministic_validation"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 66,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dd5-7103-869c-0800fd42a817",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.517388Z",
+      "started_at": "2026-09-02T10:37:54.517388Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 16
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 67,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5dd5-7103-869c-0800fd42a817",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.518161Z",
+      "started_at": "2026-09-02T10:37:54.517388Z",
+      "finished_at": "2026-09-02T10:37:54.518161Z",
+      "duration_ms": 0.77,
+      "payload": {
+        "langgraph_step": 16
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 68,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.518331Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af2c-6084-8010-810bf8445659",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 16,
+        "source": "loop",
+        "next_nodes": [
+          "actionable_tradeoff_interrupt"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 69,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dd6-72b0-b706-67af15f9b7af",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "actionable_tradeoff_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.518350Z",
+      "started_at": "2026-09-02T10:37:54.518350Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 17
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 70,
+      "event_type": "node_failed",
+      "span_id": "01a061b2-5dd6-72b0-b706-67af15f9b7af",
+      "parent_span_id": "01a061b2-5d87-7e10-ae2b-876c55e3e91c",
+      "node_id": "actionable_tradeoff_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.518376Z",
+      "started_at": "2026-09-02T10:37:54.518350Z",
+      "finished_at": "2026-09-02T10:37:54.518376Z",
+      "duration_ms": 0.022542,
+      "payload": {
+        "langgraph_step": 17,
+        "error_type": "GraphInterrupt"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 71,
+      "event_type": "run_resumed",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.521534Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "resumed_interrupt_kind": "taxon_selection",
+        "checkpoint_id": "1f1a6ba5-af2c-6084-8010-810bf8445659",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 72,
+      "event_type": "interrupt_requested",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.521543Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af2c-6084-8010-810bf8445659",
+        "interrupt_kind": "actionable_tradeoff"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 73,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5ddc-7f72-9f0b-7a83b9c52ad5",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "actionable_tradeoff_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524496Z",
+      "started_at": "2026-09-02T10:37:54.524496Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 17
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 74,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5ddc-7f72-9f0b-7a83b9c52ad5",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "actionable_tradeoff_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524525Z",
+      "started_at": "2026-09-02T10:37:54.524496Z",
+      "finished_at": "2026-09-02T10:37:54.524525Z",
+      "duration_ms": 0.024167,
+      "payload": {
+        "langgraph_step": 17
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 75,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "actionable_tradeoff_interrupt",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524723Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3b-68ea-8011-3ee74a16cfac",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 17,
+        "source": "loop",
+        "next_nodes": [
+          "apply_validated_user_choice"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 76,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5ddc-7f72-9f0b-7a90c4adfccf",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "apply_validated_user_choice",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524743Z",
+      "started_at": "2026-09-02T10:37:54.524743Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 18
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 77,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5ddc-7f72-9f0b-7a90c4adfccf",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "apply_validated_user_choice",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524837Z",
+      "started_at": "2026-09-02T10:37:54.524743Z",
+      "finished_at": "2026-09-02T10:37:54.524837Z",
+      "duration_ms": 0.09075,
+      "payload": {
+        "langgraph_step": 18
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 78,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "apply_validated_user_choice",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.524999Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3c-6588-8012-639e6800b2a6",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 18,
+        "source": "loop",
+        "next_nodes": [
+          "deterministic_validation"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 79,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5ddd-7d01-adff-fa7f5e5c2bd0",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.525017Z",
+      "started_at": "2026-09-02T10:37:54.525017Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 19
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 80,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5ddd-7d01-adff-fa7f5e5c2bd0",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.525305Z",
+      "started_at": "2026-09-02T10:37:54.525017Z",
+      "finished_at": "2026-09-02T10:37:54.525305Z",
+      "duration_ms": 0.284916,
+      "payload": {
+        "langgraph_step": 19
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 81,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.525558Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 19,
+        "source": "loop",
+        "next_nodes": [
+          "compose_expedition_plan"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 82,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5ddd-7d01-adff-fa9851247a74",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.525577Z",
+      "started_at": "2026-09-02T10:37:54.525577Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 20
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 83,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5ddd-7d01-adff-fa9851247a74",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.525930Z",
+      "started_at": "2026-09-02T10:37:54.525577Z",
+      "finished_at": "2026-09-02T10:37:54.525930Z",
+      "duration_ms": 0.349333,
+      "payload": {
+        "langgraph_step": 20
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 84,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.526073Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3e-6fd6-8014-f469a95b2772",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 20,
+        "source": "loop",
+        "next_nodes": [
+          "grounding_and_safety_checks"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 85,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dde-7771-b3af-44ed252f74d7",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.526092Z",
+      "started_at": "2026-09-02T10:37:54.526092Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 21
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 86,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5dde-7771-b3af-44ed252f74d7",
+      "parent_span_id": "01a061b2-5ddc-7f72-9f0b-7a7bfbe297b2",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.526991Z",
+      "started_at": "2026-09-02T10:37:54.526092Z",
+      "finished_at": "2026-09-02T10:37:54.526991Z",
+      "duration_ms": 0.895375,
+      "payload": {
+        "langgraph_step": 21
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 87,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.527342Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 21,
+        "source": "loop",
+        "next_nodes": []
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 88,
+      "event_type": "run_resumed",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.531640Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "resumed_interrupt_kind": "actionable_tradeoff",
+        "checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 89,
+      "event_type": "checkpoint_selected",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.543082Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 90,
+      "event_type": "replay_started",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.543091Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 91,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.543584Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af69-6862-8014-517f44085e5e",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 20,
+        "source": "fork",
+        "next_nodes": [
+          "compose_expedition_plan"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 92,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5def-7eb3-b565-93da4266d790",
+      "parent_span_id": "01a061b2-5def-7eb3-b565-93c44ef47ef1",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.543611Z",
+      "started_at": "2026-09-02T10:37:54.543611Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 21
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 93,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5def-7eb3-b565-93da4266d790",
+      "parent_span_id": "01a061b2-5def-7eb3-b565-93c44ef47ef1",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.543968Z",
+      "started_at": "2026-09-02T10:37:54.543611Z",
+      "finished_at": "2026-09-02T10:37:54.543968Z",
+      "duration_ms": 0.352833,
+      "payload": {
+        "langgraph_step": 21
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 94,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.544193Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af6b-60fe-8015-4b274801d271",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 21,
+        "source": "loop",
+        "next_nodes": [
+          "grounding_and_safety_checks"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 95,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5df0-7752-8eaa-c2cdbb0edeee",
+      "parent_span_id": "01a061b2-5def-7eb3-b565-93c44ef47ef1",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.544214Z",
+      "started_at": "2026-09-02T10:37:54.544214Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 22
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 96,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5df0-7752-8eaa-c2cdbb0edeee",
+      "parent_span_id": "01a061b2-5def-7eb3-b565-93c44ef47ef1",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.544563Z",
+      "started_at": "2026-09-02T10:37:54.544214Z",
+      "finished_at": "2026-09-02T10:37:54.544563Z",
+      "duration_ms": 0.34475,
+      "payload": {
+        "langgraph_step": 22
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 97,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.544771Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+        "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+        "graph_step": 22,
+        "source": "loop",
+        "next_nodes": []
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 98,
+      "event_type": "replay_completed",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.549111Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+        "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+        "result_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 99,
+      "event_type": "checkpoint_selected",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.553317Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 100,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "apply_validated_user_choice",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.558698Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "graph_step": 22,
+        "source": "update",
+        "next_nodes": [
+          "refresh_invalidated_evidence"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 101,
+      "event_type": "fork_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.558709Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+        "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+        "checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 102,
+      "event_type": "fork_started",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.558713Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f"
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 103,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5dff-72f0-8bce-1c50702d9072",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "refresh_invalidated_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.559022Z",
+      "started_at": "2026-09-02T10:37:54.559022Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 23
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 104,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5dff-72f0-8bce-1c50702d9072",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "refresh_invalidated_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.618609Z",
+      "started_at": "2026-09-02T10:37:54.559022Z",
+      "finished_at": "2026-09-02T10:37:54.618609Z",
+      "duration_ms": 59.582708,
+      "payload": {
+        "langgraph_step": 23
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 105,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "refresh_invalidated_evidence",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.618986Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-b021-6b4c-8017-534e3cfc938c",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "graph_step": 23,
+        "source": "loop",
+        "next_nodes": [
+          "deterministic_validation"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 106,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5e3b-75b0-9961-522597b527c9",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.619020Z",
+      "started_at": "2026-09-02T10:37:54.619020Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 24
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 107,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5e3b-75b0-9961-522597b527c9",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.619365Z",
+      "started_at": "2026-09-02T10:37:54.619020Z",
+      "finished_at": "2026-09-02T10:37:54.619365Z",
+      "duration_ms": 0.34025,
+      "payload": {
+        "langgraph_step": 24
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 108,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "deterministic_validation",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.619641Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-b023-6654-8018-a008ce4c19be",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "graph_step": 24,
+        "source": "loop",
+        "next_nodes": [
+          "compose_expedition_plan"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 109,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5e3b-75b0-9961-5246a6d95b54",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.619664Z",
+      "started_at": "2026-09-02T10:37:54.619664Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 25
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 110,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5e3b-75b0-9961-5246a6d95b54",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.619978Z",
+      "started_at": "2026-09-02T10:37:54.619664Z",
+      "finished_at": "2026-09-02T10:37:54.619978Z",
+      "duration_ms": 0.309792,
+      "payload": {
+        "langgraph_step": 25
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 111,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "compose_expedition_plan",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.620252Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-b024-69c8-8019-0076dec5f3d5",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "graph_step": 25,
+        "source": "loop",
+        "next_nodes": [
+          "grounding_and_safety_checks"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 112,
+      "event_type": "node_started",
+      "span_id": "01a061b2-5e3c-7e21-bf65-df0067bfff85",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.620277Z",
+      "started_at": "2026-09-02T10:37:54.620277Z",
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "langgraph_step": 26
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 113,
+      "event_type": "node_completed",
+      "span_id": "01a061b2-5e3c-7e21-bf65-df0067bfff85",
+      "parent_span_id": "01a061b2-5dfe-7773-bc8a-aa12c6ddcd15",
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.620629Z",
+      "started_at": "2026-09-02T10:37:54.620277Z",
+      "finished_at": "2026-09-02T10:37:54.620629Z",
+      "duration_ms": 0.348333,
+      "payload": {
+        "langgraph_step": 26
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 114,
+      "event_type": "checkpoint_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": "grounding_and_safety_checks",
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.620903Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "graph_step": 26,
+        "source": "loop",
+        "next_nodes": []
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 115,
+      "event_type": "fork_completed",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.626706Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+        "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+        "checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+        "terminal_status": "completed",
+        "interrupt_kind": null
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 116,
+      "event_type": "comparison_created",
+      "span_id": null,
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.642892Z",
+      "started_at": null,
+      "finished_at": null,
+      "duration_ms": null,
+      "payload": {
+        "thread_id": "phase3-fixture-scripted-demo",
+        "checkpoint_a": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+        "checkpoint_b": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+        "changed_fields": [
+          "request_constraints",
+          "applied_user_decisions"
+        ]
+      }
+    },
+    {
+      "run_id": "phase3-fixture-scripted-demo",
+      "sequence": 117,
+      "event_type": "run_completed",
+      "span_id": "phase3-fixture-scripted-demo",
+      "parent_span_id": null,
+      "node_id": null,
+      "tool_name": null,
+      "tool_call_id": null,
+      "timestamp": "2026-09-02T10:37:54.665277Z",
+      "started_at": "2026-09-02T10:37:54.423942Z",
+      "finished_at": "2026-09-02T10:37:54.665277Z",
+      "duration_ms": 241.276458,
+      "payload": {}
+    }
+  ]
+}

@@ -27,6 +27,15 @@ from app.biodiversity.run_models import (
     RunExecution,
     RunManifest,
     RunProfile,
+    StateCountersView,
+    StateDecisionView,
+    StateEvidenceView,
+    StateHitlView,
+    StateLocationView,
+    StatePlanView,
+    StateRequestView,
+    StateTaxonView,
+    StateView,
 )
 
 
@@ -67,6 +76,43 @@ def _interrupt_kind(snapshot: Any) -> str | None:
 
 def _metadata(snapshot: Any) -> dict[str, Any]:
     return dict(snapshot.metadata or {})
+
+
+def checkpoint_node_id(
+    metadata: dict[str, Any],
+    values: dict[str, Any],
+    *,
+    parent_next_nodes: list[str] | None = None,
+) -> str:
+    """Return the application node key represented by a saved superstep."""
+
+    explicit = metadata.get("checkpoint_node_id")
+    if explicit:
+        return str(explicit)
+    source = metadata.get("source")
+    step = metadata.get("step")
+    if source == "input" or step == -1:
+        return "__input__"
+    if source == "update":
+        return "__state_update__"
+    if parent_next_nodes:
+        return "+".join(str(node) for node in parent_next_nodes)
+    visited = list(values.get("visited_nodes") or [])
+    if visited:
+        return str(visited[-1])
+    if step == 0:
+        return "__start__"
+    return "__unknown__"
+
+
+def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
+    return [
+        StateDecisionView(
+            kind=str(item.get("kind") or "unknown"),
+            option=(str(item["option"]) if item.get("option") else None),
+        )
+        for item in values.get("applied_user_decisions") or []
+    ]
 
 
 def _execution_id(snapshot: Any) -> str:
@@ -204,6 +250,13 @@ class BiodiversityRunManager:
         self.run_profile = RunProfile.model_validate(
             run_profile or RunProfile()
         )
+        self._recorded_checkpoint_ids = {
+            str(event.payload["checkpoint_id"])
+            for event in (recorder.events if recorder is not None else [])
+            if event.event_type == "checkpoint_created"
+            and event.payload.get("checkpoint_id")
+        }
+        self._checkpoint_next_nodes: dict[str, list[str]] = {}
 
     def _runtime_config(
         self,
@@ -224,9 +277,141 @@ class BiodiversityRunManager:
             output["callbacks"] = callbacks
         return output
 
-    def _event(self, event_type: str, payload: dict[str, Any]) -> None:
+    def _event(
+        self,
+        event_type: str,
+        payload: dict[str, Any],
+        *,
+        node_id: str | None = None,
+    ) -> None:
         if self.recorder is not None:
-            self.recorder.record_event(event_type, payload=payload)
+            self.recorder.record_event(
+                event_type,
+                node_id=node_id,
+                payload=payload,
+            )
+
+    def _record_checkpoint_data(
+        self,
+        data: dict[str, Any],
+        *,
+        fallback_execution_id: str | None = None,
+        fallback_branch_id: str | None = None,
+    ) -> None:
+        config = dict(data.get("config") or {})
+        configurable = dict(config.get("configurable") or {})
+        checkpoint_id = configurable.get("checkpoint_id")
+        if not checkpoint_id:
+            raise ValueError("Checkpoint stream item has no checkpoint_id")
+        checkpoint_id = str(checkpoint_id)
+        if checkpoint_id in self._recorded_checkpoint_ids:
+            return
+        metadata = dict(data.get("metadata") or {})
+        values = dict(data.get("values") or {})
+        thread_id = str(configurable.get("thread_id") or "")
+        if not thread_id:
+            raise ValueError("Checkpoint stream item has no thread_id")
+        parent_config = dict(data.get("parent_config") or {})
+        parent_checkpoint_id = parent_config.get("configurable", {}).get(
+            "checkpoint_id"
+        )
+        parent_next_nodes = self._checkpoint_next_nodes.get(
+            str(parent_checkpoint_id)
+        )
+        if parent_checkpoint_id and parent_next_nodes is None:
+            try:
+                parent = self._require_checkpoint(
+                    thread_id,
+                    str(parent_checkpoint_id),
+                )
+                parent_next_nodes = list(parent.next)
+            except ValueError:
+                parent_next_nodes = None
+        node_id = checkpoint_node_id(
+            metadata,
+            values,
+            parent_next_nodes=parent_next_nodes,
+        )
+        execution_id = str(
+            metadata.get("execution_id")
+            or values.get("execution_id")
+            or values.get("branch_id")
+            or fallback_execution_id
+            or "main"
+        )
+        branch_id = str(
+            values.get("branch_id")
+            or metadata.get("branch_id")
+            or fallback_branch_id
+            or "main"
+        )
+        self._event(
+            "checkpoint_created",
+            {
+                "thread_id": thread_id,
+                "checkpoint_id": checkpoint_id,
+                "branch_id": branch_id,
+                "execution_id": execution_id,
+                "graph_step": metadata.get("step"),
+                "source": metadata.get("source"),
+                "next_nodes": list(data.get("next") or []),
+            },
+            node_id=node_id,
+        )
+        self._recorded_checkpoint_ids.add(checkpoint_id)
+        self._checkpoint_next_nodes[checkpoint_id] = list(
+            data.get("next") or []
+        )
+
+    def _record_snapshot_checkpoint(self, snapshot: Any) -> None:
+        self._record_checkpoint_data(
+            {
+                "config": snapshot.config,
+                "parent_config": snapshot.parent_config,
+                "values": snapshot.values,
+                "metadata": snapshot.metadata,
+                "next": snapshot.next,
+            }
+        )
+
+    def _stream_invoke(
+        self,
+        graph_input: Any,
+        config: dict[str, Any],
+        *,
+        thread_id: str,
+        execution_id: str,
+    ) -> tuple[dict[str, Any], Any]:
+        invocation_metadata = dict(config.get("metadata") or {})
+        for event in self.graph.stream(
+            graph_input,
+            self._runtime_config(config),
+            stream_mode="checkpoints",
+            version="v2",
+        ):
+            if event.get("type") == "checkpoints":
+                self._record_checkpoint_data(
+                    dict(event["data"]),
+                    fallback_execution_id=execution_id,
+                    fallback_branch_id=(
+                        str(invocation_metadata["branch_id"])
+                        if invocation_metadata.get("branch_id")
+                        else None
+                    ),
+                )
+        latest = self.execution_head(
+            thread_id=thread_id,
+            execution_id=execution_id,
+        )
+        result = dict(latest.values)
+        interrupts = [
+            item
+            for task in latest.tasks
+            for item in task.interrupts
+        ]
+        if interrupts:
+            result["__interrupt__"] = interrupts
+        return result, latest
 
     def _history(self, thread_id: str) -> list[Any]:
         return list(self.graph.get_state_history(_config(thread_id)))
@@ -286,6 +471,37 @@ class BiodiversityRunManager:
     def snapshot(self, *, thread_id: str, checkpoint_id: str) -> Any:
         return self._require_checkpoint(thread_id, checkpoint_id)
 
+    def _snapshot_node_id(
+        self,
+        snapshot: Any,
+        *,
+        thread_id: str,
+        checkpoint_lookup: dict[str, Any] | None = None,
+    ) -> str:
+        parent_config = dict(snapshot.parent_config or {})
+        parent_checkpoint_id = parent_config.get("configurable", {}).get(
+            "checkpoint_id"
+        )
+        parent_next_nodes: list[str] | None = None
+        if parent_checkpoint_id:
+            try:
+                parent = (
+                    checkpoint_lookup[str(parent_checkpoint_id)]
+                    if checkpoint_lookup is not None
+                    else self._require_checkpoint(
+                        thread_id,
+                        str(parent_checkpoint_id),
+                    )
+                )
+                parent_next_nodes = list(parent.next)
+            except (KeyError, ValueError):
+                parent_next_nodes = None
+        return checkpoint_node_id(
+            _metadata(snapshot),
+            dict(snapshot.values),
+            parent_next_nodes=parent_next_nodes,
+        )
+
     def execution_head(self, *, thread_id: str, execution_id: str) -> Any:
         snapshot = next(
             (
@@ -313,7 +529,7 @@ class BiodiversityRunManager:
             **self.run_profile.model_dump(mode="python"),
             created_at=datetime.now(UTC),
         )
-        result = self.graph.invoke(
+        result, latest = self._stream_invoke(
             {
                 "original_request_text": request,
                 "run_manifest": manifest.model_dump(mode="json"),
@@ -338,18 +554,8 @@ class BiodiversityRunManager:
                     "branch_id": branch_id,
                 },
             ),
-        )
-        latest = self.execution_head(
-            thread_id=thread_id, execution_id=execution_id
-        )
-        self._event(
-            "checkpoint_created",
-            {
-                "thread_id": thread_id,
-                "checkpoint_id": _checkpoint_id(latest),
-                "branch_id": branch_id,
-                "execution_id": execution_id,
-            },
+            thread_id=thread_id,
+            execution_id=execution_id,
         )
         if _interrupt_kind(latest):
             self._event(
@@ -431,24 +637,14 @@ class BiodiversityRunManager:
             "execution_created_at": _execution_created_at(snapshot).isoformat(),
             "branch_id": str(snapshot.values.get("branch_id") or "main"),
         }
-        result = self.graph.invoke(
+        result, latest = self._stream_invoke(
             Command(resume=resume),
             self._runtime_config(
                 snapshot.config,
                 metadata=execution_metadata,
             ),
-        )
-        latest = self.execution_head(
-            thread_id=thread_id, execution_id=execution_id
-        )
-        self._event(
-            "checkpoint_created",
-            {
-                "thread_id": thread_id,
-                "checkpoint_id": _checkpoint_id(latest),
-                "branch_id": latest.values.get("branch_id"),
-                "execution_id": execution_id,
-            },
+            thread_id=thread_id,
+            execution_id=execution_id,
         )
         self._event(
             "run_resumed",
@@ -488,6 +684,9 @@ class BiodiversityRunManager:
 
     def history(self, *, thread_id: str) -> list[CheckpointSummary]:
         history = self._require_thread(thread_id)
+        checkpoint_lookup = {
+            _checkpoint_id(snapshot): snapshot for snapshot in history
+        }
         root_branch_id = next(
             (
                 str(snapshot.values["branch_id"])
@@ -531,13 +730,19 @@ class BiodiversityRunManager:
                         "forked_from_checkpoint_id"
                     ),
                     created_at=_created_at(snapshot),
+                    node_id=self._snapshot_node_id(
+                        snapshot,
+                        thread_id=thread_id,
+                        checkpoint_lookup=checkpoint_lookup,
+                    ),
                     graph_step=metadata.get("step"),
                     source=metadata.get("source"),
                     next_nodes=list(snapshot.next),
                     interrupt_kind=_interrupt_kind(snapshot),
                     terminal_status=values.get("terminal_status"),
                     applied_constraint_changes=list(
-                        values.get("applied_user_decisions", [])
+                        item.model_dump(mode="json")
+                        for item in _safe_decision_views(dict(values))
                     ),
                     final_checkpoint_id=execution_finals.get(
                         (branch_id, execution_id)
@@ -618,6 +823,177 @@ class BiodiversityRunManager:
             for execution_id, snapshot in heads.items()
         ]
 
+    def _state_view(
+        self,
+        snapshot: Any,
+        *,
+        thread_id: str,
+        checkpoint_lookup: dict[str, Any] | None = None,
+    ) -> StateView:
+        values = dict(snapshot.values)
+        metadata = _metadata(snapshot)
+        step = metadata.get("step")
+        if not isinstance(step, int):
+            raise ValueError("Checkpoint does not expose an integer graph step")
+        parent_config = dict(snapshot.parent_config or {})
+        parent_checkpoint_id = parent_config.get("configurable", {}).get(
+            "checkpoint_id"
+        )
+        request = dict(values.get("expedition_request") or {})
+        location = dict(values.get("resolved_location") or {})
+        taxon = dict(values.get("resolved_taxon") or {})
+        occurrence = dict(values.get("occurrence_evidence") or {})
+        occurrence_counts = dict(occurrence.get("counts") or {})
+        weather = dict(values.get("weather_evidence") or {})
+        sites = dict(values.get("public_site_search") or {})
+        final_plan = dict(values.get("final_validated_plan") or {})
+        decisions = _safe_decision_views(values)
+        interrupt_kind = _interrupt_kind(snapshot)
+        return StateView(
+            thread_id=thread_id,
+            branch_id=str(values.get("branch_id") or "main"),
+            execution_id=_execution_id(snapshot),
+            checkpoint_id=_checkpoint_id(snapshot),
+            parent_checkpoint_id=(
+                str(parent_checkpoint_id) if parent_checkpoint_id else None
+            ),
+            node_id=self._snapshot_node_id(
+                snapshot,
+                thread_id=thread_id,
+                checkpoint_lookup=checkpoint_lookup,
+            ),
+            graph_step=step,
+            source=(str(metadata["source"]) if metadata.get("source") else None),
+            created_at=_created_at(snapshot),
+            next_nodes=list(snapshot.next),
+            terminal_status=values.get("terminal_status"),
+            request=(
+                StateRequestView(
+                    target_local_date=request.get("target_local_date"),
+                    duration_hours=request.get("duration_hours"),
+                    maximum_walking_distance_km=request.get(
+                        "maximum_walking_distance_km"
+                    ),
+                    rain_preference=request.get("rain_preference"),
+                    target_month_override=request.get("target_month_override"),
+                    seasonal_window_radius_months=request.get(
+                        "seasonal_window_radius_months"
+                    ),
+                    search_radius_km=request.get("search_radius_km"),
+                )
+                if request
+                else None
+            ),
+            location=(
+                StateLocationView(
+                    status=location.get("status"),
+                    input_kind=location.get("input_kind"),
+                    within_greater_london=location.get(
+                        "within_greater_london"
+                    ),
+                    administrative_district=location.get(
+                        "administrative_district"
+                    ),
+                )
+                if location
+                else None
+            ),
+            taxon=(
+                StateTaxonView(
+                    status=taxon.get("status"),
+                    accepted_taxon_key=taxon.get("accepted_taxon_key"),
+                    common_name=taxon.get("common_name"),
+                    scientific_name=taxon.get("scientific_name"),
+                    canonical_name=taxon.get("canonical_name"),
+                    rank=taxon.get("rank"),
+                    taxonomic_status=taxon.get("taxonomic_status"),
+                )
+                if taxon
+                else None
+            ),
+            evidence=StateEvidenceView(
+                occurrence_outcome=occurrence.get("outcome"),
+                sampled_count=occurrence_counts.get("sampled_count"),
+                retained_count=occurrence_counts.get("retained_total_count"),
+                ranking_eligible_count=occurrence_counts.get(
+                    "ranking_eligible_count"
+                ),
+                safe_map_cell_count=len(occurrence.get("safe_map_cells") or []),
+                weather_status=weather.get("status"),
+                public_site_status=sites.get("status"),
+                candidate_site_count=len(sites.get("candidates") or []),
+                contextual_site_count=len(
+                    sites.get("contextual_sites") or []
+                ),
+                tool_error_count=len(values.get("tool_errors") or []),
+            ),
+            plan=StatePlanView(
+                deterministic_status=values.get("deterministic_plan_status"),
+                final_status=final_plan.get("status"),
+                generated_by=final_plan.get("generated_by"),
+                recommended_site_count=len(
+                    final_plan.get("recommended_sites") or []
+                ),
+                contextual_site_count=len(
+                    final_plan.get("contextual_sites") or []
+                ),
+                evidence_gate_passed=final_plan.get("evidence_gate_passed"),
+                low_confidence_accepted=bool(
+                    final_plan.get("low_confidence_accepted")
+                    if final_plan
+                    else values.get("low_confidence_accepted", False)
+                ),
+                grounding_error_count=len(values.get("grounding_errors") or []),
+            ),
+            hitl=StateHitlView(
+                waiting=interrupt_kind is not None,
+                interrupt_kind=interrupt_kind,
+                applied_decisions=decisions,
+            ),
+            counters=StateCountersView(
+                evidence_loop_count=int(values.get("evidence_loop_count") or 0),
+                plan_revision_count=int(values.get("plan_revision_count") or 0),
+                recorded_tool_call_count=len(
+                    values.get("recorded_tool_call_ids") or []
+                ),
+            ),
+            invalidated_evidence=list(values.get("invalidated_evidence") or []),
+        )
+
+    def state_view(
+        self,
+        *,
+        thread_id: str,
+        node_id: str,
+        graph_step: int,
+        checkpoint_id: str,
+    ) -> StateView:
+        """Return one exact allow-listed state view, rejecting stale UI keys."""
+
+        snapshot = self._require_checkpoint(thread_id, checkpoint_id)
+        view = self._state_view(snapshot, thread_id=thread_id)
+        if view.node_id != node_id or view.graph_step != graph_step:
+            raise ValueError(
+                "node_id and graph_step do not match the selected checkpoint"
+            )
+        return view
+
+    def state_views(self, *, thread_id: str) -> list[StateView]:
+        """Return newest-first safe views without exposing StateSnapshot values."""
+
+        history = self._require_thread(thread_id)
+        checkpoint_lookup = {
+            _checkpoint_id(snapshot): snapshot for snapshot in history
+        }
+        return [
+            self._state_view(
+                snapshot,
+                thread_id=thread_id,
+                checkpoint_lookup=checkpoint_lookup,
+            )
+            for snapshot in history
+        ]
+
     def replay(self, *, thread_id: str, checkpoint_id: str) -> ReplayResult:
         snapshot = self._require_checkpoint(thread_id, checkpoint_id)
         self._validate_run_profile(snapshot)
@@ -645,9 +1021,11 @@ class BiodiversityRunManager:
             {"thread_id": thread_id, "checkpoint_id": checkpoint_id},
         )
         try:
-            result = self.graph.invoke(
+            result, head = self._stream_invoke(
                 None,
                 self._runtime_config(snapshot.config, metadata=replay_metadata),
+                thread_id=thread_id,
+                execution_id=execution_id,
             )
         except Exception as exc:
             self._event(
@@ -659,12 +1037,6 @@ class BiodiversityRunManager:
                 },
             )
             raise
-        replay_history = [
-            item
-            for item in self._history(thread_id)
-            if _execution_id(item) == execution_id
-        ]
-        head = replay_history[0] if replay_history else snapshot
         head_checkpoint_id = _checkpoint_id(head)
         final_id = (
             head_checkpoint_id if head.values.get("terminal_status") else None
@@ -678,16 +1050,6 @@ class BiodiversityRunManager:
                 "result_checkpoint_id": head_checkpoint_id,
             },
         )
-        if replay_history:
-            self._event(
-                "checkpoint_created",
-                {
-                    "thread_id": thread_id,
-                    "checkpoint_id": head_checkpoint_id,
-                    "branch_id": head.values.get("branch_id"),
-                    "execution_id": execution_id,
-                },
-            )
         if result.get("__interrupt__"):
             value = result["__interrupt__"][0].value
             self._event(
@@ -827,6 +1189,7 @@ class BiodiversityRunManager:
                     "updates": fork_updates,
                 }
             ],
+            "visited_nodes": ["apply_validated_user_choice"],
         }
         if "occurrence" in invalidated:
             update["low_confidence_accepted"] = False
@@ -914,6 +1277,10 @@ class BiodiversityRunManager:
             "execution_created_at": values["execution_created_at"],
             "branch_id": branch_id,
         }
+        fork_checkpoint_metadata = {
+            **fork_metadata,
+            "checkpoint_node_id": "apply_validated_user_choice",
+        }
         self._event(
             "checkpoint_selected",
             {
@@ -923,13 +1290,21 @@ class BiodiversityRunManager:
         )
         try:
             fork_config = self.graph.update_state(
-                self._runtime_config(snapshot.config, metadata=fork_metadata),
+                self._runtime_config(
+                    snapshot.config,
+                    metadata=fork_checkpoint_metadata,
+                ),
                 values=values,
                 as_node="apply_validated_user_choice",
             )
             fork_checkpoint_id = str(
                 fork_config["configurable"]["checkpoint_id"]
             )
+            fork_snapshot = self._require_checkpoint(
+                request.thread_id,
+                fork_checkpoint_id,
+            )
+            self._record_snapshot_checkpoint(fork_snapshot)
             self._event(
                 "fork_created",
                 {
@@ -948,9 +1323,11 @@ class BiodiversityRunManager:
                     "checkpoint_id": fork_checkpoint_id,
                 },
             )
-            self.graph.invoke(
+            _, head = self._stream_invoke(
                 None,
                 self._runtime_config(fork_config, metadata=fork_metadata),
+                thread_id=request.thread_id,
+                execution_id=execution_id,
             )
         except Exception as exc:
             self._event(
@@ -962,12 +1339,6 @@ class BiodiversityRunManager:
                 },
             )
             raise
-        branch_history = [
-            item
-            for item in self.graph.get_state_history(_config(request.thread_id))
-            if _execution_id(item) == execution_id
-        ]
-        head = branch_history[0]
         final_id = (
             _checkpoint_id(head) if head.values.get("terminal_status") else None
         )
@@ -1056,9 +1427,10 @@ class BiodiversityRunManager:
                     if item.get("source")
                 }
             ),
-            "applied_user_decisions": list(
-                values.get("applied_user_decisions", [])
-            ),
+            "applied_user_decisions": [
+                item.model_dump(mode="json")
+                for item in _safe_decision_views(values)
+            ],
         }
 
     def compare(
