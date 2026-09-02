@@ -39,9 +39,10 @@ def save_biodiversity_run_report(
     *,
     recorder: AgentRunRecorder,
     result: dict[str, Any],
-    request: str,
+    request: str | None,
     data_mode: str,
     model_mode: str,
+    checkpoint_id: str | None = None,
 ) -> dict[str, Path]:
     """Save safe Phase 4 inputs, excluding raw occurrences and model prompts."""
 
@@ -58,6 +59,12 @@ def save_biodiversity_run_report(
             "schema_version": 1,
             "run_id": recorder.run_id,
             "thread_id": recorder.thread_id,
+            "checkpoint_id": checkpoint_id,
+            "branch_id": result.get("branch_id"),
+            "parent_branch_id": result.get("parent_branch_id"),
+            "forked_from_checkpoint_id": result.get(
+                "forked_from_checkpoint_id"
+            ),
             "request": request,
             "data_mode": data_mode,
             "model_mode": model_mode,

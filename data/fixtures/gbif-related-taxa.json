@@ -1,0 +1,121 @@
+{
+  "schema_version": 2,
+  "provenance": {
+    "source_name": "GBIF Species API",
+    "source_url": "https://www.gbif.org/developer/species",
+    "endpoint": "https://api.gbif.org/v1/species/search",
+    "request_parameters": {
+      "source_taxon_key": 5228676,
+      "highertaxon_key": 2235048,
+      "rank": "SPECIES",
+      "status": "ACCEPTED",
+      "limit": 20,
+      "request_count": 2
+    },
+    "retrieved_at_utc": "2026-09-02T03:30:00Z",
+    "snapshot_version": "2026-09-02",
+    "licence": "GBIF API terms; source datasets retain their own terms",
+    "attribution": "GBIF.org",
+    "checksum_sha256": "12bb547767fb17b08c0b09ef4a6bcdd3ef4e446891adf3e0090d2883c3b131df",
+    "record_counts": {"before": 20, "after": 5},
+    "filtering_rules": [
+      "Accepted Aves species only",
+      "Same genus before same family",
+      "Exclude the selected source taxon",
+      "Return at most six candidates"
+    ],
+    "known_limitations": [
+      "Taxonomic relation is not ecological interchangeability",
+      "Related taxa are not asserted to be easier to observe"
+    ]
+  },
+  "payload": {
+    "results": [
+      {
+        "accepted_taxon_key": 5228676,
+        "candidates": [
+          {
+            "accepted_taxon_key": 5228644,
+            "common_name": "White-rumped Swift",
+            "scientific_name": "Apus caffer (M.H.K.Lichtenstein, 1823)",
+            "canonical_name": "Apus caffer",
+            "rank": "SPECIES",
+            "taxonomic_status": "ACCEPTED",
+            "class_name": "Aves",
+            "order": "Apodiformes",
+            "family": "Apodidae",
+            "genus": "Apus",
+            "resolution_method": "gbif_related_taxonomy_query",
+            "confidence": null,
+            "relation_level": "same_genus",
+            "relation_basis": "genus:Apus"
+          },
+          {
+            "accepted_taxon_key": 5228640,
+            "common_name": "Horus Swift",
+            "scientific_name": "Apus horus (Heuglin, 1869)",
+            "canonical_name": "Apus horus",
+            "rank": "SPECIES",
+            "taxonomic_status": "ACCEPTED",
+            "class_name": "Aves",
+            "order": "Apodiformes",
+            "family": "Apodidae",
+            "genus": "Apus",
+            "resolution_method": "gbif_related_taxonomy_query",
+            "confidence": null,
+            "relation_level": "same_genus",
+            "relation_basis": "genus:Apus"
+          },
+          {
+            "accepted_taxon_key": 5228645,
+            "common_name": "Nyanza Swift",
+            "scientific_name": "Apus niansae (Reichenow, 1887)",
+            "canonical_name": "Apus niansae",
+            "rank": "SPECIES",
+            "taxonomic_status": "ACCEPTED",
+            "class_name": "Aves",
+            "order": "Apodiformes",
+            "family": "Apodidae",
+            "genus": "Apus",
+            "resolution_method": "gbif_related_taxonomy_query",
+            "confidence": null,
+            "relation_level": "same_genus",
+            "relation_basis": "genus:Apus"
+          },
+          {
+            "accepted_taxon_key": 6095443,
+            "common_name": "Cook's Swift",
+            "scientific_name": "Apus cooki (Harington, 1913)",
+            "canonical_name": "Apus cooki",
+            "rank": "SPECIES",
+            "taxonomic_status": "ACCEPTED",
+            "class_name": "Aves",
+            "order": "Apodiformes",
+            "family": "Apodidae",
+            "genus": "Apus",
+            "resolution_method": "gbif_related_taxonomy_query",
+            "confidence": null,
+            "relation_level": "same_genus",
+            "relation_basis": "genus:Apus"
+          },
+          {
+            "accepted_taxon_key": 5228702,
+            "common_name": "Dark-rumped Swift",
+            "scientific_name": "Apus acuticauda (Jerdon, 1864)",
+            "canonical_name": "Apus acuticauda",
+            "rank": "SPECIES",
+            "taxonomic_status": "ACCEPTED",
+            "class_name": "Aves",
+            "order": "Apodiformes",
+            "family": "Apodidae",
+            "genus": "Apus",
+            "resolution_method": "gbif_related_taxonomy_query",
+            "confidence": null,
+            "relation_level": "same_genus",
+            "relation_basis": "genus:Apus"
+          }
+        ]
+      }
+    ]
+  }
+}

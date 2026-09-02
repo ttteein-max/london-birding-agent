@@ -15,6 +15,8 @@ from app.biodiversity.graph.nodes import (
     build_compose_plan_node,
     build_evidence_agent_node,
     build_parse_request_node,
+    build_prepare_taxon_selection_node,
+    build_refresh_invalidated_evidence_node,
     build_resolve_location_node,
     build_resolve_taxon_node,
     build_revise_plan_node,
@@ -24,6 +26,7 @@ from app.biodiversity.graph.nodes import (
     grounding_and_safety_checks,
     location_correction_interrupt,
     record_structured_evidence,
+    related_taxon_selection_interrupt,
     request_clarification_interrupt,
     source_resolution_failure,
     taxon_selection_interrupt,
@@ -73,6 +76,10 @@ def build_biodiversity_graph(
     builder.add_node("resolve_location", build_resolve_location_node(dependencies))
     builder.add_node("location_correction_interrupt", location_correction_interrupt)
     builder.add_node("resolve_taxon", build_resolve_taxon_node(dependencies))
+    builder.add_node(
+        "prepare_taxon_selection",
+        build_prepare_taxon_selection_node(dependencies),
+    )
     builder.add_node("taxon_selection_interrupt", taxon_selection_interrupt)
     builder.add_node("bird_input_correction_interrupt", bird_input_correction_interrupt)
     builder.add_node(
@@ -87,9 +94,20 @@ def build_biodiversity_graph(
     builder.add_node("record_structured_evidence", record_structured_evidence)
     builder.add_node("evidence_loop_limit", evidence_loop_limit)
     builder.add_node("source_resolution_failure", source_resolution_failure)
-    builder.add_node("deterministic_validation", deterministic_validation)
+    builder.add_node(
+        "deterministic_validation",
+        partial(deterministic_validation, dependencies=dependencies),
+    )
     builder.add_node("actionable_tradeoff_interrupt", actionable_tradeoff_interrupt)
     builder.add_node("apply_validated_user_choice", apply_validated_user_choice)
+    builder.add_node(
+        "related_taxon_selection_interrupt",
+        related_taxon_selection_interrupt,
+    )
+    builder.add_node(
+        "refresh_invalidated_evidence",
+        build_refresh_invalidated_evidence_node(dependencies),
+    )
     builder.add_node("compose_expedition_plan", build_compose_plan_node(composer_model))
     builder.add_node("revise_expedition_plan", build_revise_plan_node(composer_model))
     builder.add_node("grounding_and_safety_checks", grounding_and_safety_checks)
@@ -111,8 +129,15 @@ def build_biodiversity_graph(
     builder.add_conditional_edges(
         "resolve_taxon",
         route_after_taxon,
-        ["taxon_selection_interrupt", "bird_input_correction_interrupt", "evidence_agent", "source_resolution_failure"],
+        [
+            "prepare_taxon_selection",
+            "taxon_selection_interrupt",
+            "bird_input_correction_interrupt",
+            "evidence_agent",
+            "source_resolution_failure",
+        ],
     )
+    builder.add_edge("prepare_taxon_selection", "taxon_selection_interrupt")
     builder.add_edge("taxon_selection_interrupt", "evidence_agent")
     builder.add_edge("bird_input_correction_interrupt", "resolve_taxon")
     builder.add_conditional_edges(
@@ -135,8 +160,18 @@ def build_biodiversity_graph(
     builder.add_conditional_edges(
         "apply_validated_user_choice",
         route_after_user_choice,
-        ["evidence_agent", "deterministic_validation"],
+        [
+            "evidence_agent",
+            "refresh_invalidated_evidence",
+            "related_taxon_selection_interrupt",
+            "deterministic_validation",
+        ],
     )
+    builder.add_edge(
+        "related_taxon_selection_interrupt",
+        "refresh_invalidated_evidence",
+    )
+    builder.add_edge("refresh_invalidated_evidence", "deterministic_validation")
     builder.add_edge("compose_expedition_plan", "grounding_and_safety_checks")
     builder.add_conditional_edges(
         "grounding_and_safety_checks",

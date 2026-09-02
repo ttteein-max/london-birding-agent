@@ -96,6 +96,7 @@ def test_natural_english_parsing_into_expedition_request() -> None:
         "maximum_walking_distance_km": None,
         "rain_preference": "no_preference",
         "target_month_override": None,
+        "seasonal_window_radius_months": 1,
         "search_radius_km": 5.0,
         "timezone": "Europe/London",
     }
@@ -126,24 +127,30 @@ def test_robin_ambiguity_interrupt_and_validated_resume() -> None:
     payload = interrupt_payload(interrupted)
     assert payload["kind"] == "taxon_selection"
     assert all(
-        set(item)
-        == {
+        {
             "accepted_taxon_key",
             "common_name",
             "scientific_name",
             "canonical_name",
             "rank",
             "taxonomic_status",
+            "class",
+            "order",
+            "family",
+            "genus",
             "resolution_method",
             "confidence",
+            "evidence_preview",
         }
+        <= set(item)
         for item in payload["candidates"]
     )
+    assert payload["candidates"][0]["evidence_preview"]["status"] == "evaluated"
     key = payload["candidates"][0]["accepted_taxon_key"]
     result = graph.invoke(Command(resume={"accepted_taxon_key": key}), config)
     assert result["resolved_taxon"]["accepted_taxon_key"] == key
-    assert result["terminal_status"] == "safe_failure"
-    assert result["occurrence_evidence"]["outcome"] == "source_unavailable"
+    assert interrupt_payload(result)["kind"] == "actionable_tradeoff"
+    assert result["occurrence_evidence"]["outcome"] == "insufficient_evidence"
 
 
 def test_taxon_selection_rejects_invented_key() -> None:
@@ -213,10 +220,14 @@ def test_common_swift_stays_context_only_with_zero_recommendations() -> None:
     config = {"configurable": {"thread_id": "swift"}}
     interrupted = graph.invoke({"original_request_text": "Common swift"}, config)
     assert {item["option"] for item in interrupt_payload(interrupted)["options"]} == {
-        "change_target_month",
-        "accept_context_only",
+        "widen_seasonal_window",
+        "consider_related_taxa",
+        "keep_constraints_accept_low_confidence",
     }
-    result = graph.invoke(Command(resume={"option": "accept_context_only"}), config)
+    result = graph.invoke(
+        Command(resume={"option": "keep_constraints_accept_low_confidence"}),
+        config,
+    )
     assert result["final_validated_plan"]["status"] == "context_only"
     assert result["final_validated_plan"]["recommended_sites"] == []
     assert result["final_validated_plan"]["contextual_sites"]

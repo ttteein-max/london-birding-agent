@@ -27,6 +27,18 @@ AgentRunEventType = Literal[
     "tool_started",
     "tool_completed",
     "tool_failed",
+    "interrupt_requested",
+    "run_resumed",
+    "checkpoint_selected",
+    "checkpoint_created",
+    "replay_started",
+    "replay_completed",
+    "replay_failed",
+    "fork_created",
+    "fork_started",
+    "fork_completed",
+    "fork_failed",
+    "comparison_created",
     "run_completed",
     "run_failed",
 ]
@@ -203,6 +215,42 @@ class AgentRunRecorder(BaseCallbackHandler):
         )
         self._events.append(event)
         return event
+
+    def record_event(
+        self,
+        event_type: AgentRunEventType,
+        *,
+        payload: dict[str, Any] | None = None,
+    ) -> AgentRunEvent:
+        """Record a safe application event without graph state or tool payloads."""
+
+        blocked_fragments = {
+            "api_key",
+            "prompt",
+            "raw_tool",
+            "coordinate",
+            "occurrence_id",
+            "occurrenceid",
+            "record_ref",
+            "hmac",
+            "safe_cell",
+        }
+
+        def validate(value: Any, path: str = "payload") -> None:
+            if isinstance(value, dict):
+                for key, item in value.items():
+                    normalised = str(key).casefold()
+                    if any(fragment in normalised for fragment in blocked_fragments):
+                        raise ValueError(f"Unsafe observability field: {path}.{key}")
+                    validate(item, f"{path}.{key}")
+            elif isinstance(value, list):
+                for index, item in enumerate(value):
+                    validate(item, f"{path}[{index}]")
+
+        safe_payload = dict(payload or {})
+        validate(safe_payload)
+        with self._lock:
+            return self._append_event(event_type, payload=safe_payload)
 
     def _begin(
         self,

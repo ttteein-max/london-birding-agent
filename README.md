@@ -43,6 +43,22 @@ The CLI saves every node, model and tool lifecycle event under `reports/runs/<ti
 
 Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 2 LangGraph documentation](docs/phase-2-biodiversity-langgraph.md) for the topology, state reducers, HITL payloads, safety boundary and all CLI commands.
 
+## Phase 3 durable HITL and time travel
+
+Phase 3 is implemented. Biodiversity CLI runs now use a lifecycle-managed local SQLite checkpointer, while unit tests retain the in-memory saver. Ambiguous taxonomy includes bounded, coordinate-free evidence previews; low-evidence decisions support deterministic radius expansion, seasonal-window widening, GBIF-related taxa and explicit low-confidence acceptance.
+
+Durable runs can be resumed after the original Python process exits and can be inspected, replayed, forked and compared without overwriting the original final checkpoint:
+
+```bash
+python -m scripts.manage_biodiversity_runs start \
+  --thread-id expedition-1 \
+  --request "Plan a two-hour expedition from SW11 4NJ on 15 July 2026 to look for Common swift."
+
+python -m scripts.manage_biodiversity_runs history --thread-id expedition-1
+```
+
+See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for resume schemas, SQLite lifecycle and security, thread/checkpoint/branch identity, replay versus fork, invalidation rules, privacy boundaries and all management commands.
+
 ## What Phase 0.1 demonstrates
 
 `GBIFBirdNameResolver` accepts arbitrary user text rather than consulting a supported-species dictionary. It handles English common names, scientific names, case and whitespace differences, ambiguous names and unknown or misspelled input. Its typed outcomes are:
@@ -167,4 +183,4 @@ See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture
 
 ## Roadmap boundary
 
-Phase 0, Phase 0.1 and the Phase 1 deterministic biodiversity domain backend are implemented. The dynamic biodiversity LangGraph agent, frontend, routing, HITL nodes, persistence expansion and MCP remain deferred.
+Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent and Phase 3 durable HITL/time travel are implemented. Phase 4 frontend/timeline work, Phase 5 routing, Phase 6 conservation scoring and MCP remain deferred.
