@@ -58,6 +58,8 @@ class BiodiversityAgentState(TypedDict, total=False):
     expedition_request: NotRequired[dict[str, Any] | None]
     resolved_location: NotRequired[dict[str, Any] | None]
     resolved_taxon: NotRequired[dict[str, Any] | None]
+    taxon_evidence_previews: NotRequired[list[dict[str, Any]]]
+    related_taxon_candidates: NotRequired[list[dict[str, Any]]]
     occurrence_evidence: NotRequired[dict[str, Any] | None]
     weather_evidence: NotRequired[dict[str, Any] | None]
     public_site_search: NotRequired[dict[str, Any] | None]
@@ -84,14 +86,27 @@ class BiodiversityAgentState(TypedDict, total=False):
     pending_hitl_kind: NotRequired[str | None]
     pending_hitl_payload: NotRequired[dict[str, Any] | None]
     pending_user_choice: NotRequired[dict[str, Any] | None]
+    invalidated_evidence: NotRequired[Annotated[list[str], replace_list]]
     applied_user_decisions: NotRequired[
         Annotated[list[dict[str, Any]], merge_unique_dicts]
     ]
     evidence_loop_count: NotRequired[int]
     plan_revision_count: NotRequired[int]
     decision_route: NotRequired[
-        Literal["evidence_agent", "deterministic_validation"] | None
+        Literal[
+            "evidence_agent",
+            "refresh_invalidated_evidence",
+            "related_taxon_selection_interrupt",
+            "deterministic_validation",
+        ]
+        | None
     ]
     terminal_status: NotRequired[str | None]
     terminal_result: NotRequired[dict[str, Any] | None]
+    branch_id: NotRequired[str]
+    parent_branch_id: NotRequired[str | None]
+    forked_from_checkpoint_id: NotRequired[str | None]
+    fork_updates: NotRequired[dict[str, Any]]
+    fork_created_at: NotRequired[str | None]
+    branch_label: NotRequired[str | None]
     visited_nodes: NotRequired[Annotated[list[str], operator.add]]

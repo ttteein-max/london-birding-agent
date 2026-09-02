@@ -28,6 +28,11 @@ temp/
 # separately into reports/live-runs after review.
 reports/runs/
 
+# Durable local LangGraph checkpoints are runtime data, never source artifacts.
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+
 # Phase 0 generators keep compact, versioned snapshots only. Raw downloads stay local.
 data/raw/
 data/downloads/

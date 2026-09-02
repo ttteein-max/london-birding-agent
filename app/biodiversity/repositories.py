@@ -30,9 +30,31 @@ from app.feasibility.taxonomy import GBIFBirdNameResolver, TaxonomyOutcome, norm
 class TaxonomyRepository(Protocol):
     def resolve(self, bird_input: str) -> TaxonomyOutcome: ...
 
+    def related(
+        self,
+        accepted_taxon_key: int,
+        *,
+        limit: int = 6,
+        request_budget: int = 3,
+    ) -> list[dict[str, Any]]: ...
+
 
 class OccurrenceRepository(Protocol):
-    def search(self, resolution: TaxonomyOutcome, *, target_month: int) -> dict[str, Any]: ...
+    def search(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]: ...
+
+    def preview(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]: ...
 
 
 class PostcodeRepository(Protocol):
@@ -180,6 +202,21 @@ class FixtureTaxonomyRepository:
     def evidence_provenance(self) -> dict[str, Any]:
         return deepcopy(_load_fixture(self.path)["provenance"])
 
+    def related(
+        self,
+        accepted_taxon_key: int,
+        *,
+        limit: int = 6,
+        request_budget: int = 3,
+    ) -> list[dict[str, Any]]:
+        if not 1 <= limit <= 6 or not 1 <= request_budget <= 3:
+            raise ValueError("related taxonomy limits exceed the deterministic budget")
+        fixture = _load_fixture(self.path.with_name("gbif-related-taxa.json"))
+        for result in fixture["payload"]["results"]:
+            if result.get("accepted_taxon_key") == accepted_taxon_key:
+                return deepcopy(result.get("candidates", []))[:limit]
+        return []
+
 
 class LiveTaxonomyRepository:
     def __init__(self, client: BoundedJsonClient | None = None) -> None:
@@ -196,6 +233,89 @@ class LiveTaxonomyRepository:
                 source="GBIF Species API",
             ) from exc
 
+    def related(
+        self,
+        accepted_taxon_key: int,
+        *,
+        limit: int = 6,
+        request_budget: int = 3,
+    ) -> list[dict[str, Any]]:
+        """Return accepted Aves species from the same genus, then family."""
+
+        if not 1 <= limit <= 6 or not 2 <= request_budget <= 3:
+            raise ValueError("related taxonomy limits exceed the deterministic budget")
+        source, _ = self.client.get_json(
+            f"https://api.gbif.org/v1/species/{accepted_taxon_key}"
+        )
+        if not isinstance(source, dict) or source.get("class") != "Aves":
+            raise SourceFailure(
+                ToolErrorCode.malformed_upstream_response,
+                "GBIF related-taxon source record was missing Aves hierarchy.",
+                source="GBIF Species API",
+            )
+
+        candidates: dict[int, dict[str, Any]] = {}
+
+        def collect(higher_key: Any, relation_level: str, relation_basis: str) -> None:
+            if higher_key is None or len(candidates) >= limit:
+                return
+            response, _ = self.client.get_json(
+                "https://api.gbif.org/v1/species/search",
+                {
+                    "highertaxon_key": higher_key,
+                    "rank": "SPECIES",
+                    "status": "ACCEPTED",
+                    "limit": 50,
+                },
+            )
+            for record in response.get("results", []):
+                key = record.get("acceptedKey") or record.get("speciesKey") or record.get("key")
+                status = record.get("taxonomicStatus") or record.get("status")
+                if (
+                    key in (None, accepted_taxon_key)
+                    or record.get("class") != "Aves"
+                    or record.get("rank") != "SPECIES"
+                    or status != "ACCEPTED"
+                ):
+                    continue
+                english = next(
+                    (
+                        item.get("vernacularName")
+                        for item in record.get("vernacularNames", [])
+                        if item.get("vernacularName")
+                        and item.get("language") in (None, "", "eng")
+                    ),
+                    None,
+                )
+                candidates[int(key)] = {
+                    "accepted_taxon_key": int(key),
+                    "common_name": english,
+                    "scientific_name": record.get("scientificName"),
+                    "canonical_name": record.get("canonicalName") or record.get("species"),
+                    "rank": record.get("rank"),
+                    "taxonomic_status": status,
+                    "class_name": record.get("class"),
+                    "order": record.get("order"),
+                    "family": record.get("family"),
+                    "genus": record.get("genus"),
+                    "resolution_method": "gbif_related_taxonomy_query",
+                    "confidence": record.get("confidence"),
+                    "relation_level": relation_level,
+                    "relation_basis": relation_basis,
+                }
+
+        collect(source.get("genusKey"), "same_genus", f"genus:{source.get('genus')}")
+        if len(candidates) < limit and request_budget >= 3:
+            collect(source.get("familyKey"), "same_family", f"family:{source.get('family')}")
+        return sorted(
+            candidates.values(),
+            key=lambda item: (
+                item["relation_level"] != "same_genus",
+                str(item["canonical_name"]).casefold(),
+                item["accepted_taxon_key"],
+            ),
+        )[:limit]
+
 
 class FixtureOccurrenceRepository:
     reference_year = 2026
@@ -205,21 +325,116 @@ class FixtureOccurrenceRepository:
     ) -> None:
         self.path = path
 
-    def search(self, resolution: TaxonomyOutcome, *, target_month: int) -> dict[str, Any]:
+    def search(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]:
         fixture = _load_fixture(self.path)
         for result in fixture["payload"]["results"]:
             taxonomy = result.get("taxonomy") or {}
             if (
                 taxonomy.get("accepted_taxon_key") == resolution.accepted_taxon_key
                 and result.get("target_month") == target_month
+                and (
+                    seasonal_window_radius_months == 1
+                    or result.get("seasonal_window_radius_months")
+                    == seasonal_window_radius_months
+                )
             ):
                 output = deepcopy(result)
                 output["fixture_provenance"] = fixture["provenance"]
                 return output
+        try:
+            return self.preview(
+                resolution,
+                target_month=target_month,
+                seasonal_window_radius_months=seasonal_window_radius_months,
+            )
+        except SourceFailure:
+            pass
         raise SourceFailure(
             ToolErrorCode.missing_or_corrupt_fixture,
             "No saved occurrence response exists for this taxon and seasonal month.",
             source="GBIF occurrence fixture",
+        )
+
+    def preview(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]:
+        preview_path = self.path.with_name("gbif-occurrence-previews.json")
+        fixture = _load_fixture(preview_path)
+        for result in fixture["payload"]["results"]:
+            if (
+                result.get("accepted_taxon_key") == resolution.accepted_taxon_key
+                and result.get("target_month") == target_month
+                and result.get("seasonal_window_radius_months", 1)
+                == seasonal_window_radius_months
+            ):
+                api_response = result.get("api_response") or {}
+                if not isinstance(api_response.get("results"), list):
+                    raise SourceFailure(
+                        ToolErrorCode.missing_or_corrupt_fixture,
+                        "Saved preview omitted its API-shaped results list.",
+                        source="GBIF occurrence preview fixture",
+                    )
+                sampled = len(api_response["results"])
+                output = {
+                    "evidence_outcome": "insufficient_evidence",
+                    "evidence_reason": "no_retained_records",
+                    "records": [],
+                    "safe_map_cells": [],
+                    "counts": {
+                        "server_match_count": int(api_response.get("count", 0)),
+                        "sampled_count": sampled,
+                        "deduplicated_count": sampled,
+                        "duplicates_removed": 0,
+                        "rejected_count": 0,
+                        "retained_total_count": sampled,
+                        "ranking_eligible_count": 0,
+                    },
+                    "quality_summary": {"warnings": []},
+                    "dataset_diversity": {
+                        "retained_dataset_count": 0,
+                        "ranking_dataset_count": 0,
+                    },
+                    "retrieval": {
+                        "seasonal_months": sorted(
+                            {
+                                ((target_month + offset - 1) % 12) + 1
+                                for offset in range(
+                                    -seasonal_window_radius_months,
+                                    seasonal_window_radius_months + 1,
+                                )
+                            }
+                        ),
+                        "year_window": [2021, 2026],
+                        "page_size": int(api_response.get("limit", 100)),
+                        "page_budget": 1,
+                        "request_budget": 1,
+                        "pages_requested": 1,
+                        "stopped_early": True,
+                        "stop_reason": "server_results_exhausted",
+                        "request_urls": [],
+                        "deduplication": {
+                            "exact_duplicates_removed": 0,
+                            "possible_duplicates_retained": 0,
+                            "method": "No records to deduplicate.",
+                        },
+                    },
+                }
+                output["fixture_provenance"] = fixture["provenance"]
+                return output
+        raise SourceFailure(
+            ToolErrorCode.missing_or_corrupt_fixture,
+            "No saved bounded evidence preview exists for this candidate.",
+            source="GBIF occurrence preview fixture",
         )
 
 
@@ -234,12 +449,21 @@ class LiveOccurrenceRepository:
         self.current_year = current_year
         self.boundary = load_london_boundary()
 
-    def search(self, resolution: TaxonomyOutcome, *, target_month: int) -> dict[str, Any]:
+    def search(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]:
         try:
             return retrieve_occurrences(
                 resolution,
                 london_boundary=self.boundary,
-                policy=RetrievalPolicy(target_month=target_month),
+                policy=RetrievalPolicy(
+                    target_month=target_month,
+                    seasonal_window_radius_months=seasonal_window_radius_months,
+                ),
                 fetch_json=self.client.get_json,
                 current_year=self.current_year,
             )
@@ -247,6 +471,36 @@ class LiveOccurrenceRepository:
             raise SourceFailure(
                 ToolErrorCode.malformed_upstream_response,
                 "GBIF occurrence response did not match the expected shape.",
+                source="GBIF Occurrence Search API",
+            ) from exc
+
+    def preview(
+        self,
+        resolution: TaxonomyOutcome,
+        *,
+        target_month: int,
+        seasonal_window_radius_months: int = 1,
+    ) -> dict[str, Any]:
+        """Use exactly one bounded page/request for an interrupt preview."""
+
+        try:
+            return retrieve_occurrences(
+                resolution,
+                london_boundary=self.boundary,
+                policy=RetrievalPolicy(
+                    page_size=100,
+                    max_pages=1,
+                    request_budget=1,
+                    target_month=target_month,
+                    seasonal_window_radius_months=seasonal_window_radius_months,
+                ),
+                fetch_json=self.client.get_json,
+                current_year=self.current_year,
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise SourceFailure(
+                ToolErrorCode.malformed_upstream_response,
+                "GBIF occurrence preview did not match the expected shape.",
                 source="GBIF Occurrence Search API",
             ) from exc
 

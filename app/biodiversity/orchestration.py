@@ -179,6 +179,7 @@ class ExpeditionBackend:
         occurrence = search_occurrences(
             taxon,
             target_month=request.seasonal_target_month,
+            seasonal_window_radius_months=request.seasonal_window_radius_months,
             repository=self.dependencies.occurrences,
         )
         weather = get_weather_context(

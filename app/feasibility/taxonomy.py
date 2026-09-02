@@ -30,6 +30,10 @@ class TaxonCandidate(BaseModel):
     accepted_taxon_key: int
     rank: str
     taxonomic_status: str
+    class_name: str | None = None
+    order: str | None = None
+    family: str | None = None
+    genus: str | None = None
     search_method: str
     match_confidence: int | None = None
 
@@ -46,6 +50,10 @@ class TaxonomyOutcome(BaseModel):
     accepted_taxon_key: int | None = None
     rank: str | None = None
     taxonomic_status: str | None = None
+    class_name: str | None = None
+    order: str | None = None
+    family: str | None = None
+    genus: str | None = None
     match_method: str | None = None
     match_confidence: int | None = None
     rationale: str = Field(min_length=1)
@@ -97,6 +105,10 @@ def _candidate(record: dict[str, Any], common_name: str | None, method: str) -> 
         accepted_taxon_key=record.get("acceptedKey") or record.get("speciesKey") or record.get("key") or record["usageKey"],
         rank=record["rank"],
         taxonomic_status=record.get("taxonomicStatus") or record.get("status"),
+        class_name=record.get("class"),
+        order=record.get("order"),
+        family=record.get("family"),
+        genus=record.get("genus"),
         search_method=method,
         match_confidence=record.get("confidence"),
     )
@@ -230,6 +242,10 @@ class GBIFBirdNameResolver:
             accepted_taxon_key=candidate.accepted_taxon_key,
             rank=candidate.rank,
             taxonomic_status=candidate.taxonomic_status,
+            class_name=candidate.class_name,
+            order=candidate.order,
+            family=candidate.family,
+            genus=candidate.genus,
             match_method=candidate.search_method,
             match_confidence=candidate.match_confidence,
             rationale=rationale,

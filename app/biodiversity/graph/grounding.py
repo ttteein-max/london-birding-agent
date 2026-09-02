@@ -13,11 +13,9 @@ from app.biodiversity.agent_models import (
     PlanWeatherContext,
 )
 from app.biodiversity.models import (
-    ConstraintStatus,
     ExpeditionEvidenceBundle,
     ExpeditionPlan,
     ExpeditionPlanStatus,
-    SiteEvidenceTier,
 )
 
 

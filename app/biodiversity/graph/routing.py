@@ -23,12 +23,15 @@ def route_after_location(state: BiodiversityAgentState) -> Literal["location_cor
 
 
 def route_after_taxon(state: BiodiversityAgentState) -> Literal[
+    "prepare_taxon_selection",
     "taxon_selection_interrupt",
     "bird_input_correction_interrupt",
     "evidence_agent",
     "source_resolution_failure",
 ]:
     kind = state.get("pending_hitl_kind")
+    if kind == "taxon_preview_pending":
+        return "prepare_taxon_selection"
     if kind == "taxon_selection":
         return "taxon_selection_interrupt"
     if kind == "bird_input_correction":
@@ -61,9 +64,19 @@ def route_after_validation(state: BiodiversityAgentState) -> Literal["actionable
     return "compose_expedition_plan"
 
 
-def route_after_user_choice(state: BiodiversityAgentState) -> Literal["evidence_agent", "deterministic_validation"]:
+def route_after_user_choice(state: BiodiversityAgentState) -> Literal[
+    "evidence_agent",
+    "refresh_invalidated_evidence",
+    "related_taxon_selection_interrupt",
+    "deterministic_validation",
+]:
     route = state.get("decision_route")
-    if route not in {"evidence_agent", "deterministic_validation"}:
+    if route not in {
+        "evidence_agent",
+        "refresh_invalidated_evidence",
+        "related_taxon_selection_interrupt",
+        "deterministic_validation",
+    }:
         raise ValueError("Validated user choice did not set a valid route")
     return route
 

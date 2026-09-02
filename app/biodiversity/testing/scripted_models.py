@@ -6,7 +6,7 @@ import copy
 import json
 import re
 from datetime import datetime
-from typing import Any, Callable, Sequence
+from typing import Any, Sequence
 
 from langchain.messages import AIMessage, HumanMessage
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel

@@ -12,7 +12,6 @@ from app.biodiversity.models import (
     ConstraintSeverity,
     ConstraintStatus,
     ExpeditionPlanStatus,
-    RainPreference,
     SiteEvidenceTier,
     SiteSearchAction,
     StrictModel,
@@ -38,6 +37,7 @@ class ExpeditionRequestDraft(StrictModel):
     maximum_walking_distance_km: float | None = None
     rain_preference: str | None = None
     target_month_override: int | None = None
+    seasonal_window_radius_months: int | None = None
     search_radius_km: float | None = None
 
 
