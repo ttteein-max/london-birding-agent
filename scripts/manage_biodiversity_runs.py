@@ -9,7 +9,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from app.agents.model_factory import create_live_chat_model
+from app.biodiversity.model_factory import create_live_chat_model
 from app.biodiversity.graph import (
     DEFAULT_BIODIVERSITY_CHECKPOINT_PATH,
     build_biodiversity_graph,
