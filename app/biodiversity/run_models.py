@@ -10,9 +10,35 @@ from pydantic import Field, model_validator
 from app.biodiversity.models import RainPreference, StrictModel
 
 
+WORKFLOW_VERSION = "phase-3.1"
+STATE_SCHEMA_VERSION = 2
+
+
+class RunProfile(StrictModel):
+    """Immutable runtime choices that must survive a process restart."""
+
+    workflow_version: Literal["phase-3.1"] = WORKFLOW_VERSION
+    state_schema_version: Literal[2] = STATE_SCHEMA_VERSION
+    data_mode: Literal["fixture", "live"] = "fixture"
+    model_mode: Literal["scripted", "live"] = "scripted"
+    model_identifier: str = Field(
+        default="scripted-biodiversity-v1", min_length=1
+    )
+    endpoint_fingerprint: str = Field(default="local-scripted", min_length=1)
+
+
+class RunManifest(RunProfile):
+    """Checkpointed run identity, excluding credentials and endpoint secrets."""
+
+    created_at: datetime
+
+
 class CheckpointSummary(StrictModel):
     thread_id: str = Field(min_length=1)
     branch_id: str = Field(min_length=1)
+    execution_id: str = Field(min_length=1)
+    parent_execution_id: str | None = None
+    replayed_from_checkpoint_id: str | None = None
     parent_branch_id: str | None = None
     checkpoint_id: str = Field(min_length=1)
     parent_checkpoint_id: str | None = None
@@ -37,6 +63,19 @@ class RunBranch(StrictModel):
     fork_updates: dict[str, Any] = Field(default_factory=dict)
     created_at: datetime
     terminal_status: str | None = None
+
+
+class RunExecution(StrictModel):
+    thread_id: str = Field(min_length=1)
+    execution_id: str = Field(min_length=1)
+    branch_id: str = Field(min_length=1)
+    parent_execution_id: str | None = None
+    replayed_from_checkpoint_id: str | None = None
+    head_checkpoint_id: str = Field(min_length=1)
+    final_checkpoint_id: str | None = None
+    created_at: datetime
+    terminal_status: str | None = None
+    interrupt_kind: str | None = None
 
 
 class ForkUpdates(StrictModel):
@@ -65,13 +104,27 @@ class ForkRequest(StrictModel):
 class ForkResult(StrictModel):
     thread_id: str
     branch_id: str
+    execution_id: str
     parent_branch_id: str | None = None
     forked_from_checkpoint_id: str
     fork_checkpoint_id: str
+    head_checkpoint_id: str
     final_checkpoint_id: str | None = None
     terminal_status: str | None = None
     interrupt_kind: str | None = None
     applied_updates: dict[str, Any]
+
+
+class ReplayResult(StrictModel):
+    thread_id: str
+    branch_id: str
+    execution_id: str
+    parent_execution_id: str | None = None
+    replayed_from_checkpoint_id: str
+    head_checkpoint_id: str
+    final_checkpoint_id: str | None = None
+    terminal_status: str | None = None
+    interrupt_kind: str | None = None
 
 
 class ComparedValue(StrictModel):

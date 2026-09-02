@@ -1,4 +1,4 @@
-"""Credential-free scripted chat-model paths for Phase 2."""
+"""Credential-free scripted chat-model paths for Phase 3."""
 
 from __future__ import annotations
 
@@ -161,6 +161,9 @@ def plan_from_compact_payload(payload: dict[str, Any], *, revision: bool = False
         provenance_references=payload["provenance_references"],
         evidence_attributions=payload["evidence_attributions"],
         evidence_citations=payload["required_evidence_citations"],
+        evidence_gate_passed=payload["evidence_gate_passed"],
+        low_confidence_accepted=payload["low_confidence_accepted"],
+        low_confidence_notice=payload["low_confidence_notice"],
         explanation=(
             f"{payload['phase1_evidence_explanation']} Candidate distances are approximate straight-line projected distances, not walking distances. "
             "Contextual sites are not recommendations, and access and opening must be checked independently."

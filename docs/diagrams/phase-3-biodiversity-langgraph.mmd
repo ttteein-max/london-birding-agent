@@ -1,0 +1,189 @@
+%%{init: {
+  "theme": "base",
+  "flowchart": {
+    "curve": "basis",
+    "nodeSpacing": 28,
+    "rankSpacing": 42
+  },
+  "themeVariables": {
+    "fontFamily": "Arial, sans-serif",
+    "lineColor": "#64748b",
+    "primaryTextColor": "#172033"
+  }
+}}%%
+
+flowchart TB
+    subgraph CORE["Phase 3 · LangGraph 主执行图"]
+        direction TB
+
+        START([START])
+
+        PARSE["parse_expedition_request<br/>模型：结构化请求解析"]
+        REQUEST_HITL["request_clarification_interrupt<br/>HITL · 补充缺失/矛盾字段"]
+
+        LOCATION["resolve_location<br/>确定性服务 · Postcodes.io"]
+        LOCATION_HITL["location_correction_interrupt<br/>HITL · 修正 London 位置"]
+
+        TAXON["resolve_taxon<br/>确定性服务 · GBIF taxonomy"]
+        PREVIEW["prepare_taxon_selection<br/>确定性候选 evidence preview"]
+        TAXON_HITL["taxon_selection_interrupt<br/>HITL · 选择 payload 中的 taxon"]
+        BIRD_HITL["bird_input_correction_interrupt<br/>HITL · 修正鸟名"]
+
+        EVIDENCE["evidence_agent<br/>模型只编排允许的工具"]
+        TOOLNODE["evidence_tools<br/>LangGraph ToolNode"]
+
+        subgraph TOOL_INTERNAL["ToolNode 内部 · 受控工具调用"]
+            direction LR
+            OCC["search_occurrences<br/>可与 weather 并行"]
+            WEATHER["get_weather_context<br/>可与 occurrence 并行"]
+            SITES["find_public_green_spaces<br/>通常在 occurrence 后"]
+        end
+
+        RECORD["record_structured_evidence<br/>校验 · 去重 · 写入 State"]
+        LOOP_LIMIT["evidence_loop_limit<br/>最多 6 轮"]
+        SOURCE_FAILURE["source_resolution_failure<br/>安全终止"]
+
+        VALIDATE["deterministic_validation<br/>证据门槛 · 约束 · 地点 grounding"]
+
+        TRADEOFF_HITL["actionable_tradeoff_interrupt<br/>HITL · 只展示适用选择"]
+        APPLY["apply_validated_user_choice<br/>验证并应用用户选择"]
+        RELATED_HITL["related_taxon_selection_interrupt<br/>HITL · 二次选择 GBIF related taxon"]
+        REFRESH["refresh_invalidated_evidence<br/>只重算失效的证据及下游"]
+
+        COMPOSE["compose_expedition_plan<br/>模型生成结构化草稿"]
+        SAFETY["grounding_and_safety_checks<br/>确定性 grounding / privacy / safety"]
+        REVISE["revise_expedition_plan<br/>模型最多修订一次"]
+        FALLBACK["deterministic_plan_fallback<br/>代码组装完整安全方案"]
+
+        END_NODE([END])
+    end
+
+    subgraph SIDE["运行时、Time Travel 与图例"]
+        direction TB
+
+        subgraph OPERATIONS["运行时与 Time Travel"]
+            direction LR
+
+            subgraph RUNTIME["横切运行时能力 · 不是主流程的下一步"]
+                direction TB
+                STATE["BiodiversityAgentState<br/>request · evidence · plan · HITL<br/>branch / execution lineage"]
+                MANIFEST["RunManifest<br/>data/model mode · model ID<br/>endpoint fingerprint · schema version"]
+                REDUCER["Reducers<br/>add_messages · merge_by_call_id<br/>unique append · explicit replace"]
+                CHECKPOINTER[("Checkpointer<br/>测试：InMemorySaver<br/>运行：SQLite SqliteSaver")]
+                STREAM["Streaming / Observability<br/>graph.stream · updates v2<br/>node/model/tool durations<br/>HITL/checkpoint/fork events"]
+            end
+
+            subgraph CONTROL["Phase 3 图外运行管理层 · 不是 LangGraph Node"]
+                direction TB
+                MANAGER["BiodiversityRunManager"]
+                RESUME_OP["resume<br/>精确 checkpoint / branch"]
+                HISTORY["history<br/>CheckpointSummary + execution"]
+                REPLAY["replay<br/>新 execution_id<br/>终态拒绝；其余 invoke(None, historical config)"]
+                FORK["fork<br/>update_state + 定向失效"]
+                COMPARE["compare<br/>PlanComparison"]
+            end
+        end
+
+        subgraph LEGEND["图例"]
+            LEGEND_BOX["🟩 State　🟦 普通 Node　🟢 Reducer　🟪 ToolNode<br/>▫️ 紫色虚线框：ToolNode 内部工具　🟧 HITL interrupt / resume<br/>🟨 圆柱：Checkpointer　🔷 Streaming　🟪 Time Travel 管理层<br/>──▶ Edge　- -◇ Conditional Edge　粗线 ↻ Cycle"]
+        end
+    end
+
+    START --> PARSE
+
+    PARSE -. "◇ 缺字段/矛盾" .-> REQUEST_HITL
+    REQUEST_HITL == "Command(resume)" ==> LOCATION
+    PARSE -. "◇ 请求有效" .-> LOCATION
+
+    LOCATION -. "◇ 需要修正" .-> LOCATION_HITL
+    LOCATION_HITL == "Command(resume)" ==> LOCATION
+    LOCATION -. "◇ 上游失败" .-> SOURCE_FAILURE
+    LOCATION -. "◇ London 位置有效" .-> TAXON
+
+    TAXON -. "◇ 名称歧义" .-> PREVIEW
+    PREVIEW --> TAXON_HITL
+    TAXON_HITL == "Command(resume)" ==> EVIDENCE
+
+    TAXON -. "◇ 鸟名不可解析" .-> BIRD_HITL
+    BIRD_HITL == "Command(resume)" ==> TAXON
+    TAXON -. "◇ taxonomy 上游失败" .-> SOURCE_FAILURE
+    TAXON -. "◇ taxon 已解析" .-> EVIDENCE
+
+    EVIDENCE -. "◇ tool_calls" .-> TOOLNODE
+    TOOLNODE -. "并行 superstep" .-> OCC
+    TOOLNODE -. "并行 superstep" .-> WEATHER
+    TOOLNODE -. "后续调用" .-> SITES
+    TOOLNODE --> RECORD
+    RECORD == "↻ evidence loop" ==> EVIDENCE
+
+    EVIDENCE -. "◇ 达到 6 轮" .-> LOOP_LIMIT
+    EVIDENCE -. "◇ 工具收集结束" .-> VALIDATE
+
+    VALIDATE -. "◇ 证据源失败：安全终止" .-> END_NODE
+    VALIDATE -. "◇ 需要用户取舍" .-> TRADEOFF_HITL
+    TRADEOFF_HITL == "Command(resume)" ==> APPLY
+
+    APPLY -. "◇ 扩大半径" .-> REFRESH
+    APPLY -. "◇ 扩大季节窗口" .-> REFRESH
+    APPLY -. "◇ 考虑 related taxa" .-> RELATED_HITL
+    RELATED_HITL == "Command(resume)" ==> REFRESH
+    APPLY -. "◇ 接受低置信度" .-> VALIDATE
+    REFRESH == "↻ 重新确定性验证" ==> VALIDATE
+
+    VALIDATE -. "◇ 可以生成方案" .-> COMPOSE
+    COMPOSE --> SAFETY
+
+    SAFETY -. "◇ 检查通过" .-> END_NODE
+    SAFETY -. "◇ 首次检查失败" .-> REVISE
+    REVISE == "↻ 修订后重检" ==> SAFETY
+    SAFETY -. "◇ 修订仍失败" .-> FALLBACK
+    FALLBACK --> END_NODE
+
+    SOURCE_FAILURE --> END_NODE
+    LOOP_LIMIT --> END_NODE
+    CORE ~~~ OPERATIONS
+
+    REDUCER --> STATE
+    MANIFEST --> STATE
+    CHECKPOINTER -. "每个 superstep 持久化" .-> STATE
+    STATE ~~~ STREAM
+    STREAM ~~~ LEGEND_BOX
+
+    MANAGER --> HISTORY
+    MANAGER --> RESUME_OP
+    MANAGER --> REPLAY
+    MANAGER --> FORK
+    MANAGER --> COMPARE
+
+    HISTORY -. "读取 checkpoint history" .-> CHECKPOINTER
+    RESUME_OP -. "选择唯一 pending checkpoint" .-> CHECKPOINTER
+    REPLAY -. "选择历史 checkpoint" .-> CHECKPOINTER
+    FORK -. "创建新 checkpoint branch" .-> CHECKPOINTER
+    COMPARE -. "读取两个 final checkpoint" .-> CHECKPOINTER
+
+    classDef startEnd fill:#ffe4e6,stroke:#ef4444,color:#7f1d1d,stroke-width:2px;
+    classDef node fill:#dbeafe,stroke:#2563eb,color:#172033,stroke-width:2px;
+    classDef hitl fill:#ffedd5,stroke:#f97316,color:#7c2d12,stroke-width:2px;
+    classDef tool fill:#ede9fe,stroke:#7c3aed,color:#3b0764,stroke-width:2px;
+    classDef toolfn fill:#f5f3ff,stroke:#8b5cf6,color:#3b0764,stroke-width:1.5px,stroke-dasharray:5 4;
+    classDef state fill:#dcfce7,stroke:#16a34a,color:#14532d,stroke-width:2px;
+    classDef reducer fill:#ccfbf1,stroke:#0f766e,color:#134e4a,stroke-width:2px;
+    classDef checkpoint fill:#fef9c3,stroke:#ca8a04,color:#713f12,stroke-width:2px;
+    classDef streaming fill:#cffafe,stroke:#0891b2,color:#164e63,stroke-width:2px;
+    classDef control fill:#fae8ff,stroke:#a21caf,color:#701a75,stroke-width:2px;
+    classDef terminal fill:#fee2e2,stroke:#dc2626,color:#7f1d1d,stroke-width:2px;
+    classDef legend fill:#f8fafc,stroke:#94a3b8,color:#334155,stroke-width:1px;
+
+    class START,END_NODE startEnd;
+    class PARSE,LOCATION,TAXON,PREVIEW,EVIDENCE,RECORD,VALIDATE,APPLY,REFRESH,COMPOSE,SAFETY,REVISE node;
+    class REQUEST_HITL,LOCATION_HITL,TAXON_HITL,BIRD_HITL,TRADEOFF_HITL,RELATED_HITL hitl;
+    class TOOLNODE tool;
+    class OCC,WEATHER,SITES toolfn;
+    class STATE,MANIFEST state;
+    class REDUCER reducer;
+    class CHECKPOINTER checkpoint;
+    class STREAM streaming;
+    class MANAGER,RESUME_OP,HISTORY,REPLAY,FORK,COMPARE control;
+    class SOURCE_FAILURE,LOOP_LIMIT,FALLBACK terminal;
+
+    class LEGEND_BOX legend;

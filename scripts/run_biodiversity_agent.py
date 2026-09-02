@@ -1,10 +1,13 @@
-"""Run the Phase 2 London biodiversity LangGraph in the terminal."""
+"""Run the Phase 3 London biodiversity LangGraph in the terminal."""
 
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
+import os
 from contextlib import ExitStack
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
@@ -24,6 +27,7 @@ from app.biodiversity.reporting import (
     default_report_directory,
     save_biodiversity_run_report,
 )
+from app.biodiversity.run_models import RunManifest, RunProfile
 from app.biodiversity.testing import make_scripted_biodiversity_models
 
 
@@ -120,6 +124,31 @@ def main() -> None:
     )
     args = parser.parse_args()
     args.thread_id = args.thread_id or f"biodiversity-cli-{uuid4().hex[:8]}"
+    model_identifier = (
+        "scripted-biodiversity-v1"
+        if args.model_mode == "scripted"
+        else os.getenv("OPENAI_MODEL") or "live-model-not-configured"
+    )
+    endpoint = (
+        "local-scripted"
+        if args.model_mode == "scripted"
+        else os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
+    )
+    endpoint_fingerprint = (
+        "local-scripted"
+        if args.model_mode == "scripted"
+        else hashlib.sha256(endpoint.encode()).hexdigest()[:16]
+    )
+    run_profile = RunProfile(
+        data_mode=args.data_mode,
+        model_mode=args.model_mode,
+        model_identifier=model_identifier,
+        endpoint_fingerprint=endpoint_fingerprint,
+    )
+    run_manifest = RunManifest(
+        **run_profile.model_dump(mode="python"),
+        created_at=datetime.now(UTC),
+    )
 
     stack = ExitStack()
     checkpointer = stack.enter_context(
@@ -142,9 +171,17 @@ def main() -> None:
             checkpointer=checkpointer,
         )
     recorder = AgentRunRecorder(thread_id=args.thread_id)
+    branch_id = uuid4().hex
+    execution_id = uuid4().hex
+    created_at = datetime.now(UTC).isoformat()
     config = {
         "configurable": {"thread_id": args.thread_id},
         "callbacks": [recorder],
+        "metadata": {
+            "execution_id": execution_id,
+            "execution_created_at": created_at,
+            "branch_id": branch_id,
+        },
     }
     if list(graph.get_state_history(config)):
         stack.close()
@@ -154,11 +191,19 @@ def main() -> None:
         )
     graph_input: Any = {
         "original_request_text": args.request,
-        "branch_id": uuid4().hex,
+        "run_manifest": run_manifest.model_dump(mode="json"),
+        "branch_id": branch_id,
+        "branch_created_at": created_at,
         "parent_branch_id": None,
         "forked_from_checkpoint_id": None,
         "fork_updates": {},
         "fork_created_at": None,
+        "execution_id": execution_id,
+        "parent_execution_id": None,
+        "replayed_from_checkpoint_id": None,
+        "execution_created_at": created_at,
+        "low_confidence_accepted": False,
+        "related_taxon_source_key": None,
     }
     supplied_resume = json.loads(args.resume_json) if args.resume_json else None
     result: dict[str, Any] = {}
@@ -183,6 +228,15 @@ def main() -> None:
             print(f"RESUME {json.dumps(resume, ensure_ascii=False)}")
             graph_input = Command(resume=resume)
     except Exception as error:
+        try:
+            latest_snapshot = graph.get_state(config)
+            if latest_snapshot.values:
+                snapshot = latest_snapshot
+                result = dict(latest_snapshot.values)
+        except Exception:
+            # Preserve the original execution failure if even checkpoint
+            # inspection is unavailable.
+            pass
         recorder.finish(
             "failed",
             payload={"error_type": type(error).__name__},
@@ -200,6 +254,19 @@ def main() -> None:
                 request=args.request,
                 data_mode=args.data_mode,
                 model_mode=args.model_mode,
+                checkpoint_id=(
+                    str(
+                        snapshot.config.get("configurable", {}).get(
+                            "checkpoint_id"
+                        )
+                        or ""
+                    )
+                    or None
+                    if "snapshot" in locals()
+                    else None
+                ),
+                execution_id=execution_id,
+                run_manifest=run_manifest.model_dump(mode="json"),
             )
             print(f"RUN REPORT {report_dir.resolve()}")
         raise
@@ -248,6 +315,8 @@ def main() -> None:
                 snapshot.config.get("configurable", {}).get("checkpoint_id") or ""
             )
             or None,
+            execution_id=execution_id,
+            run_manifest=run_manifest.model_dump(mode="json"),
         )
         print(f"RUN REPORT {report_dir.resolve()}")
 

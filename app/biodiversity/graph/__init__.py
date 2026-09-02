@@ -1,4 +1,4 @@
-"""Phase 2 London biodiversity LangGraph public API."""
+"""Phase 3 London biodiversity LangGraph public API."""
 
 from app.biodiversity.graph.checkpoint import (
     DEFAULT_BIODIVERSITY_CHECKPOINT_PATH,

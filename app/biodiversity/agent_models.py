@@ -1,4 +1,4 @@
-"""Strict, model-facing contracts for the Phase 2 biodiversity agent."""
+"""Strict, model-facing contracts for the Phase 3 biodiversity agent."""
 
 from __future__ import annotations
 
@@ -69,7 +69,7 @@ class PlanConstraint(StrictModel):
 
 
 class BiodiversityExpeditionPlan(StrictModel):
-    """Strict Phase 2 plan returned only after deterministic grounding checks."""
+    """Strict Phase 3 plan returned only after deterministic grounding checks."""
 
     status: ExpeditionPlanStatus
     target_species: NonEmptyText
@@ -85,6 +85,9 @@ class BiodiversityExpeditionPlan(StrictModel):
     provenance_references: list[NonEmptyText] = Field(default_factory=list)
     evidence_attributions: list[NonEmptyText] = Field(default_factory=list)
     evidence_citations: list[NonEmptyText] = Field(default_factory=list)
+    evidence_gate_passed: bool
+    low_confidence_accepted: bool = False
+    low_confidence_notice: NonEmptyText | None = None
     explanation: NonEmptyText
     generated_by: Literal[
         "llm_phase_2_composer",
@@ -104,6 +107,23 @@ class BiodiversityExpeditionPlan(StrictModel):
             for site in self.contextual_sites
         ):
             raise ValueError("contextual sites must not be directly grounded")
+        if self.low_confidence_accepted:
+            if self.evidence_gate_passed:
+                raise ValueError(
+                    "accepted low confidence requires a failed historical-evidence gate"
+                )
+            if self.recommended_sites:
+                raise ValueError(
+                    "accepted low confidence cannot contain recommended sites"
+                )
+            if not self.low_confidence_notice:
+                raise ValueError(
+                    "accepted low confidence requires an explicit final-plan notice"
+                )
+        elif self.low_confidence_notice is not None:
+            raise ValueError(
+                "low-confidence notice requires an explicit user acceptance"
+            )
         return self
 
 
