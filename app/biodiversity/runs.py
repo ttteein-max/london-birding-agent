@@ -574,14 +574,13 @@ class BiodiversityRunManager:
             heads.setdefault(_execution_id(snapshot), snapshot)
         return [snapshot for snapshot in heads.values() if _interrupt_kind(snapshot)]
 
-    def resume(
+    def _resume_snapshot(
         self,
         *,
         thread_id: str,
-        resume: dict[str, Any],
         checkpoint_id: str | None = None,
         branch_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         pending = self._pending_execution_heads(thread_id)
         if checkpoint_id:
             snapshot = self._require_checkpoint(thread_id, checkpoint_id)
@@ -592,7 +591,8 @@ class BiodiversityRunManager:
                 raise ValueError("resume checkpoint must be the current execution head")
             if not _interrupt_kind(snapshot):
                 raise ValueError("resume checkpoint has no pending interrupt")
-        elif branch_id:
+            return snapshot
+        if branch_id:
             matches = [
                 item
                 for item in pending
@@ -602,20 +602,57 @@ class BiodiversityRunManager:
                 raise ValueError(
                     f"branch_id={branch_id!r} does not identify exactly one pending execution"
                 )
-            snapshot = matches[0]
-        elif len(pending) == 1:
-            snapshot = pending[0]
-        elif not pending:
+            return matches[0]
+        if len(pending) == 1:
+            return pending[0]
+        if not pending:
             raise ValueError(f"Thread {thread_id!r} has no pending interrupt")
-        else:
-            choices = ", ".join(
-                f"{item.values.get('branch_id')}:{_checkpoint_id(item)}"
-                for item in pending
-            )
-            raise ValueError(
-                "Thread has multiple pending executions; supply checkpoint_id or "
-                f"branch_id. Candidates: {choices}"
-            )
+        choices = ", ".join(
+            f"{item.values.get('branch_id')}:{_checkpoint_id(item)}"
+            for item in pending
+        )
+        raise ValueError(
+            "Thread has multiple pending executions; supply checkpoint_id or "
+            f"branch_id. Candidates: {choices}"
+        )
+
+    def validate_resume(
+        self,
+        *,
+        thread_id: str,
+        resume: dict[str, Any],
+        checkpoint_id: str | None = None,
+        branch_id: str | None = None,
+    ) -> str:
+        """Validate one exact pending decision without mutating graph state."""
+
+        snapshot = self._resume_snapshot(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            branch_id=branch_id,
+        )
+        payload = next(
+            item.value
+            for task in snapshot.tasks
+            for item in task.interrupts
+            if isinstance(item.value, dict)
+        )
+        _validate_resume_payload(payload, resume, state=dict(snapshot.values))
+        return _checkpoint_id(snapshot)
+
+    def resume(
+        self,
+        *,
+        thread_id: str,
+        resume: dict[str, Any],
+        checkpoint_id: str | None = None,
+        branch_id: str | None = None,
+    ) -> dict[str, Any]:
+        snapshot = self._resume_snapshot(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            branch_id=branch_id,
+        )
         self._validate_run_profile(snapshot)
         kind = _interrupt_kind(snapshot)
         if kind is None:

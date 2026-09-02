@@ -23,6 +23,11 @@ tmp/
 temp/
 *.tmp
 *.log
+frontend/node_modules/
+frontend/dist/
+frontend/coverage/
+frontend/playwright-report/
+frontend/test-results/
 
 # CLI timing reports are local runtime artifacts. Curated reports may be copied
 # separately into reports/live-runs after review.

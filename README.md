@@ -4,7 +4,45 @@ An explainable, evidence-grounded planner for urban birdwatching expeditions in 
 
 The project is London-only, birds-first and English-only. It identifies areas with stronger historical occurrence evidence. It does not predict sightings, convert record counts into abundance or population estimates, guarantee access, or guarantee that a bird will be observed.
 
-Phase 1 adds a strict, frontend-independent biodiversity backend with deterministic fixture/live repositories, seven typed services, safe aggregated map geometry and a fixed-order non-LLM orchestrator. The dynamic LangGraph biodiversity agent remains intentionally deferred to Phase 2.
+Phase 4 adds a FastAPI application boundary, durable run catalog, reconnect-safe SSE and a React/TypeScript/MapLibre cartographic field notebook above the Phase 3 durable LangGraph agent. Earlier incident-investigation code remains a regression-protected reference and is not the biodiversity agent.
+
+## Phase 4 visual product quick start
+
+The shortest reproducible browser flow is entirely fixture/scripted and offline after dependency installation:
+
+1. Install Python dependencies.
+
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate
+   python -m pip install --upgrade pip
+   python -m pip install -r requirements.txt
+   ```
+
+2. Install frontend dependencies.
+
+   ```bash
+   cd frontend
+   npm ci
+   cd ..
+   ```
+
+3. Start FastAPI on localhost.
+
+   ```bash
+   python -m uvicorn app.biodiversity.api.main:app --host 127.0.0.1 --port 8000
+   ```
+
+4. In another terminal, start Vite on localhost.
+
+   ```bash
+   cd frontend
+   npm run dev
+   ```
+
+5. Open `http://127.0.0.1:5173`, select **Strong evidence**, then choose **Start expedition**. For the complete fixture/scripted browser demonstration, run `npm run test:e2e` from `frontend/`.
+
+The browser receives an operation immediately, streams the existing Phase 3 node/model/tool/checkpoint events, and reads only allow-listed state/evidence/map DTOs. It supports typed HITL resume, replay, constrained fork and deterministic comparison without exposing raw LangGraph state or occurrence-level data. See [the Phase 4 visual product documentation](docs/phase-4-visual-product.md) and [OpenAPI contract](docs/phase-4-openapi.json).
 
 ## Phase 1 quick start
 
@@ -199,4 +237,4 @@ See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture
 
 ## Roadmap boundary
 
-Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent and Phase 3 durable HITL/time travel are implemented. Phase 4 frontend/timeline work, Phase 5 routing, Phase 6 conservation scoring and MCP remain deferred.
+Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent, Phase 3 durable HITL/time travel and the Phase 4 visual product are implemented. Phase 5 routing, Phase 6 habitat/conservation work and Phase 7 MCP, authentication and production multi-tenant hosting remain deferred.

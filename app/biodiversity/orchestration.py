@@ -137,7 +137,7 @@ def build_deterministic_expedition_plan(
             EvidenceOutcome.strong_map_evidence: strong_explanation,
             EvidenceOutcome.limited_contextual_evidence: (
                 "At least five retained historical records exist, but the strong spatial "
-                "gate is not met; no site-level hotspot recommendation is made."
+                "gate is not met; no site-level candidate recommendation is made."
             ),
             EvidenceOutcome.insufficient_evidence: (
                 "No retained evidence or only isolated records were found; no site-level "
