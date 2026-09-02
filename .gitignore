@@ -24,6 +24,10 @@ temp/
 *.tmp
 *.log
 
+# CLI timing reports are local runtime artifacts. Curated reports may be copied
+# separately into reports/live-runs after review.
+reports/runs/
+
 # Phase 0 generators keep compact, versioned snapshots only. Raw downloads stay local.
 data/raw/
 data/downloads/

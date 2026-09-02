@@ -38,7 +38,22 @@ The standalone Git history preserves the implemented biodiversity phases as immu
 - `phase-1.1`: site-grounding gate hardening;
 - `phase-1.2`: contextual-site tiers and same-snapshot fixtures.
 
-The default `main` branch contains Phase 1.2 plus repository-only publishing metadata. No Phase 2 LangGraph or LLM implementation is included.
+The default `main` branch now contains the Phase 2 biodiversity LangGraph implementation above the tagged Phase 1.2 deterministic baseline.
+
+## Phase 2 quick start
+
+Phase 2 adds a separate, checkpointed biodiversity LangGraph above the unchanged Phase 1.2 authority boundary. It parses natural English, uses a genuine ToolNode evidence loop, interrupts for validated human choices, composes a structured plan and applies deterministic grounding checks with one revision and a safe fallback. Fixture/scripted mode requires no API key:
+
+```bash
+python -m scripts.run_biodiversity_agent \
+  --request "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 to look for Common woodpigeon." \
+  --data-mode fixture \
+  --model-mode scripted
+```
+
+The CLI saves every node, model and tool lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
+
+Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 2 LangGraph documentation](docs/phase-2-biodiversity-langgraph.md) for the topology, state reducers, HITL payloads, safety boundary and all CLI commands.
 
 ## What Phase 0.1 demonstrates
 
@@ -130,8 +145,11 @@ python -m scripts.phase0_feasibility \
 Opt-in live pytest checks are excluded by default:
 
 ```bash
-python -m pytest -m live -q
+RUN_LIVE_BIODIVERSITY_AGENT=1 \
+python -m pytest -m live tests/test_phase2_live_langgraph.py -vv -s
 ```
+
+Confirm that pytest reports `collected 1 item` and `PASSED`; `deselected` or `skipped` means the live test did not run.
 
 Boundary and OSM regeneration are also explicit:
 
@@ -163,4 +181,4 @@ See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture
 
 ## Roadmap boundary
 
-Phase 0, Phase 0.1 and the Phase 1 deterministic biodiversity domain backend are implemented. The dynamic biodiversity LangGraph agent, frontend, routing, HITL nodes, persistence expansion and MCP remain deferred.
+Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend and the Phase 2 checkpointed LangGraph agent are implemented. A frontend or map UI, route provider, durable persistence expansion and MCP remain deferred.
