@@ -51,13 +51,13 @@ python -m scripts.run_biodiversity_agent \
   --model-mode scripted
 ```
 
-The CLI saves every node, model and tool lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
+The CLI saves every node, model, tool and persisted-checkpoint lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Events are published immediately to an optional sequence-aware sink/broker and can be replayed after a reconnect. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
 
 Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for the current topology, state reducers, HITL payloads, safety boundary and all CLI commands. The [Phase 2 document](docs/phase-2-biodiversity-langgraph.md) remains the implementation history for the original graph.
 
 ## Phase 3 durable HITL and time travel
 
-Phase 3 is implemented. Biodiversity CLI runs now use a lifecycle-managed local SQLite checkpointer, while unit tests retain the in-memory saver. Ambiguous taxonomy includes bounded, coordinate-free evidence previews; low-evidence decisions support deterministic radius expansion, seasonal-window widening, GBIF-related taxa and explicit low-confidence acceptance.
+Phase 3 is implemented. Biodiversity CLI runs now use a lifecycle-managed local SQLite checkpointer, while unit tests retain the in-memory saver. Ambiguous taxonomy includes bounded, coordinate-free evidence previews; low-evidence decisions support deterministic radius expansion, seasonal-window widening, GBIF-related taxa and explicit low-confidence acceptance. A strict `StateView` maps an exact node/step/checkpoint key to allow-listed frontend state without exposing raw LangGraph snapshots.
 
 Durable runs can be resumed after the original Python process exits and can be inspected, replayed, forked and compared without overwriting the original final checkpoint:
 
@@ -70,6 +70,8 @@ python -m scripts.manage_biodiversity_runs history --thread-id expedition-1
 ```
 
 See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for resume schemas, SQLite lifecycle and security, thread/checkpoint/branch identity, replay versus fork, invalidation rules, privacy boundaries and all management commands.
+
+The checked-in [Phase 3 HITL/time-travel demonstration](reports/phase3-demos/fixture-scripted-hitl-time-travel/README.md) reproducibly exercises taxonomy selection, low-evidence resume, replay, fork, safe checkpoint views and deterministic comparison without network access.
 
 ## What Phase 0.1 demonstrates
 

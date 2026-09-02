@@ -1251,16 +1251,22 @@ def build_expedition_evidence_bundle(
                 message=weather.limitations[0],
             )
         )
-    limitations = [
-        "Historical occurrence evidence does not guarantee a sighting.",
-        "The backend does not estimate bird populations or abundance.",
-        "No individual occurrence coordinates are included.",
-        "Candidate-site access and opening are not guaranteed.",
-        "Projected proximity is not a walking route or walking-distance validation.",
-        "This output is not legal or conservation advice and executes no field action.",
-    ]
-    if occurrence:
-        limitations.extend(occurrence.limitations)
+    limitations = list(
+        occurrence.limitations
+        if occurrence
+        else [
+            "Historical occurrence evidence does not guarantee a sighting.",
+            "The backend does not estimate bird populations or abundance.",
+        ]
+    )
+    limitations.extend(
+        [
+            "No individual occurrence coordinates are included.",
+            "Candidate-site access and opening are not guaranteed.",
+            "Projected proximity is not a walking route or walking-distance validation.",
+            "This output is not legal or conservation advice and executes no field action.",
+        ]
+    )
     return ExpeditionEvidenceBundle(
         request=request,
         location=location,

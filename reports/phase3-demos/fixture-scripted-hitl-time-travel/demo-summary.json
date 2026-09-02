@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "mode": {
+    "data": "fixture",
+    "model": "scripted"
+  },
+  "thread_id": "phase3-fixture-scripted-demo",
+  "run_id": "phase3-fixture-scripted-demo",
+  "stages": [
+    {
+      "operation": "start",
+      "interrupt_kind": "taxon_selection",
+      "selected_taxon_key": 2489281
+    },
+    {
+      "operation": "resume_taxon",
+      "interrupt_kind": "actionable_tradeoff"
+    },
+    {
+      "operation": "resume_low_confidence",
+      "checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+    },
+    {
+      "operation": "replay",
+      "thread_id": "phase3-fixture-scripted-demo",
+      "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+      "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+      "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+      "replayed_from_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+      "head_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+      "final_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+      "terminal_status": "completed",
+      "interrupt_kind": null
+    },
+    {
+      "operation": "fork",
+      "thread_id": "phase3-fixture-scripted-demo",
+      "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+      "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+      "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+      "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+      "fork_checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f",
+      "head_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+      "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+      "terminal_status": "completed",
+      "interrupt_kind": null,
+      "applied_updates": {
+        "search_radius_km": 8.0
+      },
+      "resumed_after_interrupt": false,
+      "result_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+    },
+    {
+      "operation": "compare",
+      "changed_fields": [
+        "request_constraints",
+        "applied_user_decisions"
+      ]
+    }
+  ],
+  "checkpoint_event_count": 31,
+  "checkpoint_history_count": 31,
+  "checkpoint_events_cover_history": true,
+  "state_view_count": 31,
+  "branch_count": 2,
+  "execution_count": 3,
+  "privacy": {
+    "raw_langgraph_state_saved": false,
+    "occurrence_coordinates_saved": false,
+    "occurrence_identifiers_saved": false,
+    "safe_cell_associations_saved": false
+  }
+}

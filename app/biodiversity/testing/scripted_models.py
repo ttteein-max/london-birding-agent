@@ -168,7 +168,7 @@ def plan_from_compact_payload(payload: dict[str, Any], *, revision: bool = False
             f"{payload['phase1_evidence_explanation']} Candidate distances are approximate straight-line projected distances, not walking distances. "
             "Contextual sites are not recommendations, and access and opening must be checked independently."
         ),
-        generated_by="llm_phase_2_revision" if revision else "llm_phase_2_composer",
+        generated_by="llm_revision" if revision else "llm_composer",
     )
 
 

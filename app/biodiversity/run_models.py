@@ -44,6 +44,7 @@ class CheckpointSummary(StrictModel):
     parent_checkpoint_id: str | None = None
     forked_from_checkpoint_id: str | None = None
     created_at: datetime
+    node_id: str = Field(min_length=1)
     graph_step: int | None = None
     source: str | None = None
     next_nodes: list[str] = Field(default_factory=list)
@@ -51,6 +52,101 @@ class CheckpointSummary(StrictModel):
     terminal_status: str | None = None
     applied_constraint_changes: list[dict[str, Any]] = Field(default_factory=list)
     final_checkpoint_id: str | None = None
+
+
+class StateRequestView(StrictModel):
+    """Location-redacted request constraints safe for a frontend timeline."""
+
+    target_local_date: date | None = None
+    duration_hours: float | None = None
+    maximum_walking_distance_km: float | None = None
+    rain_preference: str | None = None
+    target_month_override: int | None = None
+    seasonal_window_radius_months: int | None = None
+    search_radius_km: float | None = None
+
+
+class StateLocationView(StrictModel):
+    status: str | None = None
+    input_kind: str | None = None
+    within_greater_london: bool | None = None
+    administrative_district: str | None = None
+
+
+class StateTaxonView(StrictModel):
+    status: str | None = None
+    accepted_taxon_key: int | None = None
+    common_name: str | None = None
+    scientific_name: str | None = None
+    canonical_name: str | None = None
+    rank: str | None = None
+    taxonomic_status: str | None = None
+
+
+class StateEvidenceView(StrictModel):
+    occurrence_outcome: str | None = None
+    sampled_count: int | None = None
+    retained_count: int | None = None
+    ranking_eligible_count: int | None = None
+    safe_map_cell_count: int = Field(default=0, ge=0)
+    weather_status: str | None = None
+    public_site_status: str | None = None
+    candidate_site_count: int = Field(default=0, ge=0)
+    contextual_site_count: int = Field(default=0, ge=0)
+    tool_error_count: int = Field(default=0, ge=0)
+
+
+class StatePlanView(StrictModel):
+    deterministic_status: str | None = None
+    final_status: str | None = None
+    generated_by: str | None = None
+    recommended_site_count: int = Field(default=0, ge=0)
+    contextual_site_count: int = Field(default=0, ge=0)
+    evidence_gate_passed: bool | None = None
+    low_confidence_accepted: bool = False
+    grounding_error_count: int = Field(default=0, ge=0)
+
+
+class StateDecisionView(StrictModel):
+    kind: str = Field(min_length=1)
+    option: str | None = None
+
+
+class StateHitlView(StrictModel):
+    waiting: bool = False
+    interrupt_kind: str | None = None
+    applied_decisions: list[StateDecisionView] = Field(default_factory=list)
+
+
+class StateCountersView(StrictModel):
+    evidence_loop_count: int = Field(default=0, ge=0)
+    plan_revision_count: int = Field(default=0, ge=0)
+    recorded_tool_call_count: int = Field(default=0, ge=0)
+
+
+class StateView(StrictModel):
+    """Strictly allow-listed, coordinate-free view of one saved checkpoint."""
+
+    schema_version: Literal[1] = 1
+    thread_id: str = Field(min_length=1)
+    branch_id: str = Field(min_length=1)
+    execution_id: str = Field(min_length=1)
+    checkpoint_id: str = Field(min_length=1)
+    parent_checkpoint_id: str | None = None
+    node_id: str = Field(min_length=1)
+    graph_step: int
+    source: str | None = None
+    created_at: datetime
+    next_nodes: list[str] = Field(default_factory=list)
+    terminal_status: str | None = None
+    request: StateRequestView | None = None
+    location: StateLocationView | None = None
+    taxon: StateTaxonView | None = None
+    evidence: StateEvidenceView
+    plan: StatePlanView
+    hitl: StateHitlView
+    counters: StateCountersView
+    invalidated_evidence: list[str] = Field(default_factory=list)
 
 
 class RunBranch(StrictModel):

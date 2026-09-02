@@ -90,10 +90,14 @@ class BiodiversityExpeditionPlan(StrictModel):
     low_confidence_notice: NonEmptyText | None = None
     explanation: NonEmptyText
     generated_by: Literal[
+        "llm_composer",
+        "llm_revision",
+        "deterministic_fallback",
+        # Legacy values remain readable for already-persisted Phase 2/3 reports.
         "llm_phase_2_composer",
         "llm_phase_2_revision",
         "deterministic_phase_2_fallback",
-    ] = "llm_phase_2_composer"
+    ] = "llm_composer"
 
     @model_validator(mode="after")
     def site_tiers_match_sections(self) -> "BiodiversityExpeditionPlan":

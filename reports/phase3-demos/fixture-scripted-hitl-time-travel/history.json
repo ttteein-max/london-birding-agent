@@ -1,0 +1,871 @@
+[
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+    "parent_checkpoint_id": "1f1a6ba5-b024-69c8-8019-0076dec5f3d5",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.620698Z",
+    "node_id": "grounding_and_safety_checks",
+    "graph_step": 26,
+    "source": "loop",
+    "next_nodes": [],
+    "interrupt_kind": null,
+    "terminal_status": "completed",
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "checkpoint_id": "1f1a6ba5-b024-69c8-8019-0076dec5f3d5",
+    "parent_checkpoint_id": "1f1a6ba5-b023-6654-8018-a008ce4c19be",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.620044Z",
+    "node_id": "compose_expedition_plan",
+    "graph_step": 25,
+    "source": "loop",
+    "next_nodes": [
+      "grounding_and_safety_checks"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "checkpoint_id": "1f1a6ba5-b023-6654-8018-a008ce4c19be",
+    "parent_checkpoint_id": "1f1a6ba5-b021-6b4c-8017-534e3cfc938c",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.619544Z",
+    "node_id": "deterministic_validation",
+    "graph_step": 24,
+    "source": "loop",
+    "next_nodes": [
+      "compose_expedition_plan"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "checkpoint_id": "1f1a6ba5-b021-6b4c-8017-534e3cfc938c",
+    "parent_checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.618849Z",
+    "node_id": "refresh_invalidated_evidence",
+    "graph_step": 23,
+    "source": "loop",
+    "next_nodes": [
+      "deterministic_validation"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "3977ec54f97c489ea55f734508eefc7a",
+    "execution_id": "064a74ba9d3241199f78f2dbade43c26",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "checkpoint_id": "1f1a6ba5-af83-64f6-8016-0db8f35baa3f",
+    "parent_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "forked_from_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "created_at": "2026-09-02T10:37:54.553975Z",
+    "node_id": "apply_validated_user_choice",
+    "graph_step": 22,
+    "source": "update",
+    "next_nodes": [
+      "refresh_invalidated_evidence"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-b026-635e-801a-7470eab410a6"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2",
+    "parent_checkpoint_id": "1f1a6ba5-af6b-60fe-8015-4b274801d271",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.544626Z",
+    "node_id": "grounding_and_safety_checks",
+    "graph_step": 22,
+    "source": "loop",
+    "next_nodes": [],
+    "interrupt_kind": null,
+    "terminal_status": "completed",
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af6b-60fe-8015-4b274801d271",
+    "parent_checkpoint_id": "1f1a6ba5-af69-6862-8014-517f44085e5e",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.544043Z",
+    "node_id": "compose_expedition_plan",
+    "graph_step": 21,
+    "source": "loop",
+    "next_nodes": [
+      "grounding_and_safety_checks"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "f84aaaf9a95f4e3ab8c8cec04def0bac",
+    "parent_execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "replayed_from_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af69-6862-8014-517f44085e5e",
+    "parent_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.543411Z",
+    "node_id": "compose_expedition_plan",
+    "graph_step": 20,
+    "source": "fork",
+    "next_nodes": [
+      "compose_expedition_plan"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af6c-67c4-8016-03b86a409fc2"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+    "parent_checkpoint_id": "1f1a6ba5-af3e-6fd6-8014-f469a95b2772",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.527179Z",
+    "node_id": "grounding_and_safety_checks",
+    "graph_step": 21,
+    "source": "loop",
+    "next_nodes": [],
+    "interrupt_kind": null,
+    "terminal_status": "completed",
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af3e-6fd6-8014-f469a95b2772",
+    "parent_checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.525991Z",
+    "node_id": "compose_expedition_plan",
+    "graph_step": 20,
+    "source": "loop",
+    "next_nodes": [
+      "grounding_and_safety_checks"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af3d-6b18-8013-5db640553959",
+    "parent_checkpoint_id": "1f1a6ba5-af3c-6588-8012-639e6800b2a6",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.525461Z",
+    "node_id": "deterministic_validation",
+    "graph_step": 19,
+    "source": "loop",
+    "next_nodes": [
+      "compose_expedition_plan"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af3c-6588-8012-639e6800b2a6",
+    "parent_checkpoint_id": "1f1a6ba5-af3b-68ea-8011-3ee74a16cfac",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.524908Z",
+    "node_id": "apply_validated_user_choice",
+    "graph_step": 18,
+    "source": "loop",
+    "next_nodes": [
+      "deterministic_validation"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af3b-68ea-8011-3ee74a16cfac",
+    "parent_checkpoint_id": "1f1a6ba5-af2c-6084-8010-810bf8445659",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.524585Z",
+    "node_id": "actionable_tradeoff_interrupt",
+    "graph_step": 17,
+    "source": "loop",
+    "next_nodes": [
+      "apply_validated_user_choice"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af2c-6084-8010-810bf8445659",
+    "parent_checkpoint_id": "1f1a6ba5-af29-6b68-800f-7a2f2276bc58",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.518227Z",
+    "node_id": "deterministic_validation",
+    "graph_step": 16,
+    "source": "loop",
+    "next_nodes": [
+      "actionable_tradeoff_interrupt"
+    ],
+    "interrupt_kind": "actionable_tradeoff",
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af29-6b68-800f-7a2f2276bc58",
+    "parent_checkpoint_id": "1f1a6ba5-af28-6a9c-800e-31783cd439f2",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.517276Z",
+    "node_id": "evidence_agent",
+    "graph_step": 15,
+    "source": "loop",
+    "next_nodes": [
+      "deterministic_validation"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af28-6a9c-800e-31783cd439f2",
+    "parent_checkpoint_id": "1f1a6ba5-af27-6b88-800d-9e7f12d21d2f",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.516846Z",
+    "node_id": "record_structured_evidence",
+    "graph_step": 14,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_agent"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-af27-6b88-800d-9e7f12d21d2f",
+    "parent_checkpoint_id": "1f1a6ba5-aea1-6b00-800c-8796eb0ac9e4",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.516456Z",
+    "node_id": "evidence_tools",
+    "graph_step": 13,
+    "source": "loop",
+    "next_nodes": [
+      "record_structured_evidence"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-aea1-6b00-800c-8796eb0ac9e4",
+    "parent_checkpoint_id": "1f1a6ba5-aea0-6782-800b-dffdfae0e274",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.461562Z",
+    "node_id": "evidence_agent",
+    "graph_step": 12,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_tools"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-aea0-6782-800b-dffdfae0e274",
+    "parent_checkpoint_id": "1f1a6ba5-ae9f-6ddc-800a-1dde81ec9588",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.461062Z",
+    "node_id": "record_structured_evidence",
+    "graph_step": 11,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_agent"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae9f-6ddc-800a-1dde81ec9588",
+    "parent_checkpoint_id": "1f1a6ba5-ae9c-6416-8009-4f032d1467ab",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.460814Z",
+    "node_id": "evidence_tools",
+    "graph_step": 10,
+    "source": "loop",
+    "next_nodes": [
+      "record_structured_evidence"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae9c-6416-8009-4f032d1467ab",
+    "parent_checkpoint_id": "1f1a6ba5-ae9b-6458-8008-f150ab99af9c",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.459336Z",
+    "node_id": "evidence_agent",
+    "graph_step": 9,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_tools"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae9b-6458-8008-f150ab99af9c",
+    "parent_checkpoint_id": "1f1a6ba5-ae99-6cb6-8007-c61640bdad66",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.458932Z",
+    "node_id": "record_structured_evidence",
+    "graph_step": 8,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_agent"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae99-6cb6-8007-c61640bdad66",
+    "parent_checkpoint_id": "1f1a6ba5-ae70-67c6-8006-18b5ec47239e",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.458325Z",
+    "node_id": "evidence_tools",
+    "graph_step": 7,
+    "source": "loop",
+    "next_nodes": [
+      "record_structured_evidence"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae70-67c6-8006-18b5ec47239e",
+    "parent_checkpoint_id": "1f1a6ba5-ae6d-66ca-8005-3f341462e84b",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.441408Z",
+    "node_id": "evidence_agent",
+    "graph_step": 6,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_tools"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae6d-66ca-8005-3f341462e84b",
+    "parent_checkpoint_id": "1f1a6ba5-ae62-64fa-8004-4a167f314ea2",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.440153Z",
+    "node_id": "taxon_selection_interrupt",
+    "graph_step": 5,
+    "source": "loop",
+    "next_nodes": [
+      "evidence_agent"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      }
+    ],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae62-64fa-8004-4a167f314ea2",
+    "parent_checkpoint_id": "1f1a6ba5-ae5e-6620-8003-4acc95d45c84",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.435601Z",
+    "node_id": "prepare_taxon_selection",
+    "graph_step": 4,
+    "source": "loop",
+    "next_nodes": [
+      "taxon_selection_interrupt"
+    ],
+    "interrupt_kind": "taxon_selection",
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae5e-6620-8003-4acc95d45c84",
+    "parent_checkpoint_id": "1f1a6ba5-ae5b-64f2-8002-dc6bd72cec20",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.433993Z",
+    "node_id": "resolve_taxon",
+    "graph_step": 3,
+    "source": "loop",
+    "next_nodes": [
+      "prepare_taxon_selection"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae5b-64f2-8002-dc6bd72cec20",
+    "parent_checkpoint_id": "1f1a6ba5-ae4c-6998-8001-2985b401d8b3",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.432733Z",
+    "node_id": "resolve_location",
+    "graph_step": 2,
+    "source": "loop",
+    "next_nodes": [
+      "resolve_taxon"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae4c-6998-8001-2985b401d8b3",
+    "parent_checkpoint_id": "1f1a6ba5-ae4a-6df0-8000-d4072be9e933",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.426710Z",
+    "node_id": "parse_expedition_request",
+    "graph_step": 1,
+    "source": "loop",
+    "next_nodes": [
+      "resolve_location"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae4a-6df0-8000-d4072be9e933",
+    "parent_checkpoint_id": "1f1a6ba5-ae49-67de-bfff-b149f2442176",
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.426002Z",
+    "node_id": "__start__",
+    "graph_step": 0,
+    "source": "loop",
+    "next_nodes": [
+      "parse_expedition_request"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  },
+  {
+    "thread_id": "phase3-fixture-scripted-demo",
+    "branch_id": "d55d0d2f1c6446869da7bfb9ae4381b8",
+    "execution_id": "0efef89209344424895b4bb3dd9c3d21",
+    "parent_execution_id": null,
+    "replayed_from_checkpoint_id": null,
+    "parent_branch_id": null,
+    "checkpoint_id": "1f1a6ba5-ae49-67de-bfff-b149f2442176",
+    "parent_checkpoint_id": null,
+    "forked_from_checkpoint_id": null,
+    "created_at": "2026-09-02T10:37:54.425439Z",
+    "node_id": "__input__",
+    "graph_step": -1,
+    "source": "input",
+    "next_nodes": [
+      "__start__"
+    ],
+    "interrupt_kind": null,
+    "terminal_status": null,
+    "applied_constraint_changes": [],
+    "final_checkpoint_id": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab"
+  }
+]

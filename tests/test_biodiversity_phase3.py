@@ -511,6 +511,74 @@ def test_phase3_events_and_report_include_checkpoint_branch_metadata(
     assert metadata["forked_from_checkpoint_id"] == original_checkpoint
     assert metadata["execution_id"]
     assert {span.kind for span in recorder.spans} == {"node", "model", "tool"}
+    checkpoint_events = [
+        item
+        for item in events["events"]
+        if item["event_type"] == "checkpoint_created"
+    ]
+    history = manager.history(thread_id="reported")
+    assert len(checkpoint_events) == len(history)
+    assert len({item["payload"]["checkpoint_id"] for item in checkpoint_events}) == (
+        len(checkpoint_events)
+    )
+    assert all(item["node_id"] for item in checkpoint_events)
+    assert all("graph_step" in item["payload"] for item in checkpoint_events)
+    input_checkpoint = next(
+        item for item in checkpoint_events if item["node_id"] == "__input__"
+    )
+    assert input_checkpoint["payload"]["execution_id"] == started["execution_id"]
+    assert input_checkpoint["payload"]["branch_id"] == started["branch_id"]
+
+
+def test_state_view_is_exact_and_excludes_raw_checkpoint_state() -> None:
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    manager.start(
+        "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 "
+        "to look for Common woodpigeon.",
+        thread_id="state-view",
+    )
+    final = manager.history(thread_id="state-view")[0]
+    view = manager.state_view(
+        thread_id="state-view",
+        node_id=final.node_id,
+        graph_step=final.graph_step,
+        checkpoint_id=final.checkpoint_id,
+    )
+
+    assert view.node_id == "grounding_and_safety_checks"
+    assert view.plan.final_status == "candidate_plan_ready"
+    assert view.evidence.safe_map_cell_count > 0
+    all_views = manager.state_views(thread_id="state-view")
+    assert len(all_views) == len(manager.history(thread_id="state-view"))
+    assert "evidence_tools" in {item.node_id for item in all_views}
+    serialised = view.model_dump_json().casefold()
+    for forbidden in (
+        "sw11 4nj",
+        "original_request_text",
+        "messages",
+        "pending_hitl_payload",
+        "rounded_start_point",
+        "british_national_grid",
+        "safe_map_cells",
+        "associated_safe_cell_ids",
+        "executed_tool_call_audit",
+        "structured_evidence_log",
+        "decimallatitude",
+        "decimallongitude",
+        "occurrenceid",
+        "record_ref",
+        "hmac",
+    ):
+        assert forbidden not in serialised
+
+    with pytest.raises(ValueError, match="do not match"):
+        manager.state_view(
+            thread_id="state-view",
+            node_id="resolve_taxon",
+            graph_step=final.graph_step,
+            checkpoint_id=final.checkpoint_id,
+        )
 
 
 def test_multiple_pending_branches_require_an_exact_resume_target() -> None:

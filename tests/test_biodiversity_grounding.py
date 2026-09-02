@@ -90,7 +90,7 @@ def test_grounding_rejects_access_walking_abundance_prediction_and_guarantees(
     result = run_with_responses([unsafe])
     assert result["plan_revision_count"] == 1
     assert result["terminal_status"] == "completed"
-    assert result["final_validated_plan"]["generated_by"] == "llm_phase_2_revision"
+    assert result["final_validated_plan"]["generated_by"] == "llm_revision"
 
 
 @pytest.mark.parametrize(
@@ -128,7 +128,20 @@ def test_grounding_allows_privacy_disclaimer_without_sensitive_values() -> None:
     result = run_with_responses([disclaimer])
     assert result["plan_revision_count"] == 0
     assert result["terminal_status"] == "completed"
-    assert result["final_validated_plan"]["generated_by"] == "llm_phase_2_composer"
+    assert result["final_validated_plan"]["generated_by"] == "llm_composer"
+
+
+def test_grounding_rejects_legacy_generator_label_and_deduplicates_limitations() -> None:
+    def legacy_label(payload):
+        plan = plan_from_compact_payload(payload)
+        return plan.model_copy(update={"generated_by": "llm_phase_2_composer"})
+
+    result = run_with_responses([legacy_label])
+    plan = result["final_validated_plan"]
+    assert result["plan_revision_count"] == 1
+    assert plan["generated_by"] == "llm_revision"
+    assert sum("sighting" in item.casefold() for item in plan["unresolved_limitations"]) == 1
+    assert sum("population" in item.casefold() for item in plan["unresolved_limitations"]) == 1
 
 
 def test_model_facing_provenance_strips_coordinate_query_parameters() -> None:
@@ -160,7 +173,7 @@ def test_failed_revision_uses_deterministic_safe_fallback() -> None:
     result = run_with_responses([invented_site, invented_site])
     assert result["plan_revision_count"] == 1
     assert result["terminal_status"] == "completed_with_deterministic_fallback"
-    assert result["final_validated_plan"]["generated_by"] == "deterministic_phase_2_fallback"
+    assert result["final_validated_plan"]["generated_by"] == "deterministic_fallback"
     assert result["final_validated_plan"]["recommended_sites"]
 
 

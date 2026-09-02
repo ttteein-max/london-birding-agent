@@ -1,0 +1,147 @@
+{
+  "thread_id": "phase3-fixture-scripted-demo",
+  "checkpoint_a": "1f1a6ba5-af41-6e3e-8015-917219ecc1ab",
+  "checkpoint_b": "1f1a6ba5-b026-635e-801a-7470eab410a6",
+  "request_constraints": {
+    "checkpoint_a": {
+      "target_local_date": "2026-01-15",
+      "duration_hours": 2.0,
+      "rain_preference": "no_preference",
+      "target_month_override": null,
+      "seasonal_window_radius_months": 1,
+      "search_radius_km": 5.0
+    },
+    "checkpoint_b": {
+      "target_local_date": "2026-01-15",
+      "duration_hours": 2.0,
+      "rain_preference": "no_preference",
+      "target_month_override": null,
+      "seasonal_window_radius_months": 1,
+      "search_radius_km": 8.0
+    },
+    "changed": true
+  },
+  "selected_taxon": {
+    "checkpoint_a": {
+      "accepted_taxon_key": 2489281,
+      "common_name": "Lesser Ground-robin",
+      "canonical_name": "Amalocichla incerta"
+    },
+    "checkpoint_b": {
+      "accepted_taxon_key": 2489281,
+      "common_name": "Lesser Ground-robin",
+      "canonical_name": "Amalocichla incerta"
+    },
+    "changed": false
+  },
+  "evidence_outcome": {
+    "checkpoint_a": "insufficient_evidence",
+    "checkpoint_b": "insufficient_evidence",
+    "changed": false
+  },
+  "weather_status": {
+    "checkpoint_a": "weather_unavailable_for_requested_date",
+    "checkpoint_b": "weather_unavailable_for_requested_date",
+    "changed": false
+  },
+  "plan_status": {
+    "checkpoint_a": "cannot_recommend_sites",
+    "checkpoint_b": "cannot_recommend_sites",
+    "changed": false
+  },
+  "recommended_site_ids": {
+    "checkpoint_a": [],
+    "checkpoint_b": [],
+    "changed": false
+  },
+  "contextual_site_ids": {
+    "checkpoint_a": [
+      "osm-relation-4109332",
+      "osm-way-1187346499",
+      "osm-way-154293379",
+      "osm-way-225907207",
+      "osm-way-23066992",
+      "osm-way-37798918",
+      "osm-way-421889395",
+      "osm-way-804847432"
+    ],
+    "checkpoint_b": [
+      "osm-relation-4109332",
+      "osm-way-1187346499",
+      "osm-way-154293379",
+      "osm-way-225907207",
+      "osm-way-23066992",
+      "osm-way-37798918",
+      "osm-way-421889395",
+      "osm-way-804847432"
+    ],
+    "changed": false
+  },
+  "limitations": {
+    "checkpoint_a": [
+      "Candidate-site access and opening are not guaranteed.",
+      "Historical occurrence records do not predict or guarantee a sighting.",
+      "No individual occurrence coordinates are included.",
+      "Only records with known uncertainty of at most 1,000 m support spatial ranking.",
+      "Projected proximity is not a walking route or walking-distance validation.",
+      "Record counts are not population or abundance estimates.",
+      "This output is not legal or conservation advice and executes no field action."
+    ],
+    "checkpoint_b": [
+      "Candidate-site access and opening are not guaranteed.",
+      "Historical occurrence records do not predict or guarantee a sighting.",
+      "No individual occurrence coordinates are included.",
+      "Only records with known uncertainty of at most 1,000 m support spatial ranking.",
+      "Projected proximity is not a walking route or walking-distance validation.",
+      "Record counts are not population or abundance estimates.",
+      "This output is not legal or conservation advice and executes no field action."
+    ],
+    "changed": false
+  },
+  "provenance_sources": {
+    "checkpoint_a": [
+      "GBIF Occurrence Search API",
+      "GBIF Species API",
+      "OpenStreetMap via Overpass API",
+      "Postcodes.io"
+    ],
+    "checkpoint_b": [
+      "GBIF Occurrence Search API",
+      "GBIF Species API",
+      "OpenStreetMap via Overpass API",
+      "Postcodes.io"
+    ],
+    "changed": false
+  },
+  "applied_user_decisions": {
+    "checkpoint_a": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      }
+    ],
+    "checkpoint_b": [
+      {
+        "kind": "taxon_selection",
+        "option": null
+      },
+      {
+        "kind": "actionable_tradeoff",
+        "option": "keep_constraints_accept_low_confidence"
+      },
+      {
+        "kind": "fork_update",
+        "option": "fork_update"
+      }
+    ],
+    "changed": true
+  },
+  "changed_fields": [
+    "request_constraints",
+    "applied_user_decisions"
+  ]
+}
