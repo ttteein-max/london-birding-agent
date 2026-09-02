@@ -181,4 +181,4 @@ See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture
 
 ## Roadmap boundary
 
-Phase 0, Phase 0.1 and the Phase 1 deterministic biodiversity domain backend are implemented. The dynamic biodiversity LangGraph agent, frontend, routing, HITL nodes, persistence expansion and MCP remain deferred.
+Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend and the Phase 2 checkpointed LangGraph agent are implemented. A frontend or map UI, route provider, durable persistence expansion and MCP remain deferred.

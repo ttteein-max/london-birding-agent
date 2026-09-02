@@ -9,7 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 
-from app.agents.model_factory import create_live_chat_model
+from app.biodiversity.model_factory import create_live_chat_model
 from app.biodiversity.graph import build_biodiversity_graph
 from app.biodiversity.observability import AgentRunRecorder
 from app.biodiversity.orchestration import BackendDependencies

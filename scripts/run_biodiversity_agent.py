@@ -10,7 +10,7 @@ from typing import Any
 from langchain.messages import AIMessage
 from langgraph.types import Command
 
-from app.agents.model_factory import create_live_chat_model
+from app.biodiversity.model_factory import create_live_chat_model
 from app.biodiversity.graph import (
     build_biodiversity_graph,
     create_biodiversity_checkpointer,
