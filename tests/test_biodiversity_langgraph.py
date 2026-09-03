@@ -14,6 +14,7 @@ from app.biodiversity.graph import (
     build_biodiversity_graph,
     create_biodiversity_checkpointer,
 )
+from app.biodiversity.runs import BiodiversityRunManager
 from app.biodiversity.testing import (
     ScriptedEvidenceModel,
     ScriptedPlanComposerModel,
@@ -117,6 +118,70 @@ def test_missing_request_fields_interrupt_and_invalid_resume_is_rejected() -> No
     assert interrupt_payload(result)["kind"] == "request_clarification"
     with pytest.raises(ValueError, match="Resume must"):
         graph.invoke(Command(resume={"target_local_date": "2026-06-15"}), config)
+
+
+def test_named_london_place_is_geocoded_then_selected_by_human() -> None:
+    memory = create_biodiversity_checkpointer()
+    graph = graph_for(
+        ExpeditionRequestDraft(
+            bird_input="Common woodpigeon",
+            location_query="Kensal Road",
+            target_local_date=date(2026, 6, 15),
+            duration_hours=2,
+        ),
+        checkpointer=memory,
+    )
+    config = {"configurable": {"thread_id": "named-place"}}
+    interrupted = graph.invoke(
+        {"original_request_text": "Plan from Kensal Road."},
+        config,
+    )
+    payload = interrupt_payload(interrupted)
+    assert payload["kind"] == "location_correction"
+    assert payload["status"] == "human_selection_required"
+    assert [item["postcode"] for item in payload["location_candidates"]] == [
+        "W10 5DD",
+        "W10 5BA",
+        "W10 5DA",
+    ]
+    resumed = graph.invoke(Command(resume={"candidate_id": "place-1"}), config)
+    assert resumed["resolved_location"]["status"] == "resolved"
+    assert resumed["resolved_location"]["input_kind"] == "geocoded_place"
+    assert resumed["resolved_location"]["administrative_district"] == (
+        "Royal Borough of Kensington and Chelsea"
+    )
+    assert resumed["expedition_request"]["postcode"] is None
+    assert resumed["terminal_status"] == "completed"
+
+
+def test_named_place_rejects_forged_candidate_without_mutating_checkpoint() -> None:
+    memory = create_biodiversity_checkpointer()
+    graph = graph_for(
+        ExpeditionRequestDraft(
+            bird_input="Common woodpigeon",
+            location_query="Kensal Road",
+            target_local_date=date(2026, 6, 15),
+            duration_hours=2,
+        ),
+        checkpointer=memory,
+    )
+    manager = BiodiversityRunManager(graph)
+    manager.start("Plan from Kensal Road.", thread_id="forged-place")
+    before = graph.get_state(
+        {"configurable": {"thread_id": "forged-place"}}
+    )
+    with pytest.raises(ValueError, match="offered place matches"):
+        manager.resume(
+            thread_id="forged-place",
+            resume={"candidate_id": "place-forged"},
+        )
+    after = graph.get_state(
+        {"configurable": {"thread_id": "forged-place"}}
+    )
+    assert after.config == before.config
+    assert after.values["pending_hitl_payload"] == before.values[
+        "pending_hitl_payload"
+    ]
 
 
 def test_invalid_live_structured_parse_becomes_typed_clarification() -> None:

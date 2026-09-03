@@ -1604,6 +1604,83 @@
         ],
         "title": "GeoJSONGeometry"
       },
+      "GeocodedLocationCandidateView": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Candidate Id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "locality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locality"
+          },
+          "administrative_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrative District"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "place_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Type"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "label"
+        ],
+        "title": "GeocodedLocationCandidateView",
+        "description": "Coordinate-free location candidate safe for a typed HITL card."
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -1798,17 +1875,36 @@
             "title": "Kind"
           },
           "postcode": {
-            "type": "string",
-            "maxLength": 16,
-            "minLength": 1,
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Postcode"
+          },
+          "candidate_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Id"
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
-          "kind",
-          "postcode"
+          "kind"
         ],
         "title": "LocationCorrectionDecision"
       },
@@ -2397,6 +2493,13 @@
             },
             "type": "array",
             "title": "Candidates"
+          },
+          "location_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/GeocodedLocationCandidateView"
+            },
+            "type": "array",
+            "title": "Location Candidates"
           },
           "options": {
             "items": {

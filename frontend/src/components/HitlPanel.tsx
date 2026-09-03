@@ -31,6 +31,7 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
   };
 
   const options = decision.options ?? [];
+  const locationCandidates = decision.location_candidates ?? [];
   const taxonomyDecisionKind =
     decision.kind === "taxon_selection" || decision.kind === "related_taxon_selection"
       ? decision.kind
@@ -98,11 +99,39 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
         )}
 
         {decision.kind === "location_correction" && (
-          <form className="hitl-form" onSubmit={(event) => { event.preventDefault(); void onResume({ ...base, decision: { kind: "location_correction", postcode } }); }}>
-            <label htmlFor="corrected-postcode">London postcode</label>
-            <input id="corrected-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} required />
-            <button className="primary-action" disabled={busy}>Validate location</button>
-          </form>
+          <>
+            {locationCandidates.length > 0 && (
+              <div className="candidate-choice-grid location-choice-grid" aria-label="Verified Greater London place matches">
+                {locationCandidates.map((candidate) => (
+                  <button
+                    key={candidate.candidate_id}
+                    disabled={busy}
+                    aria-label={`Use ${candidate.label}${candidate.postcode ? ` ${candidate.postcode}` : ""}`}
+                    onClick={() => onResume({
+                      ...base,
+                      decision: {
+                        kind: "location_correction",
+                        candidate_id: candidate.candidate_id,
+                      },
+                    })}
+                  >
+                    <strong>{candidate.label}</strong>
+                    <span>{[candidate.locality, candidate.administrative_district].filter(Boolean).join(" · ")}</span>
+                    <span>{candidate.postcode ?? "No postcode returned"} · {humanise(candidate.place_type ?? candidate.category ?? "place")}</span>
+                    <small>Representative planning point — not an entrance or walking route</small>
+                  </button>
+                ))}
+              </div>
+            )}
+            {locationCandidates.length > 0 && (
+              <p className="geocoder-attribution">Place search © OpenStreetMap contributors · Nominatim</p>
+            )}
+            <form className="hitl-form" onSubmit={(event) => { event.preventDefault(); void onResume({ ...base, decision: { kind: "location_correction", postcode } }); }}>
+              <label htmlFor="corrected-postcode">Or enter a London postcode</label>
+              <input id="corrected-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} required />
+              <button className="primary-action" disabled={busy}>Validate postcode</button>
+            </form>
+          </>
         )}
 
         {decision.kind === "bird_input_correction" && (

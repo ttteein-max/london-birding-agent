@@ -1,0 +1,73 @@
+{
+  "schema_version": 1,
+  "payload": {
+    "results": [
+      {
+        "normalised_query": "kensal road",
+        "candidates": [
+          {
+            "label": "Kensal Road",
+            "locality": "North Kensington",
+            "administrative_district": "Royal Borough of Kensington and Chelsea",
+            "postcode": "W10 5DD",
+            "category": "highway",
+            "place_type": "unclassified",
+            "longitude": -0.2075391,
+            "latitude": 51.5257048
+          },
+          {
+            "label": "Kensal Road",
+            "locality": "North Kensington",
+            "administrative_district": "Royal Borough of Kensington and Chelsea",
+            "postcode": "W10 5BA",
+            "category": "highway",
+            "place_type": "unclassified",
+            "longitude": -0.212258,
+            "latitude": 51.5262549
+          },
+          {
+            "label": "Kensal Road",
+            "locality": "North Kensington",
+            "administrative_district": "Royal Borough of Kensington and Chelsea",
+            "postcode": "W10 5DA",
+            "category": "highway",
+            "place_type": "unclassified",
+            "longitude": -0.2145762,
+            "latitude": 51.5263235
+          }
+        ]
+      }
+    ]
+  },
+  "provenance": {
+    "source_name": "Nominatim Search API",
+    "source_url": "https://nominatim.org/release-docs/latest/api/Search/",
+    "endpoint": "https://nominatim.openstreetmap.org/search",
+    "request_parameters": {
+      "query": "Kensal Road, London, United Kingdom",
+      "countrycodes": "gb",
+      "bounded_to_greater_london_viewbox": true,
+      "limit": 3
+    },
+    "retrieved_at_utc": "2026-09-03T06:25:29Z",
+    "snapshot_version": "2026-09-03",
+    "licence": "Open Database Licence (ODbL) 1.0",
+    "attribution": "© OpenStreetMap contributors",
+    "checksum_sha256": "5418d4bffe895e558201fd684a7f14e63fe1051226f13e2b6482d3c8bd58fbc6",
+    "record_counts": {
+      "before": 3,
+      "after": 3
+    },
+    "filtering_rules": [
+      "Country code restricted to gb",
+      "Search bounded to a Greater London viewbox",
+      "Provider place and OSM identifiers omitted",
+      "Only allow-listed label, locality, district, postcode, category, type and coordinates retained"
+    ],
+    "known_limitations": [
+      "A geocoder match is a representative planning point, not a precise entrance",
+      "Kensal Road is split into multiple OSM road segments",
+      "Fixture results are a versioned snapshot and may differ from later live results"
+    ]
+  }
+}

@@ -44,6 +44,8 @@ The shortest reproducible browser flow is entirely fixture/scripted and offline 
 
 The browser receives an operation immediately, streams the existing Phase 3 node/model/tool/checkpoint events, and reads only allow-listed state/evidence/map DTOs. It supports typed HITL resume, replay, constrained fork and deterministic comparison without exposing raw LangGraph state or occurrence-level data. See [the Phase 4 visual product documentation](docs/phase-4-visual-product.md) and [OpenAPI contract](docs/phase-4-openapi.json).
 
+Named London places are supported as well as postcodes and explicit map points. The model only extracts wording such as `Kensal Road`; a bounded Nominatim search supplies real OpenStreetMap candidates, deterministic code rejects candidates outside Greater London, and the browser asks the user to choose when a road has several segments. Fixture mode replays a versioned, sanitized real Nominatim response for Kensal Road, so the default demonstration remains offline and reproducible.
+
 ### Local live/live mode
 
 Set the model credentials in the shell that starts FastAPI, then select `live/live` in the browser. Do not prefix model settings with `VITE_`; they must remain server-side.
@@ -241,7 +243,10 @@ All public API requests are sequential, carry a project-specific User-Agent, hav
 - Postcodes.io: London postcode feasibility.
 - Open-Meteo: weather feasibility, not bird prediction.
 - OpenStreetMap/Nominatim: versioned Greater London boundary.
+- OpenStreetMap/Nominatim Search API: submitted named-place lookup in live data mode; versioned sanitized Kensal Road candidates in fixture mode.
 - OpenStreetMap/Overpass: one-off green-space candidate snapshot, not a runtime query.
+
+The public Nominatim service requires no API key for low-volume use, but it is not an unlimited or guaranteed hosting dependency. This application sends only explicit submitted searches, caps the response at three candidates, identifies itself with a project User-Agent, serializes requests to no more than one per second, and does not implement client-side autocomplete. OpenStreetMap attribution is retained. A larger public deployment should use a hosted geocoding plan or its own compliant instance.
 
 GiGL Spaces to Visit and the authenticated GBIF bulk Download API are not dependencies.
 

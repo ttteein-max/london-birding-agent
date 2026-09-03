@@ -81,6 +81,9 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .candidate-choice-grid button:hover, .tradeoff-grid > button:hover { border-color: #82541b; transform: translateY(-1px); }
 .candidate-choice-grid em { font-family: "Iowan Old Style", serif; }
 .candidate-choice-grid span, .tradeoff-grid span, .candidate-choice-grid small { color: #71624d; font-size: 0.69rem; }
+.location-choice-grid { margin-bottom: 9px; }
+.location-choice-grid button { min-height: 118px; }
+.geocoder-attribution { margin: 0 0 10px !important; color: #71624d; font-size: 0.64rem !important; }
 .tradeoff-grid form { cursor: default; }
 .tradeoff-grid form .primary-action { margin-top: 7px; }
 .validation-list { color: #873b2e; font-size: 0.75rem; }

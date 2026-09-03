@@ -7,6 +7,7 @@ from datetime import UTC, date, datetime
 from math import hypot
 from typing import Any
 
+from app.biodiversity.agent_models import GeocodedLocationCandidate
 from app.biodiversity.models import (
     AccessCertainty,
     BritishNationalGridPoint,
@@ -222,6 +223,61 @@ def lookup_uk_postcode(
         administrative_district=payload.get("admin_district"),
         provenance=provenance,
         message="Postcode centroid resolved and validated within Greater London.",
+    )
+
+
+def resolve_geocoded_location(
+    candidate: GeocodedLocationCandidate | dict[str, Any],
+    *,
+    provenance: dict[str, Any],
+    boundary: dict[str, Any] | None = None,
+) -> ResolvedLocation:
+    """Validate a user-selected geocoder centroid against Greater London."""
+
+    selected = GeocodedLocationCandidate.model_validate(candidate)
+    point = WGS84Point(
+        longitude=round(selected.longitude, 4),
+        latitude=round(selected.latitude, 4),
+    )
+    inside = point_in_geometry(
+        point.longitude,
+        point.latitude,
+        boundary or load_london_boundary(),
+    )
+    evidence = _evidence_item(
+        provenance,
+        record_type="forward_geocoded_planning_point",
+        use=EvidenceUse.validation,
+        source_reference="https://nominatim.org/release-docs/latest/api/Search/",
+    )
+    if not inside:
+        return ResolvedLocation(
+            status=LocationStatus.outside_supported_area,
+            input_kind="geocoded_place",
+            normalised_postcode=selected.postcode,
+            rounded_start_point=point,
+            within_greater_london=False,
+            administrative_district=selected.administrative_district,
+            provenance=evidence,
+            message="The selected geocoder match is outside the supported Greater London boundary.",
+        )
+    easting, northing = british_national_grid(point.longitude, point.latitude)
+    return ResolvedLocation(
+        status=LocationStatus.resolved,
+        input_kind="geocoded_place",
+        normalised_postcode=selected.postcode,
+        rounded_start_point=point,
+        british_national_grid=BritishNationalGridPoint(
+            easting=round(easting, 1),
+            northing=round(northing, 1),
+        ),
+        within_greater_london=True,
+        administrative_district=selected.administrative_district,
+        provenance=evidence,
+        message=(
+            "User-confirmed geocoder match resolved as a representative planning "
+            "point within Greater London."
+        ),
     )
 
 

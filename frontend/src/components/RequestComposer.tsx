@@ -8,6 +8,8 @@ const EXAMPLES = {
     "Plan a two-hour expedition from SW11 4NJ on 15 January 2026 to look for robin.",
   low:
     "Plan a two-hour expedition from SW11 4NJ on 15 July 2026 to look for Common swift.",
+  namedPlace:
+    "Plan a two-hour expedition from Kensal Road on 15 June 2026 to look for Common woodpigeon.",
 };
 
 interface Props {
@@ -61,6 +63,7 @@ export function RequestComposer({ busy, allowedModes, defaultMode, onSubmit }: P
             <button type="button" onClick={() => setValue(EXAMPLES.strong)}>Strong evidence</button>
             <button type="button" onClick={() => setValue(EXAMPLES.taxonomy)}>Taxonomy HITL</button>
             <button type="button" onClick={() => setValue(EXAMPLES.low)}>Low evidence</button>
+            <button type="button" onClick={() => setValue(EXAMPLES.namedPlace)}>Named place HITL</button>
           </div>
           <div className="run-controls">
             <label htmlFor="run-mode">Run mode</label>
@@ -83,7 +86,7 @@ export function RequestComposer({ busy, allowedModes, defaultMode, onSubmit }: P
         </div>
       </form>
       <p className="microcopy">
-        Use a London postcode or explicit coordinates for the start. Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
+        Use a London postcode, named place or explicit coordinates for the start. Named places are verified before use. Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
       </p>
     </section>
   );
