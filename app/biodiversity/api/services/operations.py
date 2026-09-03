@@ -26,6 +26,7 @@ from app.biodiversity.api.schemas import (
     ResumeRunRequest,
     RunDetail,
     RunSummary,
+    SubmittedRequestView,
 )
 from app.biodiversity.api.services.public_demo import DemoRetention, PublicDemoGuard
 from app.biodiversity.api.services.views import SafeCheckpointViews
@@ -586,6 +587,8 @@ class Phase4Application:
         executions = []
         pending: list[PendingDecisionView] = []
         final_plan: FinalPlanView | None = None
+        submitted_request: SubmittedRequestView | None = None
+        manager: BiodiversityRunManager | None = None
         if current.current_checkpoint_id:
             manager = self.runtime.reader()
             branches = manager.branches(thread_id=thread_id)
@@ -595,9 +598,28 @@ class Phase4Application:
                 thread_id=thread_id,
                 checkpoint_id=current.current_checkpoint_id,
             )
+            if not self.settings.public_demo:
+                request_text = snapshot.values.get("original_request_text")
+                if isinstance(request_text, str) and request_text.strip():
+                    submitted_request = SubmittedRequestView(text=request_text)
             final_plan = self.views.final_plan(snapshot)
+        if not self.settings.public_demo and submitted_request is None:
+            manager = manager or self.runtime.reader()
+            try:
+                request_history = manager.history(thread_id=thread_id)
+                request_snapshot = manager.snapshot(
+                    thread_id=thread_id,
+                    checkpoint_id=request_history[0].checkpoint_id,
+                )
+            except (IndexError, ValueError):
+                pass
+            else:
+                request_text = request_snapshot.values.get("original_request_text")
+                if isinstance(request_text, str) and request_text.strip():
+                    submitted_request = SubmittedRequestView(text=request_text)
         return RunDetail(
             run=summary,
+            submitted_request=submitted_request,
             operations=operations,
             branches=branches,
             executions=executions,

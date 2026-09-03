@@ -114,6 +114,14 @@ def test_app_lifespan_health_and_create_run_return_202(client: TestClient) -> No
     operation = _wait(client, accepted["operation_id"])
     assert operation["status"] == "completed"
     assert operation["current_checkpoint_id"]
+    detail = client.get("/api/v1/runs/health-start").json()
+    assert detail["submitted_request"] == {
+        "text": STRONG_REQUEST,
+        "language": "English",
+        "visibility": "local_only",
+    }
+    catalog_bytes = client.app.state.phase4.settings.catalog_db.read_bytes()
+    assert STRONG_REQUEST.encode() not in catalog_bytes
 
 
 def test_public_demo_enforces_mode_policy_and_hides_api_docs(tmp_path: Path) -> None:
@@ -133,6 +141,11 @@ def test_public_demo_enforces_mode_policy_and_hides_api_docs(tmp_path: Path) -> 
         )
         assert denied.status_code == 403
         assert denied.json()["error"]["code"] == "mode_not_allowed"
+        accepted = _create(client, "public-request-hidden", STRONG_REQUEST)
+        assert _wait(client, accepted["operation_id"])["status"] == "completed"
+        detail = client.get("/api/v1/runs/public-request-hidden").json()
+        assert detail["submitted_request"] is None
+        assert STRONG_REQUEST not in json.dumps(detail)
         assert client.get("/docs").status_code == 404
         assert client.get("/openapi.json").status_code == 404
 
@@ -555,6 +568,33 @@ def test_background_failure_status_and_error_are_sanitised(
     assert "OPENAI_API_KEY" not in serialised
 
 
+def test_failed_run_recovers_request_from_its_durable_checkpoint(
+    client: TestClient,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    runtime = client.app.state.phase4.runtime
+    original_manager = runtime.manager
+
+    class FailAfterCheckpoint:
+        def __init__(self, manager: object) -> None:
+            self.manager = manager
+
+        def start(self, request: str, *, thread_id: str) -> None:
+            self.manager.start(request, thread_id=thread_id)
+            raise RuntimeError("synthetic post-checkpoint failure")
+
+    def failing_manager(*args, **kwargs):
+        return FailAfterCheckpoint(original_manager(*args, **kwargs))
+
+    monkeypatch.setattr(runtime, "manager", failing_manager)
+    accepted = _create(client, "failed-with-request", STRONG_REQUEST)
+    operation = _wait(client, accepted["operation_id"])
+    assert operation["status"] == "failed"
+    assert operation["current_checkpoint_id"] is None
+    detail = client.get("/api/v1/runs/failed-with-request").json()
+    assert detail["submitted_request"]["text"] == STRONG_REQUEST
+
+
 def test_exact_state_evidence_and_map_views_are_private(client: TestClient) -> None:
     accepted = _create(client, "privacy", STRONG_REQUEST)
     operation = _wait(client, accepted["operation_id"])
@@ -595,12 +635,15 @@ def test_exact_state_evidence_and_map_views_are_private(client: TestClient) -> N
         feature["properties"]["display_id"].startswith("grid-")
         for feature in mapped["aggregate_grid"]
     )
+    detail = client.get("/api/v1/runs/privacy").json()
+    assert detail["submitted_request"]["text"] == STRONG_REQUEST
+    detail_without_local_request = {**detail, "submitted_request": None}
     public_payload = json.dumps(
         {
             "state": state.json(),
             "evidence": evidence.json(),
             "map": mapped,
-            "detail": client.get("/api/v1/runs/privacy").json(),
+            "detail": detail_without_local_request,
             "runs": client.get("/api/v1/runs").json(),
             "history": client.get("/api/v1/runs/privacy/history").json(),
             "operation": client.get(

@@ -25,6 +25,7 @@ import { HitlPanel } from "./components/HitlPanel";
 import { PlanPanel } from "./components/PlanPanel";
 import { RequestComposer } from "./components/RequestComposer";
 import { RunSidebar } from "./components/RunSidebar";
+import { SelectedRunRequest } from "./components/SelectedRunRequest";
 import { StateInspector } from "./components/StateInspector";
 import { StatusHeader } from "./components/StatusHeader";
 import { TimeTravelPanel } from "./components/TimeTravelPanel";
@@ -329,6 +330,7 @@ export default function App() {
           onSubmit={start}
         />
         {error && <div className="api-error" role="alert"><strong>Application notice</strong><span>{error}</span><button onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
+        <SelectedRunRequest detail={detail} />
         {decision && <HitlPanel decision={decision} busy={busy} onResume={resume} />}
         <div className="workspace-grid">
           <RunSidebar runs={runs} selectedThread={selectedThread} detail={detail} onSelect={(id) => void selectRun(id)} />

@@ -987,6 +987,7 @@ export interface components {
         /** RunDetail */
         RunDetail: {
             run: components["schemas"]["RunSummary"];
+            submitted_request?: components["schemas"]["SubmittedRequestView"] | null;
             /** Operations */
             operations?: components["schemas"]["OperationView"][];
             /** Branches */
@@ -1270,6 +1271,26 @@ export interface components {
             counters: components["schemas"]["StateCountersView"];
             /** Invalidated Evidence */
             invalidated_evidence?: string[];
+        };
+        /**
+         * SubmittedRequestView
+         * @description Local-only display copy read from the durable graph checkpoint.
+         */
+        SubmittedRequestView: {
+            /** Text */
+            text: string;
+            /**
+             * Language
+             * @default English
+             * @constant
+             */
+            language: "English";
+            /**
+             * Visibility
+             * @default local_only
+             * @constant
+             */
+            visibility: "local_only";
         };
         /** TaxonCandidateView */
         TaxonCandidateView: {
