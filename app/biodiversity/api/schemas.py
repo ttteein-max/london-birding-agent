@@ -88,7 +88,14 @@ class BirdCorrectionDecision(StrictModel):
 
 class LocationCorrectionDecision(StrictModel):
     kind: Literal["location_correction"]
-    postcode: NonEmptyText = Field(max_length=16)
+    postcode: NonEmptyText | None = Field(default=None, max_length=16)
+    candidate_id: NonEmptyText | None = Field(default=None, max_length=32)
+
+    @model_validator(mode="after")
+    def exactly_one_location_choice(self) -> "LocationCorrectionDecision":
+        if (self.postcode is None) == (self.candidate_id is None):
+            raise ValueError("choose exactly one of postcode or candidate_id")
+        return self
 
 
 class RequestClarificationDecision(StrictModel):
@@ -229,6 +236,18 @@ class TaxonCandidateView(StrictModel):
     evidence_preview: TaxonEvidencePreviewView | None = None
 
 
+class GeocodedLocationCandidateView(StrictModel):
+    """Coordinate-free location candidate safe for a typed HITL card."""
+
+    candidate_id: NonEmptyText
+    label: NonEmptyText
+    locality: str | None = None
+    administrative_district: str | None = None
+    postcode: str | None = None
+    category: str | None = None
+    place_type: str | None = None
+
+
 class HitlOptionView(StrictModel):
     option: str
     current_radius_km: float | None = None
@@ -256,6 +275,9 @@ class PendingDecisionView(StrictModel):
     status: str | None = None
     rationale: str | None = None
     candidates: list[TaxonCandidateView] = Field(default_factory=list)
+    location_candidates: list[GeocodedLocationCandidateView] = Field(
+        default_factory=list
+    )
     options: list[HitlOptionView] = Field(default_factory=list)
 
 

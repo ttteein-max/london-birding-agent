@@ -559,6 +559,26 @@ export interface components {
             /** Coordinates */
             coordinates: unknown;
         };
+        /**
+         * GeocodedLocationCandidateView
+         * @description Coordinate-free location candidate safe for a typed HITL card.
+         */
+        GeocodedLocationCandidateView: {
+            /** Candidate Id */
+            candidate_id: string;
+            /** Label */
+            label: string;
+            /** Locality */
+            locality?: string | null;
+            /** Administrative District */
+            administrative_district?: string | null;
+            /** Postcode */
+            postcode?: string | null;
+            /** Category */
+            category?: string | null;
+            /** Place Type */
+            place_type?: string | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -635,7 +655,9 @@ export interface components {
              */
             kind: "location_correction";
             /** Postcode */
-            postcode: string;
+            postcode?: string | null;
+            /** Candidate Id */
+            candidate_id?: string | null;
         };
         /** MapCellFeature */
         MapCellFeature: {
@@ -844,6 +866,8 @@ export interface components {
             rationale?: string | null;
             /** Candidates */
             candidates?: components["schemas"]["TaxonCandidateView"][];
+            /** Location Candidates */
+            location_candidates?: components["schemas"]["GeocodedLocationCandidateView"][];
             /** Options */
             options?: components["schemas"]["HitlOptionView"][];
         };

@@ -32,6 +32,7 @@ class ExpeditionRequestDraft(StrictModel):
     bird_input: str | None = None
     postcode: str | None = None
     start_point: ExpeditionRequestPointDraft | None = None
+    location_query: str | None = None
     target_local_date: date | None = None
     duration_hours: float | None = None
     maximum_walking_distance_km: float | None = None
@@ -39,6 +40,20 @@ class ExpeditionRequestDraft(StrictModel):
     target_month_override: int | None = None
     seasonal_window_radius_months: int | None = None
     search_radius_km: float | None = None
+
+
+class GeocodedLocationCandidate(StrictModel):
+    """Internal geocoder match; HTTP views deliberately omit its coordinates."""
+
+    candidate_id: NonEmptyText
+    label: NonEmptyText
+    locality: str | None = None
+    administrative_district: str | None = None
+    postcode: str | None = None
+    category: str | None = None
+    place_type: str | None = None
+    longitude: float = Field(ge=-180, le=180)
+    latitude: float = Field(ge=-90, le=90)
 
 
 class PlanSiteOption(StrictModel):

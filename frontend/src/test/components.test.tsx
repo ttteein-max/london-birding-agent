@@ -127,6 +127,40 @@ describe("typed human decisions", () => {
       decision: { kind: "request_clarification", updates: { postcode: "W10 5BN" } },
     });
   });
+
+  it("submits an allow-listed geocoder candidate without exposing coordinates", async () => {
+    const onResume = vi.fn().mockResolvedValue(undefined);
+    const decision: PendingDecisionView = {
+      kind: "location_correction",
+      question: "Select the intended place.",
+      status: "human_selection_required",
+      checkpoint_id: "checkpoint-location",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      options: [],
+      candidates: [],
+      validation_errors: [],
+      location_candidates: [{
+        candidate_id: "place-1",
+        label: "Kensal Road",
+        locality: "North Kensington",
+        administrative_district: "Royal Borough of Kensington and Chelsea",
+        postcode: "W10 5DD",
+        category: "highway",
+        place_type: "unclassified",
+      }],
+    };
+    const { container } = render(
+      <HitlPanel decision={decision} busy={false} onResume={onResume} />,
+    );
+    expect(screen.getByText(/© OpenStreetMap contributors/)).toBeInTheDocument();
+    expect(container.textContent).not.toMatch(/latitude|longitude/i);
+    await userEvent.click(screen.getByRole("button", { name: "Use Kensal Road W10 5DD" }));
+    expect(onResume).toHaveBeenCalledWith({
+      checkpoint_id: "checkpoint-location",
+      decision: { kind: "location_correction", candidate_id: "place-1" },
+    });
+  });
 });
 
 describe("trace and time travel", () => {

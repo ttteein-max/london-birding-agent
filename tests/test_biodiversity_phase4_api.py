@@ -27,6 +27,10 @@ SWIFT_REQUEST = (
     "Plan a two-hour expedition from SW11 4NJ on 15 July 2026 "
     "to look for Common swift."
 )
+NAMED_PLACE_REQUEST = (
+    "Plan a two-hour expedition from Kensal Road on 15 June 2026 "
+    "to look for Common woodpigeon."
+)
 
 
 def _settings(tmp_path: Path, *, delay: float = 0) -> APISettings:
@@ -290,6 +294,45 @@ def test_taxonomy_hitl_resumes_across_http_requests(client: TestClient) -> None:
     assert response.status_code == 202
     resumed = _wait(client, response.json()["operation_id"])
     assert resumed["interrupt_kind"] == "actionable_tradeoff"
+
+
+def test_named_place_hitl_is_coordinate_free_and_resumes_same_thread(
+    client: TestClient,
+) -> None:
+    accepted = _create(client, "named-place-api", NAMED_PLACE_REQUEST)
+    operation = _wait(client, accepted["operation_id"])
+    assert operation["status"] == "waiting_for_input"
+    detail = client.get("/api/v1/runs/named-place-api").json()
+    decision = detail["pending_decisions"][0]
+    assert decision["kind"] == "location_correction"
+    assert decision["status"] == "human_selection_required"
+    assert len(decision["location_candidates"]) == 3
+    public_candidates = json.dumps(decision["location_candidates"]).casefold()
+    for forbidden in (
+        "latitude",
+        "longitude",
+        "place_id",
+        "osm_id",
+        "boundingbox",
+    ):
+        assert forbidden not in public_candidates
+    selected = decision["location_candidates"][0]
+    response = client.post(
+        "/api/v1/runs/named-place-api/resume",
+        json={
+            "checkpoint_id": decision["checkpoint_id"],
+            "decision": {
+                "kind": "location_correction",
+                "candidate_id": selected["candidate_id"],
+            },
+        },
+    )
+    assert response.status_code == 202, response.text
+    resumed = _wait(client, response.json()["operation_id"])
+    assert resumed["thread_id"] == "named-place-api"
+    assert resumed["status"] == "completed"
+    refreshed = client.get("/api/v1/runs/named-place-api").json()
+    assert refreshed["run"]["thread_id"] == "named-place-api"
 
 
 def test_restart_reads_durable_catalog_history_and_pending_hitl(tmp_path: Path) -> None:

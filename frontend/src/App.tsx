@@ -73,26 +73,38 @@ export default function App() {
   const [loadingState, setLoadingState] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stopStream = useRef<(() => void) | null>(null);
+  const selectionEpoch = useRef(0);
 
-  const loadCheckpoint = useCallback(async (threadId: string, checkpointId: string) => {
+  const loadCheckpoint = useCallback(async (
+    threadId: string,
+    checkpointId: string,
+    epoch = selectionEpoch.current,
+  ) => {
+    if (selectionEpoch.current !== epoch) return;
     setLoadingMap(true);
     try {
       const [nextEvidence, nextMap] = await Promise.all([
         api.evidence(threadId, checkpointId),
         api.map(threadId, checkpointId),
       ]);
+      if (selectionEpoch.current !== epoch) return;
       setEvidence(nextEvidence);
       setMapData(nextMap);
     } catch (caught) {
+      if (selectionEpoch.current !== epoch) return;
       setError(message(caught));
       setEvidence(null);
       setMapData(null);
     } finally {
-      setLoadingMap(false);
+      if (selectionEpoch.current === epoch) setLoadingMap(false);
     }
   }, []);
 
-  const loadRun = useCallback(async (threadId: string) => {
+  const loadRun = useCallback(async (
+    threadId: string,
+    epoch = selectionEpoch.current,
+  ) => {
+    if (selectionEpoch.current !== epoch) return;
     setLoadingRun(true);
     setError(null);
     try {
@@ -101,36 +113,48 @@ export default function App() {
         api.history(threadId),
         api.listRuns(),
       ]);
+      if (selectionEpoch.current !== epoch) return;
       setSelectedThread(threadId);
       setDetail(nextDetail);
       setHistory(nextHistory);
       setRuns(nextRuns);
       const checkpointId = nextDetail.run.current_checkpoint_id;
-      if (checkpointId) await loadCheckpoint(threadId, checkpointId);
+      if (checkpointId) await loadCheckpoint(threadId, checkpointId, epoch);
     } catch (caught) {
+      if (selectionEpoch.current !== epoch) return;
       setError(message(caught));
     } finally {
-      setLoadingRun(false);
+      if (selectionEpoch.current === epoch) setLoadingRun(false);
     }
   }, [loadCheckpoint]);
 
-  const watchOperation = useCallback((accepted: OperationAccepted, settle: boolean) => {
+  const watchOperation = useCallback((
+    accepted: OperationAccepted,
+    settle: boolean,
+    epoch = selectionEpoch.current,
+  ) => {
+    if (selectionEpoch.current !== epoch) return;
     stopStream.current?.();
     setConnection("reconnecting");
     stopStream.current = connectOperationEvents(accepted.operation_id, {
       onEvent: (event) => {
+        if (selectionEpoch.current !== epoch) return;
         if (settle && event.event_type === "run_started") setActiveOperationStatus("running");
         setEvents((current) => current.some((item) => item.run_id === event.run_id && item.sequence === event.sequence) ? current : [...current, event]);
       },
-      onConnection: setConnection,
+      onConnection: (nextConnection) => {
+        if (selectionEpoch.current === epoch) setConnection(nextConnection);
+      },
       onTerminal: () => {
-        if (!settle) return;
+        if (!settle || selectionEpoch.current !== epoch) return;
         void (async () => {
           for (let attempt = 0; attempt < 100; attempt += 1) {
+            if (selectionEpoch.current !== epoch) return;
             const operation = await api.operation(accepted.operation_id);
+            if (selectionEpoch.current !== epoch) return;
             if (!["queued", "running"].includes(operation.status)) {
               setBusy(false);
-              await loadRun(accepted.thread_id);
+              await loadRun(accepted.thread_id, epoch);
               setActiveOperationStatus(null);
               return;
             }
@@ -146,17 +170,20 @@ export default function App() {
 
   useEffect(() => {
     void (async () => {
+      const epoch = selectionEpoch.current;
       try {
         const [nextHealth, nextRuns] = await Promise.all([api.health(), api.listRuns()]);
         setHealth(nextHealth);
+        if (selectionEpoch.current !== epoch) return;
         setRuns(nextRuns);
         if (nextRuns[0]) {
           const threadId = nextRuns[0].thread_id;
-          await loadRun(threadId);
+          await loadRun(threadId, epoch);
+          if (selectionEpoch.current !== epoch) return;
           const loaded = await api.run(threadId);
           const latest = loaded.operations?.[0];
           if (latest) {
-            watchOperation({ operation_id: latest.operation_id, thread_id: threadId, status: "queued", events_url: api.eventsUrl(latest.operation_id) }, false);
+            watchOperation({ operation_id: latest.operation_id, thread_id: threadId, status: "queued", events_url: api.eventsUrl(latest.operation_id) }, false, epoch);
           }
         }
       } catch (caught) {
@@ -167,11 +194,14 @@ export default function App() {
   }, [loadRun, watchOperation]);
 
   const begin = async (create: () => Promise<OperationAccepted>) => {
+    const epoch = ++selectionEpoch.current;
+    stopStream.current?.();
     setBusy(true);
     setActiveOperationStatus("queued");
     setError(null);
     try {
       const accepted = await create();
+      if (selectionEpoch.current !== epoch) return;
       if (accepted.thread_id !== selectedThread) {
         setDetail(null);
         setHistory(null);
@@ -182,9 +212,12 @@ export default function App() {
       setEvents([]);
       setInspectedState(null);
       setComparison(null);
-      setRuns(await api.listRuns());
-      watchOperation(accepted, true);
+      const nextRuns = await api.listRuns();
+      if (selectionEpoch.current !== epoch) return;
+      setRuns(nextRuns);
+      watchOperation(accepted, true, epoch);
     } catch (caught) {
+      if (selectionEpoch.current !== epoch) return;
       setBusy(false);
       setActiveOperationStatus(null);
       setError(message(caught));
@@ -200,13 +233,18 @@ export default function App() {
   };
 
   const selectRun = async (threadId: string) => {
+    const epoch = ++selectionEpoch.current;
     stopStream.current?.();
+    setBusy(false);
+    setActiveOperationStatus(null);
     setEvents([]);
     setComparison(null);
-    await loadRun(threadId);
+    await loadRun(threadId, epoch);
+    if (selectionEpoch.current !== epoch) return;
     const loaded = await api.run(threadId);
+    if (selectionEpoch.current !== epoch) return;
     const latest = loaded.operations?.[0];
-    if (latest) watchOperation({ operation_id: latest.operation_id, thread_id: threadId, status: "queued", events_url: api.eventsUrl(latest.operation_id) }, false);
+    if (latest) watchOperation({ operation_id: latest.operation_id, thread_id: threadId, status: "queued", events_url: api.eventsUrl(latest.operation_id) }, false, epoch);
   };
 
   const resume = async (request: ResumeRunRequest) => {

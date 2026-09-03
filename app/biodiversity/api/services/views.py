@@ -14,6 +14,7 @@ from app.biodiversity.api.schemas import (
     FinalPlanView,
     GeoJSONGeometry,
     HitlOptionView,
+    GeocodedLocationCandidateView,
     MapCellFeature,
     MapCellProperties,
     MapEvidenceView,
@@ -210,6 +211,25 @@ class SafeCheckpointViews:
             rationale=(str(raw["rationale"]) if raw.get("rationale") else None),
             candidates=[
                 self._candidate(dict(item)) for item in raw.get("candidates") or []
+            ],
+            location_candidates=[
+                GeocodedLocationCandidateView(
+                    candidate_id=str(item["candidate_id"]),
+                    label=str(item["label"]),
+                    locality=(str(item["locality"]) if item.get("locality") else None),
+                    administrative_district=(
+                        str(item["administrative_district"])
+                        if item.get("administrative_district")
+                        else None
+                    ),
+                    postcode=(str(item["postcode"]) if item.get("postcode") else None),
+                    category=(str(item["category"]) if item.get("category") else None),
+                    place_type=(
+                        str(item["place_type"]) if item.get("place_type") else None
+                    ),
+                )
+                for item in raw.get("location_candidates") or []
+                if isinstance(item, dict)
             ],
             options=[
                 HitlOptionView.model_validate(item)

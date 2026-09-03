@@ -219,14 +219,59 @@ def _validate_resume_payload(
         merged.update(resume["updates"])
         draft = ExpeditionRequestDraft.model_validate(merged)
         values = draft.model_dump(exclude_none=True)
+        location_count = sum(
+            (
+                "postcode" in values,
+                "start_point" in values,
+                bool(str(values.get("location_query") or "").strip()),
+            )
+        )
+        if location_count != 1:
+            raise ValueError("Request correction must identify exactly one location")
+        location_query = str(values.pop("location_query", "")).strip()
+        if location_query and "postcode" not in values and "start_point" not in values:
+            # Validate every non-location field without treating the model as a
+            # geocoder. The real candidate will be validated after user selection.
+            values["start_point"] = {"longitude": -0.1, "latitude": 51.5}
         values["timezone"] = "Europe/London"
         ExpeditionRequest.model_validate(values)
     elif kind == "location_correction":
-        if set(resume) not in ({"postcode"}, {"start_point"}):
+        if set(resume) not in ({"postcode"}, {"start_point"}, {"candidate_id"}):
             raise ValueError("Resume must contain exactly one location correction")
-        request = ExpeditionRequest.model_validate(state["expedition_request"])
-        values = request.model_dump(mode="python")
-        values.update({"postcode": None, "start_point": None, **resume})
+        if "candidate_id" in resume:
+            selected = next(
+                (
+                    item
+                    for item in state.get("geocoded_location_candidates") or []
+                    if item.get("candidate_id") == resume["candidate_id"]
+                ),
+                None,
+            )
+            if selected is None:
+                raise ValueError(
+                    "candidate_id is not present in the offered place matches"
+                )
+            location_update = {
+                "postcode": None,
+                "start_point": {
+                    "longitude": selected["longitude"],
+                    "latitude": selected["latitude"],
+                },
+            }
+        else:
+            location_update = {"postcode": None, "start_point": None, **resume}
+        if state.get("expedition_request"):
+            values = ExpeditionRequest.model_validate(
+                state["expedition_request"]
+            ).model_dump(mode="python")
+        else:
+            draft = ExpeditionRequestDraft.model_validate(
+                state.get("parsed_request_draft") or {}
+            )
+            values = draft.model_dump(mode="python", exclude_none=True)
+            values.pop("location_query", None)
+            values["timezone"] = "Europe/London"
+        values.update(location_update)
         ExpeditionRequest.model_validate(values)
     elif kind == "bird_input_correction":
         if set(resume) != {"bird_input"} or not isinstance(

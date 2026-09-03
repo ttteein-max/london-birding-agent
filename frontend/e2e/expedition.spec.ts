@@ -45,6 +45,17 @@ test("robin taxonomy HITL resumes on the same thread", async ({ page }) => {
   await expect(page.locator(".status-pill")).toContainText("Waiting For Input");
 });
 
+test("Kensal Road resolves through a typed location decision", async ({ page }) => {
+  const threadId = await startExample(page, "Named place HITL");
+  await expect(page.getByRole("heading", { name: "Location Correction", exact: true })).toBeVisible();
+  await expect(page.locator(".location-choice-grid button")).toHaveCount(3);
+  await expect(page.getByText("© OpenStreetMap contributors", { exact: true })).toBeVisible();
+  await page.locator(".location-choice-grid button").first().click();
+  await waitForCompletedPlan(page, threadId);
+  await expect(page.getByRole("heading", { name: "Columba palumbus" })).toBeVisible();
+  await expect(page.locator(".run-list button.selected .run-title")).toHaveText(threadId);
+});
+
 test("Common swift low-evidence acceptance remains context only", async ({ page }) => {
   const threadId = await startExample(page, "Low evidence");
   await expect(page.getByRole("heading", { name: "Actionable Tradeoff", exact: true })).toBeVisible();

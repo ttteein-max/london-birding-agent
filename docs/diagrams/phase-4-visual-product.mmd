@@ -19,6 +19,7 @@ flowchart TB
     subgraph Runtime[Phase 3 workflow boundary]
         Manager[BiodiversityRunManager]
         Graph[LangGraph biodiversity workflow]
+        Geocoder[Typed named-place resolution]
         Broker[AgentRunEvent broker]
         Checkpointer[(Durable SQLite checkpointer)]
     end
@@ -27,6 +28,7 @@ flowchart TB
         Catalog[(SQLite run catalog)]
         Reports[Safe operation reports]
         OSM[Versioned OSM polygons]
+        Nominatim[Nominatim search or sanitized fixture]
         Fixtures[Fixture evidence and scripted models]
     end
 
@@ -35,6 +37,9 @@ flowchart TB
     DTO --> Coordinator
     Coordinator -->|worker thread| Manager
     Manager --> Graph
+    Graph --> Geocoder
+    Geocoder -->|bounded candidates| Nominatim
+    Geocoder -->|typed human selection| HITL
     Graph <--> Checkpointer
     Graph --> Broker
     Broker --> SSE
@@ -52,4 +57,4 @@ flowchart TB
     Graph --> Fixtures
 
     classDef privacy fill:#174f43,color:#fff,stroke:#0b382f,stroke-width:2px;
-    class DTO,Views privacy;
+    class DTO,Views,Geocoder privacy;

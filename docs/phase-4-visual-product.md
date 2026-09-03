@@ -10,7 +10,7 @@ The diagram is maintained as [Mermaid source](diagrams/phase-4-visual-product.mm
 
 The product remains London-only, English-only and birds-first. It presents historical occurrence evidence, not species probability. A server match count is not abundance or a population estimate. It does not guarantee a sighting, site access, opening hours or field success.
 
-Phase 4 does not implement walking routes, route ordering, entrances, walking duration, elevation, habitat suitability, rarity, conservation or legal conclusions, authentication, MCP, runtime Overpass queries, production multi-tenancy, bookings or field actions. Candidate geometry comes only from the versioned OSM snapshot.
+Phase 4 does not implement walking routes, route ordering, entrances, walking duration, elevation, habitat suitability, rarity, conservation or legal conclusions, authentication, MCP, runtime Overpass queries, production multi-tenancy, bookings or field actions. Candidate-site geometry comes only from the versioned OSM snapshot. A submitted named start place may use Nominatim Search in live data mode, but that lookup resolves a generalized planning origin and never becomes evidence or routing geometry.
 
 ## Architecture
 
@@ -23,6 +23,7 @@ The backend is split into application routes, DTOs, services, repositories and t
 - The LangGraph SQLite checkpointer and the application-owned SQLite run catalog have independent schemas. The catalog never inspects private checkpointer tables.
 - `AgentRunEvent`, `AgentRunRecorder` and `InMemoryAgentEventBroker` are the Phase 3 event contracts. Phase 4 adds only an SSE transport over them.
 - Safe operation reports preserve completed event streams for refresh and restart. The in-memory broker is only the live, single-process delivery mechanism.
+- Named-place resolution is a separate repository boundary. Fixture mode loads a versioned, sanitized real Nominatim response; live data mode performs one bounded, rate-limited search only after submission. The graph stores the coordinate internally, while the application DTO exposes only a response-local candidate ID, label, locality, district, postcode and place type.
 
 The React application is decomposed into the request composer, status header, run lineage navigation, MapLibre evidence map, plan/evidence/weather cards, typed HITL decisions, live trace, checkpoint inspector and time-travel comparison. `src/api/schema.d.ts` is generated from the checked-in FastAPI OpenAPI document and the hand-written client references those generated types.
 
@@ -108,6 +109,8 @@ SSE payloads contain lifecycle identity, timing, node/tool/model labels and safe
 - only OSM Polygon/MultiPolygon geometry is returned; the complete 3,364-feature snapshot is never sent;
 - the start context is rounded to approximately 0.01 degrees and labelled as generalised.
 
+The typed location-correction view is stricter still: Nominatim `place_id`, OSM object IDs, bounding boxes, query URLs and coordinates are omitted. Roads often have multiple OSM segments, so the application never silently treats the first search result as the user's intent. The user selects an offered response-local candidate ID or provides a postcode; the server then maps that choice back to the exact internal candidate and verifies the point against the versioned Greater London boundary.
+
 Every map includes OpenStreetMap, GBIF and Open-Meteo attribution plus the historical-evidence, no-guarantee, access and straight-line-distance limitations. With no configured basemap, the local paper style, overlays, text ledger, legend and error/empty states remain usable.
 
 ## Model decisions and deterministic validation
@@ -115,6 +118,7 @@ Every map includes OpenStreetMap, GBIF and Open-Meteo attribution plus the histo
 | The model may decide | Deterministic code remains authoritative for |
 | --- | --- |
 | Parse an English request into a typed draft | Required fields, date/duration ranges and London-only request rules |
+| Extract the user's named-place wording | Nominatim query bounds, returned candidates, Greater London point-in-polygon validation and exact offered-candidate selection |
 | Propose the next approved evidence tool call | Tool allowlist, bounded loops, deduplication, coordinate quality and evidence thresholds |
 | Compose a structured plan from the evidence bundle | Strong-evidence gate, candidate/site-cell grounding, contextual-site separation and limitation wording |
 | Revise a draft once after grounding feedback | Final schema, provenance, no-prediction/no-route boundary and deterministic fallback |
@@ -185,6 +189,12 @@ FastAPI and Vite bind to `127.0.0.1` in the documented development flow. To use 
 | live | live | Opt-in end-to-end external integration | No |
 
 The local Phase 4 UI can initiate any mode advertised by the server. Default tests and the public deployment initiate only fixture/scripted; live checks retain the explicit opt-in rules documented for earlier phases.
+
+### Named-place data source
+
+`fixture/scripted` and `fixture/live` read the checked-in `nominatim-london-places.json` snapshot. Its Kensal Road candidates came from a real bounded Nominatim response, but are fixed so tests remain offline. `live/scripted` and `live/live` query the current Nominatim Search API after the user submits a run. They do not query on each keystroke.
+
+The OpenStreetMap Foundation public Nominatim endpoint does not require an API key and permits low-volume use under its usage policy; it is nevertheless rate-limited and carries no availability guarantee. The implementation caps results at three, supplies an identifying User-Agent, serializes requests to at most one request per second, preserves `© OpenStreetMap contributors` and ODbL attribution, and turns source failure into a safe postcode alternative. This makes it appropriate for a personal local demonstration, not an unbounded public production deployment.
 
 The single-container and public safety design is documented in [the Phase 4 public demo guide](phase-4-public-demo.md).
 

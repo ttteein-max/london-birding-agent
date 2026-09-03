@@ -9,8 +9,27 @@ from langchain.messages import AIMessage
 from app.biodiversity.graph.state import BiodiversityAgentState
 
 
-def route_after_request_parse(state: BiodiversityAgentState) -> Literal["request_clarification_interrupt", "resolve_location"]:
-    return "request_clarification_interrupt" if state.get("pending_hitl_kind") == "request_clarification" else "resolve_location"
+def route_after_request_parse(
+    state: BiodiversityAgentState,
+) -> Literal[
+    "request_clarification_interrupt",
+    "geocode_location_query",
+    "resolve_location",
+]:
+    kind = state.get("pending_hitl_kind")
+    if kind == "request_clarification":
+        return "request_clarification_interrupt"
+    if kind == "location_query_pending":
+        return "geocode_location_query"
+    return "resolve_location"
+
+
+def route_after_request_clarification(
+    state: BiodiversityAgentState,
+) -> Literal["geocode_location_query", "resolve_location"]:
+    if state.get("pending_hitl_kind") == "location_query_pending":
+        return "geocode_location_query"
+    return "resolve_location"
 
 
 def route_after_location(state: BiodiversityAgentState) -> Literal["location_correction_interrupt", "resolve_taxon", "source_resolution_failure"]:
