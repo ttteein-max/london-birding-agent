@@ -9,10 +9,10 @@ interface Props {
 }
 
 export function HitlPanel({ decision, busy, onResume }: Props) {
-  const [postcode, setPostcode] = useState("SW11 4NJ");
-  const [bird, setBird] = useState("Common woodpigeon");
-  const [date, setDate] = useState("2026-06-15");
-  const [duration, setDuration] = useState("2");
+  const [postcode, setPostcode] = useState("");
+  const [bird, setBird] = useState("");
+  const [date, setDate] = useState("");
+  const [duration, setDuration] = useState("");
   const [radius, setRadius] = useState("8");
 
   const base = { checkpoint_id: decision.checkpoint_id };

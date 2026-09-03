@@ -7,6 +7,7 @@ import { EvidencePanel } from "../components/EvidencePanel";
 import { HitlPanel } from "../components/HitlPanel";
 import { PlanPanel } from "../components/PlanPanel";
 import { RequestComposer } from "../components/RequestComposer";
+import { RunSidebar } from "../components/RunSidebar";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
 import type { FinalPlanView, PendingDecisionView } from "../api/contracts";
 import { comparisonFixture, evidenceFixture, historyFixture, planFixture } from "./fixtures";
@@ -105,6 +106,27 @@ describe("typed human decisions", () => {
       decision: { kind: "actionable_tradeoff", option: "keep_constraints_accept_low_confidence" },
     });
   });
+
+  it("submits only user-entered request clarification fields", async () => {
+    const onResume = vi.fn().mockResolvedValue(undefined);
+    const decision: PendingDecisionView = {
+      kind: "request_clarification",
+      question: "Please correct the request.",
+      checkpoint_id: "checkpoint-clarification",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      options: [],
+      candidates: [],
+      validation_errors: ["Missing or contradictory field: postcode_or_start_point."],
+    };
+    render(<HitlPanel decision={decision} busy={false} onResume={onResume} />);
+    await userEvent.type(screen.getByLabelText("London postcode"), "W10 5BN");
+    await userEvent.click(screen.getByRole("button", { name: "Apply corrections" }));
+    expect(onResume).toHaveBeenCalledWith({
+      checkpoint_id: "checkpoint-clarification",
+      decision: { kind: "request_clarification", updates: { postcode: "W10 5BN" } },
+    });
+  });
 });
 
 describe("trace and time travel", () => {
@@ -190,5 +212,23 @@ describe("loading, empty, error, and accessibility states", () => {
       expect.stringContaining("Common woodpigeon"),
       { data_mode: "live", model_mode: "live" },
     );
+  });
+
+  it("labels the persisted mode for every recent run", () => {
+    render(<RunSidebar
+      runs={[{
+        thread_id: "expedition-live",
+        status: "completed",
+        data_mode: "live",
+        model_mode: "live",
+        created_at: "2026-09-03T04:15:31Z",
+        updated_at: "2026-09-03T04:16:41Z",
+      }]}
+      selectedThread={null}
+      detail={null}
+      onSelect={vi.fn()}
+    />);
+    expect(screen.getByText("live/live")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /expedition-live.*live\/live/i })).toBeInTheDocument();
   });
 });
