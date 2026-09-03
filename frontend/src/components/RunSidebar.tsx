@@ -31,7 +31,10 @@ export function RunSidebar({ runs, selectedThread, detail, onSelect }: Props) {
                   aria-current={run.thread_id === selectedThread ? "page" : undefined}
                 >
                   <span className="run-title">{run.thread_id}</span>
-                  <span>{humanise(run.status)} · {compactDate(run.updated_at)}</span>
+                  <span className="run-summary-line">
+                    <span>{humanise(run.status)} · {compactDate(run.updated_at)}</span>
+                    <span className="run-mode-label">{run.data_mode}/{run.model_mode}</span>
+                  </span>
                 </button>
               </li>
             ))}

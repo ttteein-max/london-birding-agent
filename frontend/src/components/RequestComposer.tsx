@@ -83,7 +83,7 @@ export function RequestComposer({ busy, allowedModes, defaultMode, onSubmit }: P
         </div>
       </form>
       <p className="microcopy">
-        Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
+        Use a London postcode or explicit coordinates for the start. Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
       </p>
     </section>
   );

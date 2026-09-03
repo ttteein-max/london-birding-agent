@@ -119,6 +119,40 @@ def test_missing_request_fields_interrupt_and_invalid_resume_is_rejected() -> No
         graph.invoke(Command(resume={"target_local_date": "2026-06-15"}), config)
 
 
+def test_invalid_live_structured_parse_becomes_typed_clarification() -> None:
+    class InvalidStructuredParser:
+        def with_structured_output(self, schema, **kwargs):
+            assert schema is ExpeditionRequestDraft
+            assert kwargs["include_raw"] is True
+            return self
+
+        def invoke(self, messages):
+            del messages
+            return {
+                "raw": AIMessage(content=""),
+                "parsed": None,
+                "parsing_error": ValueError("unsafe provider detail"),
+            }
+
+    memory = create_biodiversity_checkpointer()
+    graph = build_biodiversity_graph(
+        parser_model=InvalidStructuredParser(),
+        evidence_model=evidence_model("search_occurrences"),
+        composer_model=ScriptedPlanComposerModel(),
+        checkpointer=memory,
+    )
+    result = graph.invoke(
+        {"original_request_text": "A request with a named street"},
+        {"configurable": {"thread_id": "invalid-structured-parser"}},
+    )
+    payload = interrupt_payload(result)
+    assert payload["kind"] == "request_clarification"
+    assert payload["validation_errors"][0] == (
+        "The model response did not match the structured request contract."
+    )
+    assert "unsafe provider detail" not in json.dumps(payload)
+
+
 def test_robin_ambiguity_interrupt_and_validated_resume() -> None:
     memory = create_biodiversity_checkpointer()
     graph = graph_for(request_draft("robin", 1), checkpointer=memory)

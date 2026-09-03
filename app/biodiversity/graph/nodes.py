@@ -107,22 +107,53 @@ def build_parse_request_node(parser_model: Any) -> Callable[[BiodiversityAgentSt
     structured_parser = parser_model.with_structured_output(
         ExpeditionRequestDraft,
         method="function_calling",
+        include_raw=True,
     )
 
     def parse_expedition_request(state: BiodiversityAgentState) -> dict[str, Any]:
         original = state["original_request_text"]
-        response = structured_parser.invoke(
-            [
-                SystemMessage(content=REQUEST_PARSER_PROMPT),
-                HumanMessage(content=f"Untrusted expedition request data:\n{original}"),
-            ]
-        )
-        draft = (
-            response
-            if isinstance(response, ExpeditionRequestDraft)
-            else ExpeditionRequestDraft.model_validate(response)
-        )
+        parser_errors: list[str] = []
+        try:
+            response = structured_parser.invoke(
+                [
+                    SystemMessage(content=REQUEST_PARSER_PROMPT),
+                    HumanMessage(content=f"Untrusted expedition request data:\n{original}"),
+                ]
+            )
+            if (
+                isinstance(response, dict)
+                and "parsed" in response
+                and "parsing_error" in response
+            ):
+                parsed = response.get("parsed")
+                if parsed is None:
+                    draft = ExpeditionRequestDraft()
+                    parser_errors.append(
+                        "The model response did not match the structured request contract."
+                    )
+                else:
+                    draft = (
+                        parsed
+                        if isinstance(parsed, ExpeditionRequestDraft)
+                        else ExpeditionRequestDraft.model_validate(parsed)
+                    )
+            else:
+                draft = (
+                    response
+                    if isinstance(response, ExpeditionRequestDraft)
+                    else ExpeditionRequestDraft.model_validate(response)
+                )
+        except ValidationError:
+            # Some OpenAI-compatible adapters raise during Pydantic parsing instead
+            # of returning ``parsing_error``. Treat an invalid model-shaped draft as
+            # missing untrusted input and move to the typed HITL correction flow.
+            # Raw model output and exception text are deliberately not persisted.
+            draft = ExpeditionRequestDraft()
+            parser_errors.append(
+                "The model response did not match the structured request contract."
+            )
         request, errors = _request_from_draft(draft)
+        errors = [*parser_errors, *errors]
         payload = None
         kind = None
         if errors:

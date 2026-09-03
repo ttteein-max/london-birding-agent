@@ -36,6 +36,24 @@ function message(error: unknown): string {
   return "The application could not complete that request safely.";
 }
 
+function failedRunDetail(detail: RunDetail, events: AgentRunEvent[]): string {
+  const failedNode = [...events].reverse().find((event) => event.event_type === "node_failed");
+  if (
+    failedNode?.node_id === "parse_expedition_request"
+    && failedNode.payload.error_type === "ValidationError"
+  ) {
+    return "The model response did not match the request schema. Use a London postcode or explicit coordinates; place names such as streets require a typed location correction.";
+  }
+  const errorCode = detail.operations?.[0]?.error_code;
+  if (errorCode === "upstream_unavailable") {
+    return "A configured live data or model provider was unavailable. Check the provider and retry.";
+  }
+  if (errorCode === "invalid_operation") {
+    return "The operation failed deterministic validation. Review the failed node in Agent trace before retrying.";
+  }
+  return "The operation stopped without exposing unsafe exception details. Review the safe Agent trace before retrying.";
+}
+
 export default function App() {
   const [health, setHealth] = useState<HealthView | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
@@ -282,7 +300,7 @@ export default function App() {
             {!loadingRun && detail?.final_plan && <PlanPanel plan={detail.final_plan} />}
             {!loadingRun && evidence && <EvidencePanel evidence={evidence} />}
             {!loadingRun && !detail && <AsyncState kind="empty" title="No expedition selected" detail="Start a fixture example or choose a recent run." />}
-            {!loadingRun && detail && !detail.final_plan && !decision && <AsyncState kind={detail.run.status === "failed" ? "error" : "loading"} title={detail.run.status === "failed" ? "Execution failed safely" : "Plan not ready"} detail={detail.run.status === "failed" ? "Inspect the safe operation status and retry when the configured source is available." : "Evidence collection is still in progress."} />}
+            {!loadingRun && detail && !detail.final_plan && !decision && <AsyncState kind={detail.run.status === "failed" ? "error" : "loading"} title={detail.run.status === "failed" ? "Execution failed safely" : "Plan not ready"} detail={detail.run.status === "failed" ? failedRunDetail(detail, events) : "Evidence collection is still in progress."} />}
           </aside>
         </div>
         <AgentTrace events={events} connection={connection} onCheckpoint={(event) => void inspectEvent(event)} />

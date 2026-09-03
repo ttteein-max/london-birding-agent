@@ -101,6 +101,8 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .run-list button:hover { background: var(--paper-deep); }
 .run-list button.selected { color: var(--green); background: var(--green-soft); box-shadow: inset 3px 0 var(--green); }
 .run-title { overflow: hidden; width: 100%; margin-bottom: 3px; color: var(--ink); font-size: 0.75rem; font-weight: 750; text-overflow: ellipsis; }
+.run-summary-line { display: flex; align-items: center; justify-content: space-between; gap: 6px; width: 100%; }
+.run-mode-label { border: 1px solid #b9c2bc; border-radius: 999px; padding: 2px 5px; color: #465850; background: rgba(255, 255, 255, 0.52); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.55rem; font-weight: 750; white-space: nowrap; }
 .lineage-section { padding-bottom: 10px; }
 .identity-list li { display: flex; gap: 8px; margin-bottom: 8px; }
 .identity-icon { display: grid; place-items: center; width: 24px; height: 24px; flex: 0 0 auto; border: 1px solid #a9afa8; border-radius: 50%; color: var(--green); font-size: 0.65rem; }
