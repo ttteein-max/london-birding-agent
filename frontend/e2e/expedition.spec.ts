@@ -26,6 +26,10 @@ async function waitForCompletedPlan(page: Page, threadId: string): Promise<void>
 test("Common woodpigeon strong-evidence happy path", async ({ page }) => {
   const threadId = await startExample(page, "Strong evidence");
   await waitForCompletedPlan(page, threadId);
+  await expect(page.getByRole("heading", { name: "Natural-language request" })).toBeVisible();
+  await expect(page.locator(".selected-request-card blockquote")).toContainText(
+    "Plan a two-hour expedition from SW11 4NJ",
+  );
   await expect(page.getByRole("heading", { name: "Columba palumbus" })).toBeVisible();
   await expect(page.getByText("Evidence gate passed", { exact: true })).toBeVisible();
   await expect(page.locator(".plan-columns > div").first().locator("li")).not.toHaveCount(0);

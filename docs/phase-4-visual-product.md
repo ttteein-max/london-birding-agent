@@ -25,7 +25,7 @@ The backend is split into application routes, DTOs, services, repositories and t
 - Safe operation reports preserve completed event streams for refresh and restart. The in-memory broker is only the live, single-process delivery mechanism.
 - Named-place resolution is a separate repository boundary. Fixture mode loads a versioned, sanitized real Nominatim response; live data mode performs one bounded, rate-limited search only after submission. The graph stores the coordinate internally, while the application DTO exposes only a response-local candidate ID, label, locality, district, postcode and place type.
 
-The React application is decomposed into the request composer, status header, run lineage navigation, MapLibre evidence map, plan/evidence/weather cards, typed HITL decisions, live trace, checkpoint inspector and time-travel comparison. `src/api/schema.d.ts` is generated from the checked-in FastAPI OpenAPI document and the hand-written client references those generated types.
+The React application is decomposed into the request composer, selected-run request record, status header, run lineage navigation, MapLibre evidence map, plan/evidence/weather cards, typed HITL decisions, live trace, checkpoint inspector and time-travel comparison. `src/api/schema.d.ts` is generated from the checked-in FastAPI OpenAPI document and the hand-written client references those generated types.
 
 ## API contract
 
@@ -36,7 +36,7 @@ All routes are under `/api/v1`:
 | GET | `/health` | Product, workflow and default mode status |
 | POST | `/runs` | Queue a new expedition |
 | GET | `/runs` | List durable run summaries |
-| GET | `/runs/{thread_id}` | Read a run, operations, branches, executions, decisions and current safe plan |
+| GET | `/runs/{thread_id}` | Read a run, operations, branches, executions, decisions, current safe plan and the local-only submitted-request record |
 | GET | `/runs/{thread_id}/history` | Read checkpoint, branch and execution identities |
 | GET | `/runs/{thread_id}/checkpoints/{checkpoint_id}/state` | Read the exact Phase 3 `StateView`; requires matching `node_id` and `graph_step` |
 | GET | `/runs/{thread_id}/checkpoints/{checkpoint_id}/evidence` | Read safe counts, quality, provenance, constraints and daily weather |
@@ -92,6 +92,8 @@ The event stream uses each `AgentRunEvent.sequence` as its SSE `id`. A client ma
 Responses use `text/event-stream`, `Cache-Control: no-cache, no-transform` and `X-Accel-Buffering: no`. The frontend reconnects from its last accepted sequence and suppresses duplicates. Closing the browser only closes the subscription.
 
 SSE payloads contain lifecycle identity, timing, node/tool/model labels and safe checkpoint linkage. They contain no prompt, raw state, tool input/output, occurrence coordinate or occurrence identifier.
+
+The local `RunDetail` DTO has one deliberate display-only exception to the general prompt boundary: `submitted_request` contains the original, length-bounded English request for the selected run. It is read from the durable checkpoint, never duplicated in `RunCatalog`, never emitted through SSE or run-list responses, and is always `null` when `BIODIVERSITY_PUBLIC_DEMO=true`. This lets a local user understand historical runs without exposing one unauthenticated public-demo visitor's input to another.
 
 ## DTO and privacy boundary
 

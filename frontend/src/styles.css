@@ -69,6 +69,13 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .api-error span { flex: 1; }
 .api-error button { border: 0; background: transparent; font-size: 1.2rem; cursor: pointer; }
 
+.selected-request-card { margin-bottom: 14px; border: 1px solid rgba(49, 93, 115, 0.34); border-left: 5px solid var(--blue); border-radius: 8px; padding: 13px 16px; background: rgba(240, 241, 234, 0.92); box-shadow: 0 8px 24px rgba(35, 46, 41, 0.06); }
+.selected-request-card h2 { font-size: 1.08rem; }
+.selected-request-card blockquote { margin: 10px 0; border-left: 2px solid #a8b8be; padding: 2px 0 2px 12px; color: #314c58; font-family: "Iowan Old Style", "Palatino Linotype", serif; font-size: 0.92rem; line-height: 1.5; white-space: pre-wrap; }
+.request-record-mode { border: 1px solid #a8b8be; border-radius: 999px; padding: 3px 7px; color: var(--blue); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.59rem; font-weight: 750; }
+.request-record-meta { display: flex; flex-wrap: wrap; gap: 5px 14px; color: var(--muted); font-size: 0.62rem; }
+.request-record-meta code { color: #3f555d; font-size: 0.61rem; }
+
 .hitl-panel { display: grid; grid-template-columns: 112px 1fr; margin-bottom: 14px; overflow: hidden; border-color: rgba(173, 112, 31, 0.5); border-radius: 10px; background: #f5ead3; }
 .hitl-signal { display: flex; flex-direction: column; justify-content: center; align-items: center; border-right: 1px solid rgba(132, 87, 28, 0.3); color: #f7ecd8; background: #8e5e23; text-transform: uppercase; }
 .hitl-signal span { font-size: 0.62rem; letter-spacing: 0.18em; }

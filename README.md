@@ -44,6 +44,8 @@ The shortest reproducible browser flow is entirely fixture/scripted and offline 
 
 The browser receives an operation immediately, streams the existing Phase 3 node/model/tool/checkpoint events, and reads only allow-listed state/evidence/map DTOs. It supports typed HITL resume, replay, constrained fork and deterministic comparison without exposing raw LangGraph state or occurrence-level data. See [the Phase 4 visual product documentation](docs/phase-4-visual-product.md) and [OpenAPI contract](docs/phase-4-openapi.json).
 
+Selecting an item in **Recent runs** also opens a compact **Natural-language request** record above the workspace. The request is read from the durable checkpoint rather than copied into the run catalog. It is available in the local profile only; unauthenticated public-demo mode suppresses it so one visitor cannot read another visitor's submitted text.
+
 Named London places are supported as well as postcodes and explicit map points. The model only extracts wording such as `Kensal Road`; a bounded Nominatim search supplies real OpenStreetMap candidates, deterministic code rejects candidates outside Greater London, and the browser asks the user to choose when a road has several segments. Fixture mode replays a versioned, sanitized real Nominatim response for Kensal Road, so the default demonstration remains offline and reproducible.
 
 ### Local live/live mode

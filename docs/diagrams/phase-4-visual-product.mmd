@@ -1,6 +1,7 @@
 flowchart TB
     subgraph Browser[React cartographic field notebook]
         Composer[Request composer]
+        RequestRecord[Selected run request record]
         Map[MapLibre evidence map]
         Cards[Plan, evidence, constraints, weather]
         Trace[Live node, model, tool trace]
@@ -48,6 +49,7 @@ flowchart TB
     Views --> DTO
     DTO --> Map
     DTO --> Cards
+    DTO -->|local profile only| RequestRecord
     DTO --> HITL
     DTO --> Travel
     Coordinator <--> Catalog

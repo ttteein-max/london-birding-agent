@@ -2891,6 +2891,16 @@
           "run": {
             "$ref": "#/components/schemas/RunSummary"
           },
+          "submitted_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmittedRequestView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
           "operations": {
             "items": {
               "$ref": "#/components/schemas/OperationView"
@@ -3783,6 +3793,35 @@
         ],
         "title": "StateView",
         "description": "Strictly allow-listed, coordinate-free view of one saved checkpoint."
+      },
+      "SubmittedRequestView": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "language": {
+            "type": "string",
+            "const": "English",
+            "title": "Language",
+            "default": "English"
+          },
+          "visibility": {
+            "type": "string",
+            "const": "local_only",
+            "title": "Visibility",
+            "default": "local_only"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SubmittedRequestView",
+        "description": "Local-only display copy read from the durable graph checkpoint."
       },
       "TaxonCandidateView": {
         "properties": {

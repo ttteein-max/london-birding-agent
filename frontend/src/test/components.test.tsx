@@ -8,8 +8,9 @@ import { HitlPanel } from "../components/HitlPanel";
 import { PlanPanel } from "../components/PlanPanel";
 import { RequestComposer } from "../components/RequestComposer";
 import { RunSidebar } from "../components/RunSidebar";
+import { SelectedRunRequest } from "../components/SelectedRunRequest";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
-import type { FinalPlanView, PendingDecisionView } from "../api/contracts";
+import type { FinalPlanView, PendingDecisionView, RunDetail } from "../api/contracts";
 import { comparisonFixture, evidenceFixture, historyFixture, planFixture } from "./fixtures";
 
 describe("field notebook cards", () => {
@@ -205,6 +206,34 @@ describe("trace and time travel", () => {
 });
 
 describe("loading, empty, error, and accessibility states", () => {
+  it("shows the exact natural-language request for the selected local run", () => {
+    const detail: RunDetail = {
+      run: {
+        thread_id: "expedition-history",
+        status: "completed",
+        data_mode: "fixture",
+        model_mode: "scripted",
+        created_at: "2026-09-03T04:15:31Z",
+        updated_at: "2026-09-03T04:16:41Z",
+      },
+      submitted_request: {
+        text: "Plan a two-hour expedition from Kensal Road on 15 June 2026 to look for Common woodpigeon.",
+        language: "English",
+        visibility: "local_only",
+      },
+      operations: [],
+      branches: [],
+      executions: [],
+      pending_decisions: [],
+      final_plan: null,
+    };
+    render(<SelectedRunRequest detail={detail} />);
+    expect(screen.getByRole("heading", { name: "Natural-language request" })).toBeInTheDocument();
+    expect(screen.getByText(/Plan a two-hour expedition from Kensal Road/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Selected run request metadata")).toHaveTextContent("expedition-history");
+    expect(screen.getByText("fixture/scripted")).toBeInTheDocument();
+  });
+
   it("renders explicit async states", () => {
     const { rerender } = render(<AsyncState kind="empty" title="No expedition selected" detail="Start a run." />);
     expect(screen.getByRole("status")).toHaveTextContent("No expedition selected");

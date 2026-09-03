@@ -329,8 +329,17 @@ class FinalPlanView(StrictModel):
     generated_by: str
 
 
+class SubmittedRequestView(StrictModel):
+    """Local-only display copy read from the durable graph checkpoint."""
+
+    text: NonEmptyText = Field(max_length=4000)
+    language: Literal["English"] = "English"
+    visibility: Literal["local_only"] = "local_only"
+
+
 class RunDetail(StrictModel):
     run: RunSummary
+    submitted_request: SubmittedRequestView | None = None
     operations: list[OperationView] = Field(default_factory=list)
     branches: list[RunBranch] = Field(default_factory=list)
     executions: list[RunExecution] = Field(default_factory=list)
