@@ -14,6 +14,7 @@ from app.biodiversity.graph.nodes import (
     bird_input_correction_interrupt,
     build_compose_plan_node,
     build_evidence_agent_node,
+    build_geocode_location_node,
     build_parse_request_node,
     build_prepare_taxon_selection_node,
     build_refresh_invalidated_evidence_node,
@@ -35,6 +36,7 @@ from app.biodiversity.graph.routing import (
     route_after_evidence_agent,
     route_after_grounding,
     route_after_location,
+    route_after_request_clarification,
     route_after_request_parse,
     route_after_taxon,
     route_after_user_choice,
@@ -73,6 +75,10 @@ def build_biodiversity_graph(
     builder = StateGraph(BiodiversityAgentState)
     builder.add_node("parse_expedition_request", build_parse_request_node(parser_model))
     builder.add_node("request_clarification_interrupt", request_clarification_interrupt)
+    builder.add_node(
+        "geocode_location_query",
+        build_geocode_location_node(dependencies),
+    )
     builder.add_node("resolve_location", build_resolve_location_node(dependencies))
     builder.add_node("location_correction_interrupt", location_correction_interrupt)
     builder.add_node("resolve_taxon", build_resolve_taxon_node(dependencies))
@@ -117,9 +123,18 @@ def build_biodiversity_graph(
     builder.add_conditional_edges(
         "parse_expedition_request",
         route_after_request_parse,
-        ["request_clarification_interrupt", "resolve_location"],
+        [
+            "request_clarification_interrupt",
+            "geocode_location_query",
+            "resolve_location",
+        ],
     )
-    builder.add_edge("request_clarification_interrupt", "resolve_location")
+    builder.add_conditional_edges(
+        "request_clarification_interrupt",
+        route_after_request_clarification,
+        ["geocode_location_query", "resolve_location"],
+    )
+    builder.add_edge("geocode_location_query", "location_correction_interrupt")
     builder.add_conditional_edges(
         "resolve_location",
         route_after_location,

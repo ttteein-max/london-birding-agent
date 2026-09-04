@@ -37,6 +37,7 @@ from app.biodiversity.run_models import (
     StateTaxonView,
     StateView,
 )
+from app.biodiversity.request_parsing import merge_request_draft
 
 
 DERIVED_FORK_FIELDS = {
@@ -106,13 +107,70 @@ def checkpoint_node_id(
 
 
 def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
-    return [
-        StateDecisionView(
-            kind=str(item.get("kind") or "unknown"),
-            option=(str(item["option"]) if item.get("option") else None),
+    resolved_taxon = dict(values.get("resolved_taxon") or {})
+    resolved_key = resolved_taxon.get("accepted_taxon_key")
+    resolved_name = (
+        resolved_taxon.get("common_name")
+        or resolved_taxon.get("canonical_name")
+        or resolved_taxon.get("scientific_name")
+    )
+    decisions: list[StateDecisionView] = []
+    for raw in values.get("applied_user_decisions") or []:
+        item = dict(raw)
+        accepted_key = item.get("accepted_taxon_key")
+        selected_name = (
+            str(resolved_name)
+            if accepted_key is not None
+            and accepted_key == resolved_key
+            and resolved_name
+            else None
         )
-        for item in values.get("applied_user_decisions") or []
-    ]
+        updates = item.get("updates")
+        decisions.append(
+            StateDecisionView(
+                kind=str(item.get("kind") or "unknown"),
+                option=(str(item["option"]) if item.get("option") else None),
+                accepted_taxon_key=(
+                    int(accepted_key)
+                    if isinstance(accepted_key, int)
+                    and not isinstance(accepted_key, bool)
+                    and accepted_key > 0
+                    else None
+                ),
+                selected_taxon_name=selected_name,
+                bird_input=(
+                    str(item["bird_input"]) if item.get("bird_input") else None
+                ),
+                relation_level=(
+                    str(item["relation_level"])
+                    if item.get("relation_level")
+                    else None
+                ),
+                rationale=(
+                    str(item["rationale"]) if item.get("rationale") else None
+                ),
+                search_radius_km=(
+                    float(item["search_radius_km"])
+                    if isinstance(item.get("search_radius_km"), (int, float))
+                    and not isinstance(item.get("search_radius_km"), bool)
+                    else None
+                ),
+                seasonal_window_radius_months=(
+                    int(item["seasonal_window_radius_months"])
+                    if isinstance(item.get("seasonal_window_radius_months"), int)
+                    and not isinstance(
+                        item.get("seasonal_window_radius_months"), bool
+                    )
+                    else None
+                ),
+                changed_fields=(
+                    sorted(str(key) for key in updates)
+                    if isinstance(updates, dict)
+                    else []
+                ),
+            )
+        )
+    return decisions
 
 
 def _execution_id(snapshot: Any) -> str:
@@ -215,18 +273,67 @@ def _validate_resume_payload(
     elif kind == "request_clarification":
         if set(resume) != {"updates"} or not isinstance(resume["updates"], dict):
             raise ValueError("Resume must be {'updates': {...}}")
-        merged = dict(state.get("parsed_request_draft") or {})
+        recovered = merge_request_draft(
+            state.get("parsed_request_draft"),
+            str(state.get("original_request_text") or ""),
+        )
+        merged = recovered.model_dump(mode="python") if recovered else {}
         merged.update(resume["updates"])
         draft = ExpeditionRequestDraft.model_validate(merged)
         values = draft.model_dump(exclude_none=True)
+        location_count = sum(
+            (
+                "postcode" in values,
+                "start_point" in values,
+                bool(str(values.get("location_query") or "").strip()),
+            )
+        )
+        if location_count != 1:
+            raise ValueError("Request correction must identify exactly one location")
+        location_query = str(values.pop("location_query", "")).strip()
+        if location_query and "postcode" not in values and "start_point" not in values:
+            # Validate every non-location field without treating the model as a
+            # geocoder. The real candidate will be validated after user selection.
+            values["start_point"] = {"longitude": -0.1, "latitude": 51.5}
         values["timezone"] = "Europe/London"
         ExpeditionRequest.model_validate(values)
     elif kind == "location_correction":
-        if set(resume) not in ({"postcode"}, {"start_point"}):
+        if set(resume) not in ({"postcode"}, {"start_point"}, {"candidate_id"}):
             raise ValueError("Resume must contain exactly one location correction")
-        request = ExpeditionRequest.model_validate(state["expedition_request"])
-        values = request.model_dump(mode="python")
-        values.update({"postcode": None, "start_point": None, **resume})
+        if "candidate_id" in resume:
+            selected = next(
+                (
+                    item
+                    for item in state.get("geocoded_location_candidates") or []
+                    if item.get("candidate_id") == resume["candidate_id"]
+                ),
+                None,
+            )
+            if selected is None:
+                raise ValueError(
+                    "candidate_id is not present in the offered place matches"
+                )
+            location_update = {
+                "postcode": None,
+                "start_point": {
+                    "longitude": selected["longitude"],
+                    "latitude": selected["latitude"],
+                },
+            }
+        else:
+            location_update = {"postcode": None, "start_point": None, **resume}
+        if state.get("expedition_request"):
+            values = ExpeditionRequest.model_validate(
+                state["expedition_request"]
+            ).model_dump(mode="python")
+        else:
+            draft = ExpeditionRequestDraft.model_validate(
+                state.get("parsed_request_draft") or {}
+            )
+            values = draft.model_dump(mode="python", exclude_none=True)
+            values.pop("location_query", None)
+            values["timezone"] = "Europe/London"
+        values.update(location_update)
         ExpeditionRequest.model_validate(values)
     elif kind == "bird_input_correction":
         if set(resume) != {"bird_input"} or not isinstance(
@@ -574,14 +681,13 @@ class BiodiversityRunManager:
             heads.setdefault(_execution_id(snapshot), snapshot)
         return [snapshot for snapshot in heads.values() if _interrupt_kind(snapshot)]
 
-    def resume(
+    def _resume_snapshot(
         self,
         *,
         thread_id: str,
-        resume: dict[str, Any],
         checkpoint_id: str | None = None,
         branch_id: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> Any:
         pending = self._pending_execution_heads(thread_id)
         if checkpoint_id:
             snapshot = self._require_checkpoint(thread_id, checkpoint_id)
@@ -592,7 +698,8 @@ class BiodiversityRunManager:
                 raise ValueError("resume checkpoint must be the current execution head")
             if not _interrupt_kind(snapshot):
                 raise ValueError("resume checkpoint has no pending interrupt")
-        elif branch_id:
+            return snapshot
+        if branch_id:
             matches = [
                 item
                 for item in pending
@@ -602,20 +709,57 @@ class BiodiversityRunManager:
                 raise ValueError(
                     f"branch_id={branch_id!r} does not identify exactly one pending execution"
                 )
-            snapshot = matches[0]
-        elif len(pending) == 1:
-            snapshot = pending[0]
-        elif not pending:
+            return matches[0]
+        if len(pending) == 1:
+            return pending[0]
+        if not pending:
             raise ValueError(f"Thread {thread_id!r} has no pending interrupt")
-        else:
-            choices = ", ".join(
-                f"{item.values.get('branch_id')}:{_checkpoint_id(item)}"
-                for item in pending
-            )
-            raise ValueError(
-                "Thread has multiple pending executions; supply checkpoint_id or "
-                f"branch_id. Candidates: {choices}"
-            )
+        choices = ", ".join(
+            f"{item.values.get('branch_id')}:{_checkpoint_id(item)}"
+            for item in pending
+        )
+        raise ValueError(
+            "Thread has multiple pending executions; supply checkpoint_id or "
+            f"branch_id. Candidates: {choices}"
+        )
+
+    def validate_resume(
+        self,
+        *,
+        thread_id: str,
+        resume: dict[str, Any],
+        checkpoint_id: str | None = None,
+        branch_id: str | None = None,
+    ) -> str:
+        """Validate one exact pending decision without mutating graph state."""
+
+        snapshot = self._resume_snapshot(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            branch_id=branch_id,
+        )
+        payload = next(
+            item.value
+            for task in snapshot.tasks
+            for item in task.interrupts
+            if isinstance(item.value, dict)
+        )
+        _validate_resume_payload(payload, resume, state=dict(snapshot.values))
+        return _checkpoint_id(snapshot)
+
+    def resume(
+        self,
+        *,
+        thread_id: str,
+        resume: dict[str, Any],
+        checkpoint_id: str | None = None,
+        branch_id: str | None = None,
+    ) -> dict[str, Any]:
+        snapshot = self._resume_snapshot(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            branch_id=branch_id,
+        )
         self._validate_run_profile(snapshot)
         kind = _interrupt_kind(snapshot)
         if kind is None:

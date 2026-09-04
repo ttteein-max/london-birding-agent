@@ -1,0 +1,4715 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "London Biodiversity Expedition Planner API",
+    "description": "A privacy-bounded API for London bird-expedition evidence, agent execution, human decisions, and checkpoint time travel.",
+    "version": "4.0.0"
+  },
+  "paths": {
+    "/api/v1/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "operationId": "health_api_v1_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/workflow/topology": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Workflow Topology",
+        "operationId": "workflow_topology_api_v1_workflow_topology_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTopologyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "List Runs",
+        "operationId": "list_runs_api_v1_runs_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RunSummary"
+                  },
+                  "type": "array",
+                  "title": "Response List Runs Api V1 Runs Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Create Run",
+        "operationId": "create_run_api_v1_runs_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Run",
+        "operationId": "get_run_api_v1_runs__thread_id__get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunDetail"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/history": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get History",
+        "operationId": "get_history_api_v1_runs__thread_id__history_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HistoryView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/state": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Checkpoint State",
+        "operationId": "get_checkpoint_state_api_v1_runs__thread_id__checkpoints__checkpoint_id__state_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint Id"
+            }
+          },
+          {
+            "name": "node_id",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Node Id"
+            }
+          },
+          {
+            "name": "graph_step",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "title": "Graph Step"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StateView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/evidence": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Checkpoint Evidence",
+        "operationId": "get_checkpoint_evidence_api_v1_runs__thread_id__checkpoints__checkpoint_id__evidence_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EvidenceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/plan": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Checkpoint Plan",
+        "operationId": "get_checkpoint_plan_api_v1_runs__thread_id__checkpoints__checkpoint_id__plan_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FinalPlanView"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Checkpoint Plan Api V1 Runs  Thread Id  Checkpoints  Checkpoint Id  Plan Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/map": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Checkpoint Map",
+        "operationId": "get_checkpoint_map_api_v1_runs__thread_id__checkpoints__checkpoint_id__map_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MapEvidenceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/resume": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Resume Run",
+        "operationId": "resume_run_api_v1_runs__thread_id__resume_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/replay": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Replay Run",
+        "operationId": "replay_run_api_v1_runs__thread_id__replay_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReplayRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/fork": {
+      "post": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Fork Run",
+        "operationId": "fork_run_api_v1_runs__thread_id__fork_post",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForkRunRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationAccepted"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/compare": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Compare Runs",
+        "operationId": "compare_runs_api_v1_runs__thread_id__compare_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_a",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Checkpoint A"
+            }
+          },
+          {
+            "name": "checkpoint_b",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "title": "Checkpoint B"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ComparisonView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/{operation_id}": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Get Operation",
+        "operationId": "get_operation_api_v1_operations__operation_id__get",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operation Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OperationView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/operations/{operation_id}/events": {
+      "get": {
+        "tags": [
+          "operations"
+        ],
+        "summary": "Get Operation Events",
+        "operationId": "get_operation_events_api_v1_operations__operation_id__events_get",
+        "parameters": [
+          {
+            "name": "operation_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Operation Id"
+            }
+          },
+          {
+            "name": "after_sequence",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "After Sequence"
+            }
+          },
+          {
+            "name": "Last-Event-ID",
+            "in": "header",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Last-Event-Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ActionableTradeoffDecision": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "actionable_tradeoff",
+            "title": "Kind"
+          },
+          "option": {
+            "type": "string",
+            "enum": [
+              "expand_search_radius",
+              "widen_seasonal_window",
+              "consider_related_taxa",
+              "keep_constraints_accept_low_confidence",
+              "accept_context_only",
+              "continue_with_weather_acknowledgement",
+              "accept_uncertain_access",
+              "revise_rain_preference"
+            ],
+            "title": "Option"
+          },
+          "search_radius_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 25.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Radius Km"
+          },
+          "seasonal_window_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Window Radius Months"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "option"
+        ],
+        "title": "ActionableTradeoffDecision"
+      },
+      "BirdCorrectionDecision": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "bird_input_correction",
+            "title": "Kind"
+          },
+          "bird_input": {
+            "type": "string",
+            "maxLength": 240,
+            "minLength": 1,
+            "title": "Bird Input"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "bird_input"
+        ],
+        "title": "BirdCorrectionDecision"
+      },
+      "CheckpointSummary": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Thread Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Id"
+          },
+          "parent_execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Execution Id"
+          },
+          "replayed_from_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replayed From Checkpoint Id"
+          },
+          "parent_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Branch Id"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Checkpoint Id"
+          },
+          "parent_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Checkpoint Id"
+          },
+          "forked_from_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forked From Checkpoint Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "node_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Node Id"
+          },
+          "graph_step": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Graph Step"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "next_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Next Nodes"
+          },
+          "interrupt_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interrupt Kind"
+          },
+          "terminal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Status"
+          },
+          "applied_constraint_changes": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Applied Constraint Changes"
+          },
+          "final_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Checkpoint Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "branch_id",
+          "execution_id",
+          "checkpoint_id",
+          "created_at",
+          "node_id"
+        ],
+        "title": "CheckpointSummary"
+      },
+      "ComparedValue": {
+        "properties": {
+          "checkpoint_a": {
+            "title": "Checkpoint A"
+          },
+          "checkpoint_b": {
+            "title": "Checkpoint B"
+          },
+          "changed": {
+            "type": "boolean",
+            "title": "Changed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "changed"
+        ],
+        "title": "ComparedValue"
+      },
+      "ComparisonView": {
+        "properties": {
+          "comparison": {
+            "$ref": "#/components/schemas/PlanComparison"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "comparison"
+        ],
+        "title": "ComparisonView"
+      },
+      "ConstraintView": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "severity": {
+            "type": "string",
+            "title": "Severity"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "code",
+          "status",
+          "severity",
+          "message"
+        ],
+        "title": "ConstraintView"
+      },
+      "CreateRunRequest": {
+        "properties": {
+          "request": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Request"
+          },
+          "thread_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 96,
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Thread Id"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Data Mode",
+            "default": "fixture"
+          },
+          "model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Model Mode",
+            "default": "scripted"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "request"
+        ],
+        "title": "CreateRunRequest"
+      },
+      "EvidenceCountsView": {
+        "properties": {
+          "server_match_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Server Match Count",
+            "default": 0
+          },
+          "sampled_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Sampled Count",
+            "default": 0
+          },
+          "deduplicated_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Deduplicated Count",
+            "default": 0
+          },
+          "exact_duplicates_removed": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Exact Duplicates Removed",
+            "default": 0
+          },
+          "possible_duplicates_retained": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Possible Duplicates Retained",
+            "default": 0
+          },
+          "retained_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Retained Count",
+            "default": 0
+          },
+          "rejected_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Rejected Count",
+            "default": 0
+          },
+          "ranking_eligible_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Ranking Eligible Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvidenceCountsView"
+      },
+      "EvidenceGateCriterionView": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "ranking_eligible_records",
+              "spatial_cells_1km",
+              "ranking_datasets"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Value"
+          },
+          "minimum": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Minimum"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value",
+          "minimum",
+          "passed"
+        ],
+        "title": "EvidenceGateCriterionView"
+      },
+      "EvidenceGateView": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceGateCriterionView"
+            },
+            "type": "array",
+            "title": "Criteria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "criteria"
+        ],
+        "title": "EvidenceGateView"
+      },
+      "EvidenceQualityView": {
+        "properties": {
+          "spatial_cell_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Spatial Cell Count",
+            "default": 0
+          },
+          "safe_map_cell_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Safe Map Cell Count",
+            "default": 0
+          },
+          "retained_dataset_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Retained Dataset Count",
+            "default": 0
+          },
+          "ranking_dataset_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Ranking Dataset Count",
+            "default": 0
+          },
+          "dominant_ranking_dataset_share": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Dominant Ranking Dataset Share",
+            "default": 0
+          },
+          "dominant_basis_of_record_share": {
+            "type": "number",
+            "maximum": 1.0,
+            "minimum": 0.0,
+            "title": "Dominant Basis Of Record Share",
+            "default": 0
+          },
+          "quality_percentages": {
+            "additionalProperties": {
+              "type": "number"
+            },
+            "type": "object",
+            "title": "Quality Percentages"
+          },
+          "year_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Year Distribution"
+          },
+          "month_distribution": {
+            "additionalProperties": {
+              "type": "integer"
+            },
+            "type": "object",
+            "title": "Month Distribution"
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "EvidenceQualityView"
+      },
+      "EvidenceView": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "title": "Execution Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "strong",
+              "limited",
+              "insufficient",
+              "source_failure"
+            ],
+            "title": "Status"
+          },
+          "occurrence_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Outcome"
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/EvidenceCountsView"
+          },
+          "quality": {
+            "$ref": "#/components/schemas/EvidenceQualityView"
+          },
+          "gate": {
+            "$ref": "#/components/schemas/EvidenceGateView"
+          },
+          "seasonal_target_month": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Target Month"
+          },
+          "seasonal_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Seasonal Months"
+          },
+          "year_window": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Window"
+          },
+          "candidate_sites": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSiteView"
+            },
+            "type": "array",
+            "title": "Candidate Sites"
+          },
+          "contextual_sites": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSiteView"
+            },
+            "type": "array",
+            "title": "Contextual Sites"
+          },
+          "constraints": {
+            "items": {
+              "$ref": "#/components/schemas/ConstraintView"
+            },
+            "type": "array",
+            "title": "Constraints"
+          },
+          "weather": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeatherDayView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "provenance": {
+            "items": {
+              "$ref": "#/components/schemas/ProvenanceView"
+            },
+            "type": "array",
+            "title": "Provenance"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          },
+          "suggested_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Actions"
+          },
+          "server_match_note": {
+            "type": "string",
+            "const": "Server match count is not abundance or a population estimate.",
+            "title": "Server Match Note",
+            "default": "Server match count is not abundance or a population estimate."
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "checkpoint_id",
+          "branch_id",
+          "execution_id",
+          "status",
+          "counts",
+          "quality",
+          "gate"
+        ],
+        "title": "EvidenceView"
+      },
+      "FinalPlanView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "target_species": {
+            "type": "string",
+            "title": "Target Species"
+          },
+          "target_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Target Date"
+          },
+          "duration_hours": {
+            "type": "number",
+            "title": "Duration Hours"
+          },
+          "resolved_london_start_context": {
+            "type": "string",
+            "title": "Resolved London Start Context"
+          },
+          "recommended_sites": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSiteView"
+            },
+            "type": "array",
+            "title": "Recommended Sites"
+          },
+          "contextual_sites": {
+            "items": {
+              "$ref": "#/components/schemas/PlanSiteView"
+            },
+            "type": "array",
+            "title": "Contextual Sites"
+          },
+          "weather_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/WeatherDayView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "constraints": {
+            "items": {
+              "$ref": "#/components/schemas/ConstraintView"
+            },
+            "type": "array",
+            "title": "Constraints"
+          },
+          "unresolved_limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Unresolved Limitations"
+          },
+          "suggested_next_actions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Suggested Next Actions"
+          },
+          "provenance_references": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Provenance References"
+          },
+          "evidence_attributions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Attributions"
+          },
+          "evidence_citations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Evidence Citations"
+          },
+          "evidence_gate_passed": {
+            "type": "boolean",
+            "title": "Evidence Gate Passed"
+          },
+          "low_confidence_accepted": {
+            "type": "boolean",
+            "title": "Low Confidence Accepted",
+            "default": false
+          },
+          "low_confidence_notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Low Confidence Notice"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          },
+          "generated_by": {
+            "type": "string",
+            "title": "Generated By"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "target_species",
+          "target_date",
+          "duration_hours",
+          "resolved_london_start_context",
+          "evidence_gate_passed",
+          "explanation",
+          "generated_by"
+        ],
+        "title": "FinalPlanView"
+      },
+      "ForkRunRequest": {
+        "properties": {
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Checkpoint Id"
+          },
+          "updates": {
+            "$ref": "#/components/schemas/ForkUpdates"
+          },
+          "branch_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkpoint_id",
+          "updates"
+        ],
+        "title": "ForkRunRequest"
+      },
+      "ForkUpdates": {
+        "properties": {
+          "search_radius_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 25.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Radius Km"
+          },
+          "seasonal_window_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Window Radius Months"
+          },
+          "target_month_override": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 12.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Month Override"
+          },
+          "target_local_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Local Date"
+          },
+          "rain_preference": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/RainPreference"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 24.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Hours"
+          },
+          "selected_related_taxon_key": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Related Taxon Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ForkUpdates"
+      },
+      "GeoJSONGeometry": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "Point",
+              "Polygon",
+              "MultiPolygon"
+            ],
+            "title": "Type"
+          },
+          "coordinates": {
+            "title": "Coordinates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "type",
+          "coordinates"
+        ],
+        "title": "GeoJSONGeometry"
+      },
+      "GeocodedLocationCandidateView": {
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Candidate Id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "locality": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Locality"
+          },
+          "administrative_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrative District"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "place_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Place Type"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "candidate_id",
+          "label"
+        ],
+        "title": "GeocodedLocationCandidateView",
+        "description": "Coordinate-free location candidate safe for a typed HITL card."
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "HealthView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "const": "ok",
+            "title": "Status",
+            "default": "ok"
+          },
+          "product": {
+            "type": "string",
+            "const": "London Biodiversity Expedition Planner",
+            "title": "Product",
+            "default": "London Biodiversity Expedition Planner"
+          },
+          "api_version": {
+            "type": "string",
+            "const": "v1",
+            "title": "Api Version",
+            "default": "v1"
+          },
+          "workflow_version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Workflow Version"
+          },
+          "default_data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Default Data Mode"
+          },
+          "default_model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Default Model Mode"
+          },
+          "allowed_run_modes": {
+            "items": {
+              "$ref": "#/components/schemas/RunModeView"
+            },
+            "type": "array",
+            "title": "Allowed Run Modes"
+          },
+          "public_demo": {
+            "type": "boolean",
+            "title": "Public Demo"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_version",
+          "default_data_mode",
+          "default_model_mode",
+          "allowed_run_modes",
+          "public_demo"
+        ],
+        "title": "HealthView"
+      },
+      "HistoryView": {
+        "properties": {
+          "checkpoints": {
+            "items": {
+              "$ref": "#/components/schemas/CheckpointSummary"
+            },
+            "type": "array",
+            "title": "Checkpoints"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/RunBranch"
+            },
+            "type": "array",
+            "title": "Branches"
+          },
+          "executions": {
+            "items": {
+              "$ref": "#/components/schemas/RunExecution"
+            },
+            "type": "array",
+            "title": "Executions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkpoints",
+          "branches",
+          "executions"
+        ],
+        "title": "HistoryView"
+      },
+      "HitlOptionView": {
+        "properties": {
+          "option": {
+            "type": "string",
+            "title": "Option"
+          },
+          "current_radius_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Radius Km"
+          },
+          "maximum_radius_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Radius Km"
+          },
+          "current_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Radius Months"
+          },
+          "maximum_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Radius Months"
+          },
+          "candidate_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Count"
+          },
+          "relation_levels": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Relation Levels"
+          },
+          "current_seasonal_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Current Seasonal Months"
+          },
+          "next_seasonal_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Next Seasonal Months"
+          },
+          "year_window": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Window"
+          },
+          "current_server_match_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Server Match Count"
+          },
+          "current_ranking_eligible_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ranking Eligible Count"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "option"
+        ],
+        "title": "HitlOptionView"
+      },
+      "LocationCorrectionDecision": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "location_correction",
+            "title": "Kind"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 16,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "candidate_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 32,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Candidate Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "LocationCorrectionDecision"
+      },
+      "MapCellFeature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type",
+            "default": "Feature"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeoJSONGeometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/MapCellProperties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "MapCellFeature"
+      },
+      "MapCellProperties": {
+        "properties": {
+          "display_id": {
+            "type": "string",
+            "title": "Display Id"
+          },
+          "layer": {
+            "type": "string",
+            "const": "aggregate_evidence",
+            "title": "Layer",
+            "default": "aggregate_evidence"
+          },
+          "density_band": {
+            "type": "string",
+            "enum": [
+              "lower",
+              "medium",
+              "higher"
+            ],
+            "title": "Density Band"
+          },
+          "dataset_diversity_band": {
+            "type": "string",
+            "enum": [
+              "single",
+              "multiple"
+            ],
+            "title": "Dataset Diversity Band"
+          },
+          "date_start": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date Start"
+          },
+          "date_end": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Date End"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "display_id",
+          "density_band",
+          "dataset_diversity_band",
+          "label"
+        ],
+        "title": "MapCellProperties"
+      },
+      "MapEvidenceView": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "title": "Execution Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "strong",
+              "limited",
+              "insufficient",
+              "source_failure"
+            ],
+            "title": "Status"
+          },
+          "aggregate_grid": {
+            "items": {
+              "$ref": "#/components/schemas/MapCellFeature"
+            },
+            "type": "array",
+            "title": "Aggregate Grid"
+          },
+          "candidate_sites": {
+            "items": {
+              "$ref": "#/components/schemas/MapSiteFeature"
+            },
+            "type": "array",
+            "title": "Candidate Sites"
+          },
+          "contextual_sites": {
+            "items": {
+              "$ref": "#/components/schemas/MapSiteFeature"
+            },
+            "type": "array",
+            "title": "Contextual Sites"
+          },
+          "start_context": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/MapStartContext"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "attributions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Attributions"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          },
+          "grid_note": {
+            "type": "string",
+            "title": "Grid Note"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "checkpoint_id",
+          "branch_id",
+          "execution_id",
+          "status",
+          "attributions",
+          "limitations",
+          "grid_note"
+        ],
+        "title": "MapEvidenceView"
+      },
+      "MapSiteFeature": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type",
+            "default": "Feature"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeoJSONGeometry"
+          },
+          "properties": {
+            "$ref": "#/components/schemas/MapSiteProperties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "MapSiteFeature"
+      },
+      "MapSiteProperties": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "layer": {
+            "type": "string",
+            "enum": [
+              "candidate",
+              "contextual"
+            ],
+            "title": "Layer"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "site_type": {
+            "type": "string",
+            "title": "Site Type"
+          },
+          "access_certainty": {
+            "type": "string",
+            "title": "Access Certainty"
+          },
+          "evidence_tier": {
+            "type": "string",
+            "title": "Evidence Tier"
+          },
+          "approximate_straight_line_distance_km": {
+            "type": "number",
+            "title": "Approximate Straight Line Distance Km"
+          },
+          "operator": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Operator"
+          },
+          "opening_hours": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Opening Hours"
+          },
+          "website": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Website"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "site_id",
+          "layer",
+          "name",
+          "site_type",
+          "access_certainty",
+          "evidence_tier",
+          "approximate_straight_line_distance_km"
+        ],
+        "title": "MapSiteProperties"
+      },
+      "MapStartContext": {
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "Feature",
+            "title": "Type",
+            "default": "Feature"
+          },
+          "geometry": {
+            "$ref": "#/components/schemas/GeoJSONGeometry"
+          },
+          "properties": {
+            "additionalProperties": {
+              "type": "string"
+            },
+            "propertyNames": {
+              "enum": [
+                "layer",
+                "label",
+                "precision"
+              ]
+            },
+            "type": "object",
+            "title": "Properties"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "geometry",
+          "properties"
+        ],
+        "title": "MapStartContext"
+      },
+      "OperationAccepted": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Operation Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "maxLength": 96,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Thread Id"
+          },
+          "status": {
+            "type": "string",
+            "const": "queued",
+            "title": "Status",
+            "default": "queued"
+          },
+          "events_url": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Events Url"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operation_id",
+          "thread_id",
+          "events_url"
+        ],
+        "title": "OperationAccepted"
+      },
+      "OperationView": {
+        "properties": {
+          "operation_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Operation Id"
+          },
+          "thread_id": {
+            "type": "string",
+            "maxLength": 96,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Thread Id"
+          },
+          "branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "resume",
+              "replay",
+              "fork"
+            ],
+            "title": "Kind"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "waiting_for_input",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Data Mode"
+          },
+          "model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Model Mode"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "started_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Started At"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "last_event_sequence": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Last Event Sequence",
+            "default": 0
+          },
+          "current_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Checkpoint Id"
+          },
+          "interrupt_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interrupt Kind"
+          },
+          "error_code": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error Code"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "operation_id",
+          "thread_id",
+          "kind",
+          "status",
+          "data_mode",
+          "model_mode",
+          "created_at"
+        ],
+        "title": "OperationView"
+      },
+      "ParsedRequestDraftView": {
+        "properties": {
+          "bird_input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bird Input"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "location_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Query"
+          },
+          "has_explicit_start_point": {
+            "type": "boolean",
+            "title": "Has Explicit Start Point",
+            "default": false
+          },
+          "target_local_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Local Date"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 24.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Hours"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ParsedRequestDraftView",
+        "description": "Safe, editable request fields already extracted before clarification."
+      },
+      "PendingDecisionView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "request_clarification",
+              "location_correction",
+              "bird_input_correction",
+              "taxon_selection",
+              "actionable_tradeoff",
+              "related_taxon_selection"
+            ],
+            "title": "Kind"
+          },
+          "question": {
+            "type": "string",
+            "title": "Question"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "title": "Checkpoint Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "title": "Execution Id"
+          },
+          "validation_errors": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Validation Errors"
+          },
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "candidates": {
+            "items": {
+              "$ref": "#/components/schemas/TaxonCandidateView"
+            },
+            "type": "array",
+            "title": "Candidates"
+          },
+          "location_candidates": {
+            "items": {
+              "$ref": "#/components/schemas/GeocodedLocationCandidateView"
+            },
+            "type": "array",
+            "title": "Location Candidates"
+          },
+          "options": {
+            "items": {
+              "$ref": "#/components/schemas/HitlOptionView"
+            },
+            "type": "array",
+            "title": "Options"
+          },
+          "parsed_draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParsedRequestDraftView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "question",
+          "checkpoint_id",
+          "branch_id",
+          "execution_id"
+        ],
+        "title": "PendingDecisionView"
+      },
+      "PlanComparison": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "title": "Thread Id"
+          },
+          "checkpoint_a": {
+            "type": "string",
+            "title": "Checkpoint A"
+          },
+          "checkpoint_b": {
+            "type": "string",
+            "title": "Checkpoint B"
+          },
+          "request_constraints": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "selected_taxon": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "evidence_outcome": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "weather_status": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "plan_status": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "recommended_site_ids": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "contextual_site_ids": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "limitations": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "provenance_sources": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "applied_user_decisions": {
+            "$ref": "#/components/schemas/ComparedValue"
+          },
+          "changed_fields": {
+            "items": {
+              "type": "string",
+              "enum": [
+                "request_constraints",
+                "selected_taxon",
+                "evidence_outcome",
+                "weather_status",
+                "plan_status",
+                "recommended_site_ids",
+                "contextual_site_ids",
+                "limitations",
+                "provenance_sources",
+                "applied_user_decisions"
+              ]
+            },
+            "type": "array",
+            "title": "Changed Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "checkpoint_a",
+          "checkpoint_b",
+          "request_constraints",
+          "selected_taxon",
+          "evidence_outcome",
+          "weather_status",
+          "plan_status",
+          "recommended_site_ids",
+          "contextual_site_ids",
+          "limitations",
+          "provenance_sources",
+          "applied_user_decisions"
+        ],
+        "title": "PlanComparison"
+      },
+      "PlanSiteView": {
+        "properties": {
+          "site_id": {
+            "type": "string",
+            "title": "Site Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          },
+          "access_certainty": {
+            "type": "string",
+            "title": "Access Certainty"
+          },
+          "approximate_straight_line_distance_km": {
+            "type": "number",
+            "title": "Approximate Straight Line Distance Km"
+          },
+          "evidence_tier": {
+            "type": "string",
+            "title": "Evidence Tier"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "site_id",
+          "name",
+          "access_certainty",
+          "approximate_straight_line_distance_km",
+          "evidence_tier"
+        ],
+        "title": "PlanSiteView"
+      },
+      "ProvenanceView": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "title": "Source"
+          },
+          "source_record_type": {
+            "type": "string",
+            "title": "Source Record Type"
+          },
+          "retrieved_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Retrieved At"
+          },
+          "licence": {
+            "type": "string",
+            "title": "Licence"
+          },
+          "attribution": {
+            "type": "string",
+            "title": "Attribution"
+          },
+          "use_classification": {
+            "type": "string",
+            "title": "Use Classification"
+          },
+          "source_reference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Reference"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "source_record_type",
+          "retrieved_at",
+          "licence",
+          "attribution",
+          "use_classification"
+        ],
+        "title": "ProvenanceView"
+      },
+      "RainPreference": {
+        "type": "string",
+        "enum": [
+          "no_preference",
+          "avoid_heavy_rain"
+        ],
+        "title": "RainPreference"
+      },
+      "ReplayRunRequest": {
+        "properties": {
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Checkpoint Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "checkpoint_id"
+        ],
+        "title": "ReplayRunRequest"
+      },
+      "RequestClarificationDecision": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "const": "request_clarification",
+            "title": "Kind"
+          },
+          "updates": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Updates"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "updates"
+        ],
+        "title": "RequestClarificationDecision"
+      },
+      "ResumeRunRequest": {
+        "properties": {
+          "decision": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/TaxonSelectionDecision"
+              },
+              {
+                "$ref": "#/components/schemas/BirdCorrectionDecision"
+              },
+              {
+                "$ref": "#/components/schemas/LocationCorrectionDecision"
+              },
+              {
+                "$ref": "#/components/schemas/RequestClarificationDecision"
+              },
+              {
+                "$ref": "#/components/schemas/ActionableTradeoffDecision"
+              }
+            ],
+            "title": "Decision",
+            "discriminator": {
+              "propertyName": "kind",
+              "mapping": {
+                "actionable_tradeoff": "#/components/schemas/ActionableTradeoffDecision",
+                "bird_input_correction": "#/components/schemas/BirdCorrectionDecision",
+                "location_correction": "#/components/schemas/LocationCorrectionDecision",
+                "related_taxon_selection": "#/components/schemas/TaxonSelectionDecision",
+                "request_clarification": "#/components/schemas/RequestClarificationDecision",
+                "taxon_selection": "#/components/schemas/TaxonSelectionDecision"
+              }
+            }
+          },
+          "checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Checkpoint Id"
+          },
+          "branch_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Id"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "decision"
+        ],
+        "title": "ResumeRunRequest"
+      },
+      "RunBranch": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Thread Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Branch Id"
+          },
+          "parent_branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Branch Id"
+          },
+          "head_checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Head Checkpoint Id"
+          },
+          "final_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Checkpoint Id"
+          },
+          "forked_from_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Forked From Checkpoint Id"
+          },
+          "fork_updates": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Fork Updates"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "terminal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "branch_id",
+          "head_checkpoint_id",
+          "created_at"
+        ],
+        "title": "RunBranch"
+      },
+      "RunDetail": {
+        "properties": {
+          "run": {
+            "$ref": "#/components/schemas/RunSummary"
+          },
+          "submitted_request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/SubmittedRequestView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "operations": {
+            "items": {
+              "$ref": "#/components/schemas/OperationView"
+            },
+            "type": "array",
+            "title": "Operations"
+          },
+          "branches": {
+            "items": {
+              "$ref": "#/components/schemas/RunBranch"
+            },
+            "type": "array",
+            "title": "Branches"
+          },
+          "executions": {
+            "items": {
+              "$ref": "#/components/schemas/RunExecution"
+            },
+            "type": "array",
+            "title": "Executions"
+          },
+          "pending_decisions": {
+            "items": {
+              "$ref": "#/components/schemas/PendingDecisionView"
+            },
+            "type": "array",
+            "title": "Pending Decisions"
+          },
+          "final_plan": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/FinalPlanView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "run"
+        ],
+        "title": "RunDetail"
+      },
+      "RunExecution": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Thread Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Branch Id"
+          },
+          "parent_execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Execution Id"
+          },
+          "replayed_from_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Replayed From Checkpoint Id"
+          },
+          "head_checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Head Checkpoint Id"
+          },
+          "final_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Checkpoint Id"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "terminal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Status"
+          },
+          "interrupt_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interrupt Kind"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "execution_id",
+          "branch_id",
+          "head_checkpoint_id",
+          "created_at"
+        ],
+        "title": "RunExecution"
+      },
+      "RunModeView": {
+        "properties": {
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Data Mode"
+          },
+          "model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Model Mode"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "data_mode",
+          "model_mode"
+        ],
+        "title": "RunModeView"
+      },
+      "RunSummary": {
+        "properties": {
+          "thread_id": {
+            "type": "string",
+            "maxLength": 96,
+            "minLength": 1,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]*$",
+            "title": "Thread Id"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "waiting_for_input",
+              "completed",
+              "failed"
+            ],
+            "title": "Status"
+          },
+          "data_mode": {
+            "type": "string",
+            "enum": [
+              "fixture",
+              "live"
+            ],
+            "title": "Data Mode"
+          },
+          "model_mode": {
+            "type": "string",
+            "enum": [
+              "scripted",
+              "live"
+            ],
+            "title": "Model Mode"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "updated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Updated At"
+          },
+          "current_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Checkpoint Id"
+          },
+          "branch_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Execution Id"
+          },
+          "interrupt_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interrupt Kind"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "status",
+          "data_mode",
+          "model_mode",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "RunSummary"
+      },
+      "StateCountersView": {
+        "properties": {
+          "evidence_loop_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Evidence Loop Count",
+            "default": 0
+          },
+          "plan_revision_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Plan Revision Count",
+            "default": 0
+          },
+          "recorded_tool_call_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Recorded Tool Call Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateCountersView"
+      },
+      "StateDecisionView": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Kind"
+          },
+          "option": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Option"
+          },
+          "accepted_taxon_key": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Taxon Key"
+          },
+          "selected_taxon_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Taxon Name"
+          },
+          "bird_input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bird Input"
+          },
+          "relation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Level"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "search_radius_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 25.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Radius Km"
+          },
+          "seasonal_window_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Window Radius Months"
+          },
+          "changed_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Fields"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind"
+        ],
+        "title": "StateDecisionView"
+      },
+      "StateEvidenceView": {
+        "properties": {
+          "occurrence_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Occurrence Outcome"
+          },
+          "sampled_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampled Count"
+          },
+          "retained_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained Count"
+          },
+          "ranking_eligible_count": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking Eligible Count"
+          },
+          "safe_map_cell_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Safe Map Cell Count",
+            "default": 0
+          },
+          "weather_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Status"
+          },
+          "public_site_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Site Status"
+          },
+          "candidate_site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Candidate Site Count",
+            "default": 0
+          },
+          "contextual_site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Contextual Site Count",
+            "default": 0
+          },
+          "tool_error_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Tool Error Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateEvidenceView"
+      },
+      "StateHitlView": {
+        "properties": {
+          "waiting": {
+            "type": "boolean",
+            "title": "Waiting",
+            "default": false
+          },
+          "interrupt_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Interrupt Kind"
+          },
+          "applied_decisions": {
+            "items": {
+              "$ref": "#/components/schemas/StateDecisionView"
+            },
+            "type": "array",
+            "title": "Applied Decisions"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateHitlView"
+      },
+      "StateLocationView": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "input_kind": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Input Kind"
+          },
+          "within_greater_london": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Within Greater London"
+          },
+          "administrative_district": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Administrative District"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateLocationView"
+      },
+      "StatePlanView": {
+        "properties": {
+          "deterministic_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Deterministic Status"
+          },
+          "final_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Status"
+          },
+          "generated_by": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Generated By"
+          },
+          "recommended_site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Recommended Site Count",
+            "default": 0
+          },
+          "contextual_site_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Contextual Site Count",
+            "default": 0
+          },
+          "evidence_gate_passed": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Gate Passed"
+          },
+          "low_confidence_accepted": {
+            "type": "boolean",
+            "title": "Low Confidence Accepted",
+            "default": false
+          },
+          "grounding_error_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Grounding Error Count",
+            "default": 0
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StatePlanView"
+      },
+      "StateRequestView": {
+        "properties": {
+          "target_local_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Local Date"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Hours"
+          },
+          "maximum_walking_distance_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Walking Distance Km"
+          },
+          "rain_preference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rain Preference"
+          },
+          "target_month_override": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Month Override"
+          },
+          "seasonal_window_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Window Radius Months"
+          },
+          "search_radius_km": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Radius Km"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateRequestView",
+        "description": "Location-redacted request constraints safe for a frontend timeline."
+      },
+      "StateTaxonView": {
+        "properties": {
+          "status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Status"
+          },
+          "accepted_taxon_key": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Taxon Key"
+          },
+          "common_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Common Name"
+          },
+          "scientific_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Scientific Name"
+          },
+          "canonical_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canonical Name"
+          },
+          "rank": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rank"
+          },
+          "taxonomic_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Taxonomic Status"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "StateTaxonView"
+      },
+      "StateView": {
+        "properties": {
+          "schema_version": {
+            "type": "integer",
+            "const": 1,
+            "title": "Schema Version",
+            "default": 1
+          },
+          "thread_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Thread Id"
+          },
+          "branch_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Branch Id"
+          },
+          "execution_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Execution Id"
+          },
+          "checkpoint_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Checkpoint Id"
+          },
+          "parent_checkpoint_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Checkpoint Id"
+          },
+          "node_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Node Id"
+          },
+          "graph_step": {
+            "type": "integer",
+            "title": "Graph Step"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Created At"
+          },
+          "next_nodes": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Next Nodes"
+          },
+          "terminal_status": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Terminal Status"
+          },
+          "request": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StateRequestView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "location": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StateLocationView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "taxon": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/StateTaxonView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "evidence": {
+            "$ref": "#/components/schemas/StateEvidenceView"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/StatePlanView"
+          },
+          "hitl": {
+            "$ref": "#/components/schemas/StateHitlView"
+          },
+          "counters": {
+            "$ref": "#/components/schemas/StateCountersView"
+          },
+          "invalidated_evidence": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Invalidated Evidence"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "thread_id",
+          "branch_id",
+          "execution_id",
+          "checkpoint_id",
+          "node_id",
+          "graph_step",
+          "created_at",
+          "evidence",
+          "plan",
+          "hitl",
+          "counters"
+        ],
+        "title": "StateView",
+        "description": "Strictly allow-listed, coordinate-free view of one saved checkpoint."
+      },
+      "SubmittedRequestView": {
+        "properties": {
+          "text": {
+            "type": "string",
+            "maxLength": 4000,
+            "minLength": 1,
+            "title": "Text"
+          },
+          "language": {
+            "type": "string",
+            "const": "English",
+            "title": "Language",
+            "default": "English"
+          },
+          "visibility": {
+            "type": "string",
+            "const": "local_only",
+            "title": "Visibility",
+            "default": "local_only"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "text"
+        ],
+        "title": "SubmittedRequestView",
+        "description": "Local-only display copy read from the durable graph checkpoint."
+      },
+      "TaxonCandidateView": {
+        "properties": {
+          "accepted_taxon_key": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Accepted Taxon Key"
+          },
+          "common_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Common Name"
+          },
+          "scientific_name": {
+            "type": "string",
+            "title": "Scientific Name"
+          },
+          "canonical_name": {
+            "type": "string",
+            "title": "Canonical Name"
+          },
+          "rank": {
+            "type": "string",
+            "title": "Rank"
+          },
+          "taxonomic_status": {
+            "type": "string",
+            "title": "Taxonomic Status"
+          },
+          "class_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Class Name"
+          },
+          "order": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Order"
+          },
+          "family": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Family"
+          },
+          "genus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Genus"
+          },
+          "resolution_method": {
+            "type": "string",
+            "title": "Resolution Method"
+          },
+          "confidence": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Confidence"
+          },
+          "relation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Level"
+          },
+          "relation_basis": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Basis"
+          },
+          "evidence_preview": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/TaxonEvidencePreviewView"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "accepted_taxon_key",
+          "scientific_name",
+          "canonical_name",
+          "rank",
+          "taxonomic_status",
+          "resolution_method"
+        ],
+        "title": "TaxonCandidateView"
+      },
+      "TaxonEvidencePreviewView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "evidence_outcome": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Evidence Outcome"
+          },
+          "sampled_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sampled Count"
+          },
+          "retained_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retained Count"
+          },
+          "ranking_eligible_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Ranking Eligible Count"
+          },
+          "dataset_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Dataset Count"
+          },
+          "target_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Target Months"
+          },
+          "source_status": {
+            "type": "string",
+            "title": "Source Status"
+          },
+          "limitations": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Limitations"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "source_status"
+        ],
+        "title": "TaxonEvidencePreviewView"
+      },
+      "TaxonSelectionDecision": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "taxon_selection",
+              "related_taxon_selection"
+            ],
+            "title": "Kind"
+          },
+          "accepted_taxon_key": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Accepted Taxon Key"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "kind",
+          "accepted_taxon_key"
+        ],
+        "title": "TaxonSelectionDecision"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      },
+      "WeatherDayView": {
+        "properties": {
+          "status": {
+            "type": "string",
+            "title": "Status"
+          },
+          "requested_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Requested Date"
+          },
+          "maximum_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Maximum Temperature C"
+          },
+          "minimum_temperature_c": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Minimum Temperature C"
+          },
+          "precipitation_probability_percent": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitation Probability Percent"
+          },
+          "precipitation_amount_mm": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Precipitation Amount Mm"
+          },
+          "weather_code": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Weather Code"
+          },
+          "explanation": {
+            "type": "string",
+            "title": "Explanation"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "status",
+          "requested_date",
+          "explanation"
+        ],
+        "title": "WeatherDayView"
+      },
+      "WorkflowEdgeView": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Target"
+          },
+          "conditional": {
+            "type": "boolean",
+            "title": "Conditional",
+            "default": false
+          },
+          "route_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "WorkflowEdgeView"
+      },
+      "WorkflowNodeView": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Node Id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "entry",
+              "intake",
+              "location",
+              "taxonomy",
+              "evidence",
+              "validation",
+              "planning",
+              "outcome"
+            ],
+            "title": "Stage"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "end",
+              "model",
+              "deterministic",
+              "tool",
+              "hitl",
+              "terminal"
+            ],
+            "title": "Kind"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "node_id",
+          "label",
+          "stage",
+          "kind",
+          "summary",
+          "order"
+        ],
+        "title": "WorkflowNodeView"
+      },
+      "WorkflowTopologyView": {
+        "properties": {
+          "workflow_version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Workflow Version"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowNodeView"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEdgeView"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_version",
+          "nodes",
+          "edges"
+        ],
+        "title": "WorkflowTopologyView"
+      }
+    }
+  }
+}

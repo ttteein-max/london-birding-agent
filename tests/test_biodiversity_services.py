@@ -17,8 +17,10 @@ from app.biodiversity.models import (
     WGS84Point,
 )
 from app.biodiversity.repositories import (
+    FixturePlaceGeocoderRepository,
     FixturePostcodeRepository,
     FixtureWeatherRepository,
+    LivePlaceGeocoderRepository,
     SnapshotGreenSpaceRepository,
     normalise_postcode,
 )
@@ -27,6 +29,7 @@ from app.biodiversity.tools import (
     find_public_green_spaces,
     get_weather_context,
     lookup_uk_postcode,
+    resolve_geocoded_location,
     validate_expedition_constraints,
 )
 
@@ -77,6 +80,111 @@ def test_map_point_is_rounded_and_not_treated_as_address() -> None:
     assert location.rounded_start_point.longitude == -0.1276
     assert location.administrative_district is None
     assert "not a precise home address" in location.provenance.limitations[0]
+
+
+def test_fixture_named_place_is_real_geocoder_data_and_london_validated() -> None:
+    response = FixturePlaceGeocoderRepository().search("Kensal Road")
+    candidates = response["payload"]["candidates"]
+    assert [item["postcode"] for item in candidates] == [
+        "W10 5DD",
+        "W10 5BA",
+        "W10 5DA",
+    ]
+    selected = {"candidate_id": "place-1", **candidates[0]}
+    location = resolve_geocoded_location(
+        selected,
+        provenance=response["provenance"],
+    )
+    assert location.status == LocationStatus.resolved
+    assert location.input_kind == "geocoded_place"
+    assert location.administrative_district == (
+        "Royal Borough of Kensington and Chelsea"
+    )
+    assert location.provenance.attribution == "© OpenStreetMap contributors"
+    assert "representative planning point" in location.message
+
+
+def test_live_geocoder_uses_bounded_london_query_and_drops_provider_ids(
+    monkeypatch,
+) -> None:
+    class StubClient:
+        def __init__(self) -> None:
+            self.call: tuple[str, dict[str, Any]] | None = None
+
+        def get_json(self, base_url: str, params: dict[str, Any]):
+            self.call = (base_url, params)
+            return ([{
+                "place_id": 123,
+                "osm_id": 456,
+                "lat": "51.5257048",
+                "lon": "-0.2075391",
+                "category": "highway",
+                "type": "unclassified",
+                "name": "Kensal Road",
+                "address": {
+                    "road": "Kensal Road",
+                    "suburb": "North Kensington",
+                    "city_district": "Royal Borough of Kensington and Chelsea",
+                    "postcode": "W10 5DD",
+                    "country_code": "gb",
+                },
+            }], "https://nominatim.example/search?redacted")
+
+    monkeypatch.setattr(
+        LivePlaceGeocoderRepository,
+        "_minimum_interval_seconds",
+        0,
+    )
+    client = StubClient()
+    result = LivePlaceGeocoderRepository(client=client).search("Kensal Road")
+    assert client.call is not None
+    base_url, params = client.call
+    assert base_url == "https://nominatim.openstreetmap.org/search"
+    assert params["countrycodes"] == "gb"
+    assert params["bounded"] == 1
+    assert params["limit"] == 3
+    assert "layer" not in params
+    candidate = result["payload"]["candidates"][0]
+    assert candidate["label"] == "Kensal Road"
+    assert "place_id" not in candidate
+    assert "osm_id" not in candidate
+
+
+def test_live_geocoder_keeps_natural_named_places_without_a_postcode(
+    monkeypatch,
+) -> None:
+    class StubClient:
+        def get_json(self, base_url: str, params: dict[str, Any]):
+            del base_url
+            assert "layer" not in params
+            return ([{
+                "lat": "51.5014966",
+                "lon": "0.2025856",
+                "category": "natural",
+                "type": "wetland",
+                "name": "Rainham Marshes",
+                "address": {
+                    "wetland": "Rainham Marshes",
+                    "city_district": "London Borough of Havering",
+                    "city": "Greater London",
+                    "country_code": "gb",
+                },
+            }], "https://nominatim.example/search?redacted")
+
+    monkeypatch.setattr(
+        LivePlaceGeocoderRepository,
+        "_minimum_interval_seconds",
+        0,
+    )
+    result = LivePlaceGeocoderRepository(client=StubClient()).search(
+        "Rainham Marshes"
+    )
+    candidate = result["payload"]["candidates"][0]
+    assert candidate["label"] == "Rainham Marshes"
+    assert candidate["category"] == "natural"
+    assert candidate["place_type"] == "wetland"
+    assert candidate["postcode"] is None
+    assert candidate["administrative_district"] == "London Borough of Havering"
 
 
 def test_weather_requires_exact_requested_date() -> None:

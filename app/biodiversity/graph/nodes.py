@@ -15,6 +15,7 @@ from pydantic import ValidationError
 from app.biodiversity.agent_models import (
     BiodiversityExpeditionPlan,
     ExpeditionRequestDraft,
+    GeocodedLocationCandidate,
     TerminalAgentResult,
 )
 from app.biodiversity.graph.grounding import (
@@ -46,20 +47,25 @@ from app.biodiversity.models import (
     ResolvedTaxon,
     RelatedTaxonCandidate,
     SiteSearchAction,
+    SourceFailure,
     TaxonStatus,
     TaxonEvidencePreview,
+    ToolError,
+    ToolErrorCode,
     WeatherEvidence,
 )
 from app.biodiversity.orchestration import (
     BackendDependencies,
     build_deterministic_expedition_plan,
 )
+from app.biodiversity.request_parsing import merge_request_draft
 from app.biodiversity.tools import (
     build_expedition_evidence_bundle,
     find_public_green_spaces,
     get_weather_context,
     lookup_uk_postcode,
     resolve_bird_taxon,
+    resolve_geocoded_location,
     search_occurrences,
     validate_expedition_constraints,
 )
@@ -71,19 +77,89 @@ def _json(value: Any) -> Any:
     return value
 
 
+def _raw_structured_arguments(response: Any) -> dict[str, Any] | None:
+    """Read function arguments without retaining raw model output."""
+
+    if not isinstance(response, dict):
+        return None
+    raw = response.get("raw")
+    for call in getattr(raw, "tool_calls", None) or []:
+        if isinstance(call, dict) and isinstance(call.get("args"), dict):
+            return dict(call["args"])
+    additional = getattr(raw, "additional_kwargs", None)
+    if not isinstance(additional, dict):
+        return None
+    for call in additional.get("tool_calls") or []:
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function")
+        if not isinstance(function, dict):
+            continue
+        arguments = function.get("arguments")
+        if isinstance(arguments, dict):
+            return dict(arguments)
+        if isinstance(arguments, str):
+            try:
+                decoded = json.loads(arguments)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(decoded, dict):
+                return decoded
+    return None
+
+
+def _recover_valid_draft_fields(
+    response: Any,
+) -> tuple[ExpeditionRequestDraft | None, list[str]]:
+    """Keep independently valid fields from a partially invalid tool call."""
+
+    arguments = _raw_structured_arguments(response)
+    if arguments is None:
+        return None, []
+    recovered: dict[str, Any] = {}
+    errors: list[str] = []
+    for name in ExpeditionRequestDraft.model_fields:
+        if name not in arguments or arguments[name] is None:
+            continue
+        try:
+            single_field = ExpeditionRequestDraft.model_validate(
+                {name: arguments[name]}
+            )
+        except ValidationError:
+            errors.append(
+                f"Could not safely use the model value for {name}; please correct it."
+            )
+            continue
+        recovered[name] = getattr(single_field, name)
+    return ExpeditionRequestDraft.model_validate(recovered), errors
+
+
 def _request_from_draft(draft: ExpeditionRequestDraft) -> tuple[ExpeditionRequest | None, list[str]]:
     missing = [
         field
         for field in ("bird_input", "target_local_date", "duration_hours")
         if getattr(draft, field) in {None, ""}
     ]
-    if draft.postcode is None and draft.start_point is None:
-        missing.append("postcode_or_start_point")
-    if draft.postcode is not None and draft.start_point is not None:
+    location_query = (draft.location_query or "").strip()
+    location_count = sum(
+        (
+            draft.postcode is not None,
+            draft.start_point is not None,
+            bool(location_query),
+        )
+    )
+    if location_count == 0:
+        missing.append("postcode_start_point_or_location_query")
+    if location_count > 1:
         missing.append("exactly_one_location_required")
+    if draft.location_query is not None and not 2 <= len(location_query) <= 240:
+        missing.append("location_query_length")
     if missing:
         return None, [f"Missing or contradictory field: {field}." for field in missing]
+    if location_query:
+        return None, []
     values = draft.model_dump(exclude_none=True)
+    values.pop("location_query", None)
     values["timezone"] = "Europe/London"
     try:
         return ExpeditionRequest.model_validate(values), []
@@ -107,22 +183,60 @@ def build_parse_request_node(parser_model: Any) -> Callable[[BiodiversityAgentSt
     structured_parser = parser_model.with_structured_output(
         ExpeditionRequestDraft,
         method="function_calling",
+        include_raw=True,
     )
 
     def parse_expedition_request(state: BiodiversityAgentState) -> dict[str, Any]:
         original = state["original_request_text"]
-        response = structured_parser.invoke(
-            [
-                SystemMessage(content=REQUEST_PARSER_PROMPT),
-                HumanMessage(content=f"Untrusted expedition request data:\n{original}"),
-            ]
-        )
-        draft = (
-            response
-            if isinstance(response, ExpeditionRequestDraft)
-            else ExpeditionRequestDraft.model_validate(response)
-        )
+        parser_errors: list[str] = []
+        try:
+            response = structured_parser.invoke(
+                [
+                    SystemMessage(content=REQUEST_PARSER_PROMPT),
+                    HumanMessage(content=f"Untrusted expedition request data:\n{original}"),
+                ]
+            )
+            if (
+                isinstance(response, dict)
+                and "parsed" in response
+                and "parsing_error" in response
+            ):
+                parsed = response.get("parsed")
+                if parsed is None:
+                    recovered, recovery_errors = _recover_valid_draft_fields(response)
+                    recovered = merge_request_draft(recovered, original)
+                    if recovered is None:
+                        draft = ExpeditionRequestDraft()
+                        parser_errors.append(
+                            "The model response did not match the structured request contract."
+                        )
+                    else:
+                        draft = recovered
+                        parser_errors.extend(recovery_errors)
+                else:
+                    draft = (
+                        parsed
+                        if isinstance(parsed, ExpeditionRequestDraft)
+                        else ExpeditionRequestDraft.model_validate(parsed)
+                    )
+            else:
+                draft = (
+                    response
+                    if isinstance(response, ExpeditionRequestDraft)
+                    else ExpeditionRequestDraft.model_validate(response)
+                )
+        except ValidationError:
+            # Some OpenAI-compatible adapters raise during Pydantic parsing instead
+            # of returning ``parsing_error``. Treat an invalid model-shaped draft as
+            # missing untrusted input and move to the typed HITL correction flow.
+            # Raw model output and exception text are deliberately not persisted.
+            draft = merge_request_draft(None, original) or ExpeditionRequestDraft()
+            if not draft.model_dump(mode="python", exclude_none=True):
+                parser_errors.append(
+                    "The model response did not match the structured request contract."
+                )
         request, errors = _request_from_draft(draft)
+        errors = [*parser_errors, *errors]
         payload = None
         kind = None
         if errors:
@@ -134,9 +248,14 @@ def build_parse_request_node(parser_model: Any) -> Callable[[BiodiversityAgentSt
                 "parsed_draft": draft.model_dump(mode="json"),
                 "resume_schema": {"updates": "object containing corrected request fields"},
             }
+        elif request is None:
+            kind = "location_query_pending"
         return {
             "parsed_request_draft": draft.model_dump(mode="json"),
             "expedition_request": request.model_dump(mode="json") if request else None,
+            "geocoded_location_candidates": [],
+            "geocoding_provenance": None,
+            "selected_geocoded_location": None,
             "pending_hitl_kind": kind,
             "pending_hitl_payload": payload,
             "messages": [HumanMessage(content=f"Expedition request: {original}")],
@@ -168,19 +287,25 @@ def request_clarification_interrupt(state: BiodiversityAgentState) -> dict[str, 
     unknown = set(resumed["updates"]) - allowed
     if unknown:
         raise ValueError(f"Unsupported request correction fields: {sorted(unknown)}")
-    merged = dict(state.get("parsed_request_draft") or {})
+    recovered = merge_request_draft(
+        state.get("parsed_request_draft"),
+        str(state.get("original_request_text") or ""),
+    )
+    merged = recovered.model_dump(mode="python") if recovered else {}
     merged.update(resumed["updates"])
     try:
         draft = ExpeditionRequestDraft.model_validate(merged)
     except ValidationError as exc:
         raise ValueError(f"Invalid request correction: {exc}") from exc
     request, errors = _request_from_draft(draft)
-    if request is None:
+    if request is None and errors:
         raise ValueError(f"Request correction is still invalid: {'; '.join(errors)}")
     return {
         "parsed_request_draft": draft.model_dump(mode="json"),
-        "expedition_request": request.model_dump(mode="json"),
-        "pending_hitl_kind": None,
+        "expedition_request": request.model_dump(mode="json") if request else None,
+        "pending_hitl_kind": (
+            "location_query_pending" if request is None else None
+        ),
         "pending_hitl_payload": None,
         "applied_user_decisions": [
             {"kind": "request_clarification", "updates": resumed["updates"]}
@@ -189,10 +314,100 @@ def request_clarification_interrupt(state: BiodiversityAgentState) -> dict[str, 
     }
 
 
+def build_geocode_location_node(
+    dependencies: BackendDependencies,
+) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
+    def geocode_location_query(state: BiodiversityAgentState) -> dict[str, Any]:
+        draft = ExpeditionRequestDraft.model_validate(state["parsed_request_draft"])
+        query = (draft.location_query or "").strip()
+        if not query or dependencies.geocoder is None:
+            raise ValueError("Named-place geocoding requires a configured location query")
+        candidates: list[GeocodedLocationCandidate] = []
+        provenance: dict[str, Any] | None = None
+        tool_error: ToolError | None = None
+        try:
+            response = dependencies.geocoder.search(query, limit=3)
+            provenance = dict(response.get("provenance") or {})
+            raw_candidates = (response.get("payload") or {}).get("candidates")
+            if not isinstance(raw_candidates, list):
+                raise ValueError("geocoder response omitted candidates")
+            for index, raw in enumerate(raw_candidates, start=1):
+                candidate = GeocodedLocationCandidate.model_validate(
+                    {"candidate_id": f"place-{index}", **dict(raw)}
+                )
+                if resolve_geocoded_location(
+                    candidate,
+                    provenance=provenance,
+                ).status == LocationStatus.resolved:
+                    candidates.append(candidate)
+        except SourceFailure as exc:
+            tool_error = ToolError(
+                tool="geocode_location_query",
+                code=exc.code,
+                message=exc.message,
+                retryable=exc.retryable,
+                source=exc.source,
+            )
+        except (KeyError, TypeError, ValueError):
+            tool_error = ToolError(
+                tool="geocode_location_query",
+                code=ToolErrorCode.malformed_upstream_response,
+                message="Geocoder results did not match the expected safe shape.",
+                retryable=False,
+                source="Nominatim Search API",
+            )
+        if candidates:
+            status = "human_selection_required"
+            question = (
+                "Select the intended Greater London place match, or enter a London postcode."
+            )
+        elif tool_error is not None:
+            status = tool_error.code.value
+            question = (
+                "The named-place source is unavailable; enter a London postcode to continue."
+            )
+        else:
+            status = "place_not_found"
+            question = (
+                "No verified Greater London place match was found; enter a London postcode."
+            )
+        candidate_payloads = [item.model_dump(mode="json") for item in candidates]
+        return {
+            "geocoded_location_candidates": candidate_payloads,
+            "geocoding_provenance": provenance,
+            "selected_geocoded_location": None,
+            "pending_hitl_kind": "location_correction",
+            "pending_hitl_payload": {
+                "kind": "location_correction",
+                "question": question,
+                "status": status,
+                "location_candidates": candidate_payloads,
+                "resume_schema": {
+                    "candidate_id": "offered place candidate",
+                    "or_postcode": "London postcode",
+                },
+            },
+            "tool_errors": (
+                [tool_error.model_dump(mode="json")] if tool_error else []
+            ),
+            "visited_nodes": ["geocode_location_query"],
+        }
+
+    return geocode_location_query
+
+
 def build_resolve_location_node(dependencies: BackendDependencies) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
     def resolve_location(state: BiodiversityAgentState) -> dict[str, Any]:
         request = ExpeditionRequest.model_validate(state["expedition_request"])
-        location = lookup_uk_postcode(request, repository=dependencies.postcode)
+        selected = state.get("selected_geocoded_location")
+        location = (
+            resolve_geocoded_location(
+                selected,
+                provenance=dict(state.get("geocoding_provenance") or {}),
+            )
+            if selected
+            else lookup_uk_postcode(request, repository=dependencies.postcode)
+        )
         kind = None
         payload = None
         if location.status in {
@@ -223,16 +438,55 @@ def location_correction_interrupt(state: BiodiversityAgentState) -> dict[str, An
     if state.get("pending_hitl_kind") != "location_correction" or not payload:
         raise ValueError("Location correction interrupt has no pending payload")
     resumed = interrupt(payload)
-    if not isinstance(resumed, dict) or set(resumed) not in ({"postcode"}, {"start_point"}):
-        raise ValueError("Resume must contain exactly one of postcode or start_point")
-    request = ExpeditionRequest.model_validate(state["expedition_request"])
-    update = {"postcode": None, "start_point": None, **resumed}
+    if not isinstance(resumed, dict) or set(resumed) not in (
+        {"postcode"},
+        {"start_point"},
+        {"candidate_id"},
+    ):
+        raise ValueError(
+            "Resume must contain exactly one of postcode, start_point, or candidate_id"
+        )
+    selected: dict[str, Any] | None = None
+    if "candidate_id" in resumed:
+        selected = next(
+            (
+                dict(item)
+                for item in state.get("geocoded_location_candidates") or []
+                if item.get("candidate_id") == resumed["candidate_id"]
+            ),
+            None,
+        )
+        if selected is None:
+            raise ValueError("candidate_id is not present in the offered place matches")
+        location_update = {
+            "postcode": None,
+            "start_point": {
+                "longitude": selected["longitude"],
+                "latitude": selected["latitude"],
+            },
+        }
+    else:
+        location_update = {"postcode": None, "start_point": None, **resumed}
+    current_request = state.get("expedition_request")
+    if current_request:
+        values = ExpeditionRequest.model_validate(current_request).model_dump(
+            mode="python"
+        )
+    else:
+        draft = ExpeditionRequestDraft.model_validate(
+            state.get("parsed_request_draft") or {}
+        )
+        values = draft.model_dump(mode="python", exclude_none=True)
+        values.pop("location_query", None)
+        values["timezone"] = "Europe/London"
+    values.update(location_update)
     try:
-        corrected = _validated_request_update(request, update)
+        corrected = ExpeditionRequest.model_validate(values)
     except ValidationError as exc:
         raise ValueError(f"Invalid location correction: {exc}") from exc
     return {
         "expedition_request": corrected.model_dump(mode="json"),
+        "selected_geocoded_location": selected,
         "resolved_location": None,
         "pending_hitl_kind": None,
         "pending_hitl_payload": None,
@@ -614,12 +868,33 @@ def _actionable_tradeoff(
         and not state.get("low_confidence_accepted", False)
     ):
         options: list[dict[str, Any]] = []
+        occurrence = bundle.occurrence
         if request.seasonal_window_radius_months < 3:
+            next_radius = request.seasonal_window_radius_months + 1
+            next_months = sorted(
+                {
+                    ((request.seasonal_target_month + offset - 1) % 12) + 1
+                    for offset in range(-next_radius, next_radius + 1)
+                }
+            )
             options.append(
                 {
                     "option": "widen_seasonal_window",
                     "current_radius_months": request.seasonal_window_radius_months,
                     "maximum_radius_months": 3,
+                    "current_seasonal_months": (
+                        list(occurrence.seasonal_months) if occurrence else []
+                    ),
+                    "next_seasonal_months": next_months,
+                    "year_window": (
+                        list(occurrence.year_window) if occurrence else None
+                    ),
+                    "current_server_match_count": (
+                        occurrence.counts.server_match_count if occurrence else 0
+                    ),
+                    "current_ranking_eligible_count": (
+                        occurrence.counts.ranking_eligible_count if occurrence else 0
+                    ),
                 }
             )
         if related_candidates:
@@ -637,8 +912,10 @@ def _actionable_tradeoff(
             "kind": "actionable_tradeoff",
             "question": "How should the low historical-evidence result continue?",
             "reason": (
-                "London-wide occurrence evidence does not pass the deterministic gate; "
-                "expanding the local site radius would not solve this condition."
+                "The current multi-year seasonal occurrence query does not pass the "
+                "deterministic gate. Widening changes the queried months, not the target "
+                "species or historical year window; expanding the local site radius "
+                "would not solve this evidence condition."
             ),
             "options": options,
             "resume_schema": {

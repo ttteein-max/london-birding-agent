@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import threading
 import time
 from copy import deepcopy
 from pathlib import Path
@@ -61,6 +62,10 @@ class PostcodeRepository(Protocol):
     def lookup(self, normalised_postcode: str) -> dict[str, Any]: ...
 
 
+class PlaceGeocoderRepository(Protocol):
+    def search(self, query: str, *, limit: int = 3) -> dict[str, Any]: ...
+
+
 class WeatherRepository(Protocol):
     def daily(self, longitude: float, latitude: float, requested_date: str) -> dict[str, Any]: ...
 
@@ -77,7 +82,7 @@ class BoundedJsonClient:
             raise ValueError("timeout must be positive and max_attempts must be 1..3")
         self.timeout_seconds = timeout_seconds
         self.max_attempts = max_attempts
-        self.user_agent = "London-Biodiversity-Expedition-Planner-Phase1/1.0"
+        self.user_agent = "London-Biodiversity-Expedition-Planner/4.0"
 
     def get_json(
         self, base_url: str, params: dict[str, Any] | None = None
@@ -565,6 +570,158 @@ class LivePostcodeRepository:
                 "quality": result.get("quality"),
             },
             "live_url": url,
+        }
+
+
+class FixturePlaceGeocoderRepository:
+    """Versioned Nominatim results used by offline tests and demonstrations."""
+
+    def __init__(
+        self,
+        path: Path = FIXTURE_DIR / "nominatim-london-places.json",
+    ) -> None:
+        self.path = path
+
+    def search(self, query: str, *, limit: int = 3) -> dict[str, Any]:
+        if not 1 <= limit <= 5:
+            raise ValueError("geocoder result limit must be 1..5")
+        fixture = _load_fixture(self.path)
+        normalised = " ".join(query.casefold().split())
+        for result in fixture["payload"]["results"]:
+            if result.get("normalised_query") == normalised:
+                return {
+                    "schema_version": fixture["schema_version"],
+                    "payload": {
+                        "query": query,
+                        "candidates": deepcopy(result.get("candidates") or [])[:limit],
+                    },
+                    "provenance": deepcopy(fixture["provenance"]),
+                }
+        return {
+            "schema_version": fixture["schema_version"],
+            "payload": {"query": query, "candidates": []},
+            "provenance": deepcopy(fixture["provenance"]),
+        }
+
+
+class LivePlaceGeocoderRepository:
+    """Low-rate Nominatim client for submitted London place searches."""
+
+    _request_lock = threading.Lock()
+    _last_request_started = 0.0
+    _minimum_interval_seconds = 1.0
+
+    def __init__(self, client: BoundedJsonClient | None = None) -> None:
+        self.client = client or BoundedJsonClient(max_attempts=2)
+
+    @classmethod
+    def _wait_for_public_service_budget(cls) -> None:
+        elapsed = time.monotonic() - cls._last_request_started
+        if elapsed < cls._minimum_interval_seconds:
+            time.sleep(cls._minimum_interval_seconds - elapsed)
+        cls._last_request_started = time.monotonic()
+
+    @staticmethod
+    def _candidate(record: dict[str, Any]) -> dict[str, Any] | None:
+        address = record.get("address")
+        if not isinstance(address, dict) or address.get("country_code") != "gb":
+            return None
+        try:
+            longitude = float(record["lon"])
+            latitude = float(record["lat"])
+        except (KeyError, TypeError, ValueError):
+            return None
+        label = (
+            record.get("name")
+            or address.get("road")
+            or address.get("neighbourhood")
+            or address.get("suburb")
+            or address.get("city")
+        )
+        if not isinstance(label, str) or not label.strip():
+            return None
+        locality = (
+            address.get("neighbourhood")
+            or address.get("suburb")
+            or address.get("quarter")
+        )
+        district = (
+            address.get("city_district")
+            or address.get("borough")
+            or address.get("county")
+            or address.get("city")
+        )
+        return {
+            "label": label.strip(),
+            "locality": str(locality).strip() if locality else None,
+            "administrative_district": str(district).strip() if district else None,
+            "postcode": (
+                str(address["postcode"]).strip() if address.get("postcode") else None
+            ),
+            "category": (
+                str(record["category"]).strip() if record.get("category") else None
+            ),
+            "place_type": (
+                str(record["type"]).strip() if record.get("type") else None
+            ),
+            "longitude": longitude,
+            "latitude": latitude,
+        }
+
+    def search(self, query: str, *, limit: int = 3) -> dict[str, Any]:
+        if not 1 <= limit <= 5:
+            raise ValueError("geocoder result limit must be 1..5")
+        with self._request_lock:
+            self._wait_for_public_service_budget()
+            raw, _url = self.client.get_json(
+                "https://nominatim.openstreetmap.org/search",
+                {
+                    "q": f"{query}, London, United Kingdom",
+                    "format": "jsonv2",
+                    "addressdetails": 1,
+                    "limit": limit,
+                    "countrycodes": "gb",
+                    "viewbox": "-0.5103,51.2868,0.3340,51.6919",
+                    "bounded": 1,
+                    "accept-language": "en",
+                    "dedupe": 1,
+                },
+            )
+        if not isinstance(raw, list):
+            raise SourceFailure(
+                ToolErrorCode.malformed_upstream_response,
+                "Nominatim response was not a result list.",
+                source="Nominatim Search API",
+            )
+        candidates = [
+            candidate
+            for record in raw[:limit]
+            if isinstance(record, dict)
+            if (candidate := self._candidate(record)) is not None
+        ]
+        if raw and not candidates:
+            raise SourceFailure(
+                ToolErrorCode.malformed_upstream_response,
+                "Nominatim results did not match the expected safe shape.",
+                source="Nominatim Search API",
+            )
+        return {
+            "schema_version": 1,
+            "payload": {"query": query, "candidates": candidates},
+            "provenance": {
+                "source_name": "Nominatim Search API",
+                "source_url": "https://nominatim.org/release-docs/latest/api/Search/",
+                "retrieved_at_utc": time.strftime(
+                    "%Y-%m-%dT%H:%M:%SZ", time.gmtime()
+                ),
+                "licence": "Open Database Licence (ODbL) 1.0",
+                "attribution": "© OpenStreetMap contributors",
+                "known_limitations": [
+                    "A geocoder match is a representative planning point, not a precise entrance.",
+                    "Named natural features may not include a postcode.",
+                    "Roads may be split into multiple candidate segments.",
+                ],
+            },
         }
 
 

@@ -1,0 +1,62 @@
+flowchart TB
+    subgraph Browser[React cartographic field notebook]
+        Composer[Request composer]
+        RequestRecord[Selected run request record]
+        Map[MapLibre evidence map]
+        Cards[Plan, evidence, constraints, weather]
+        Trace[Live node, model, tool trace]
+        HITL[Typed human decision cards]
+        Travel[Checkpoint, fork, replay, compare]
+    end
+
+    subgraph API[FastAPI application boundary]
+        Routes[Versioned /api/v1 routes]
+        DTO[Allow-listed Pydantic DTOs]
+        Coordinator[Per-thread mutation coordinator]
+        SSE[SSE adapter]
+        Views[Safe checkpoint, evidence, map views]
+    end
+
+    subgraph Runtime[Phase 3 workflow boundary]
+        Manager[BiodiversityRunManager]
+        Graph[LangGraph biodiversity workflow]
+        Geocoder[Typed named-place resolution]
+        Broker[AgentRunEvent broker]
+        Checkpointer[(Durable SQLite checkpointer)]
+    end
+
+    subgraph ApplicationData[Application-owned persistence and public snapshots]
+        Catalog[(SQLite run catalog)]
+        Reports[Safe operation reports]
+        OSM[Versioned OSM polygons]
+        Nominatim[Nominatim search or sanitized fixture]
+        Fixtures[Fixture evidence and scripted models]
+    end
+
+    Composer -->|202 operation identity| Routes
+    Routes --> DTO
+    DTO --> Coordinator
+    Coordinator -->|worker thread| Manager
+    Manager --> Graph
+    Graph --> Geocoder
+    Geocoder -->|bounded candidates| Nominatim
+    Geocoder -->|typed human selection| HITL
+    Graph <--> Checkpointer
+    Graph --> Broker
+    Broker --> SSE
+    SSE -->|sequence replay and live events| Trace
+    Manager --> Views
+    Views --> DTO
+    DTO --> Map
+    DTO --> Cards
+    DTO -->|local profile only| RequestRecord
+    DTO --> HITL
+    DTO --> Travel
+    Coordinator <--> Catalog
+    Coordinator --> Reports
+    SSE -. historical replay .-> Reports
+    Views --> OSM
+    Graph --> Fixtures
+
+    classDef privacy fill:#174f43,color:#fff,stroke:#0b382f,stroke-width:2px;
+    class DTO,Views,Geocoder privacy;

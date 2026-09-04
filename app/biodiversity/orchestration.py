@@ -17,15 +17,18 @@ from app.biodiversity.models import (
 )
 from app.biodiversity.repositories import (
     FixtureOccurrenceRepository,
+    FixturePlaceGeocoderRepository,
     FixturePostcodeRepository,
     FixtureTaxonomyRepository,
     FixtureWeatherRepository,
     GreenSpaceRepository,
     LiveOccurrenceRepository,
+    LivePlaceGeocoderRepository,
     LivePostcodeRepository,
     LiveTaxonomyRepository,
     LiveWeatherRepository,
     OccurrenceRepository,
+    PlaceGeocoderRepository,
     PostcodeRepository,
     SnapshotGreenSpaceRepository,
     TaxonomyRepository,
@@ -49,6 +52,7 @@ class BackendDependencies:
     occurrences: OccurrenceRepository
     weather: WeatherRepository
     green_spaces: GreenSpaceRepository
+    geocoder: PlaceGeocoderRepository | None = None
 
     @classmethod
     def fixture(cls) -> "BackendDependencies":
@@ -58,6 +62,7 @@ class BackendDependencies:
             occurrences=FixtureOccurrenceRepository(),
             weather=FixtureWeatherRepository(),
             green_spaces=SnapshotGreenSpaceRepository(),
+            geocoder=FixturePlaceGeocoderRepository(),
         )
 
     @classmethod
@@ -68,6 +73,7 @@ class BackendDependencies:
             occurrences=LiveOccurrenceRepository(),
             weather=LiveWeatherRepository(),
             green_spaces=SnapshotGreenSpaceRepository(),
+            geocoder=LivePlaceGeocoderRepository(),
         )
 
 
@@ -137,7 +143,7 @@ def build_deterministic_expedition_plan(
             EvidenceOutcome.strong_map_evidence: strong_explanation,
             EvidenceOutcome.limited_contextual_evidence: (
                 "At least five retained historical records exist, but the strong spatial "
-                "gate is not met; no site-level hotspot recommendation is made."
+                "gate is not met; no site-level candidate recommendation is made."
             ),
             EvidenceOutcome.insufficient_evidence: (
                 "No retained evidence or only isolated records were found; no site-level "

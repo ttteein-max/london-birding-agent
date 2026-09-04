@@ -73,10 +73,19 @@ def parse_scripted_request(text: str) -> ExpeditionRequestDraft:
     walk_match = re.search(r"(?:maximum|max(?:imum)? walking distance(?: of)?|walk no more than)\s+(\d+(?:\.\d+)?)\s*km\b", text, re.IGNORECASE)
     month_match = re.search(r"target month(?: override)?(?: of| is)?\s+(\d{1,2})\b", text, re.IGNORECASE)
     point_match = re.search(r"(?:point|coordinates?)\s*\(?\s*(-?\d+\.\d+)\s*,\s*(-?\d+\.\d+)\s*\)?", text, re.IGNORECASE)
+    location_match = re.search(
+        r"\bfrom\s+(.+?)\s+on\s+(?:\d{1,2}\s+[A-Za-z]+\s+20\d{2}|20\d{2}-\d{2}-\d{2})\b",
+        text,
+        re.IGNORECASE,
+    )
+    location_query = None
+    if location_match and postcode_match is None and point_match is None:
+        location_query = location_match.group(1).strip(" ,.")
     return ExpeditionRequestDraft(
         bird_input=bird_match.group(1).strip() if bird_match else None,
         postcode=postcode_match.group(1).upper() if postcode_match else None,
         start_point={"longitude": float(point_match.group(1)), "latitude": float(point_match.group(2))} if point_match else None,
+        location_query=location_query,
         target_local_date=_parse_date(text),
         duration_hours=duration,
         maximum_walking_distance_km=float(walk_match.group(1)) if walk_match else None,
