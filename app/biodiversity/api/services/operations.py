@@ -11,7 +11,6 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import uuid4
 
-from app.agents.model_factory import create_live_chat_model
 from app.biodiversity.api.dependencies import APISettings
 from app.biodiversity.api.repositories import RunCatalog
 from app.biodiversity.api.schemas import (
@@ -33,6 +32,7 @@ from app.biodiversity.api.services.public_demo import DemoRetention, PublicDemoG
 from app.biodiversity.api.services.topology import build_workflow_topology
 from app.biodiversity.api.services.views import SafeCheckpointViews
 from app.biodiversity.graph import build_biodiversity_graph
+from app.biodiversity.model_factory import create_live_chat_model
 from app.biodiversity.observability import (
     AgentRunEvent,
     AgentRunEventBatch,
