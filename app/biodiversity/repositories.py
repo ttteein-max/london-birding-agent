@@ -684,7 +684,6 @@ class LivePlaceGeocoderRepository:
                     "viewbox": "-0.5103,51.2868,0.3340,51.6919",
                     "bounded": 1,
                     "accept-language": "en",
-                    "layer": "address",
                     "dedupe": 1,
                 },
             )
@@ -719,6 +718,7 @@ class LivePlaceGeocoderRepository:
                 "attribution": "© OpenStreetMap contributors",
                 "known_limitations": [
                     "A geocoder match is a representative planning point, not a precise entrance.",
+                    "Named natural features may not include a postcode.",
                     "Roads may be split into multiple candidate segments.",
                 ],
             },

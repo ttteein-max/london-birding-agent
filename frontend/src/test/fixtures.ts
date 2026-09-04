@@ -4,6 +4,8 @@ import type {
   HistoryView,
   MapEvidenceView,
   PlanComparison,
+  StateView,
+  WorkflowTopologyView,
 } from "../api/contracts";
 
 export const evidenceFixture: EvidenceView = {
@@ -26,6 +28,7 @@ export const evidenceFixture: EvidenceView = {
   },
   quality: {
     spatial_cell_count: 31,
+    safe_map_cell_count: 12,
     retained_dataset_count: 8,
     ranking_dataset_count: 6,
     dominant_ranking_dataset_share: 0.42,
@@ -34,6 +37,14 @@ export const evidenceFixture: EvidenceView = {
     year_distribution: { "2025": 42 },
     month_distribution: { "6": 86 },
     warnings: ["Sampling is bounded and not exhaustive."],
+  },
+  gate: {
+    passed: true,
+    criteria: [
+      { key: "ranking_eligible_records", label: "Ranking-eligible records", value: 227, minimum: 50, passed: true },
+      { key: "spatial_cells_1km", label: "Distinct ranking 1 km cells", value: 31, minimum: 5, passed: true },
+      { key: "ranking_datasets", label: "Ranking datasets", value: 6, minimum: 2, passed: true },
+    ],
   },
   seasonal_target_month: 6,
   seasonal_months: [5, 6, 7],
@@ -172,6 +183,23 @@ export const historyFixture: HistoryView = {
   ],
 };
 
+export const workflowTopologyFixture: WorkflowTopologyView = {
+  workflow_version: "phase-3.1",
+  nodes: [
+    { node_id: "__start__", label: "Start", stage: "entry", kind: "start", summary: "Accept an execution.", order: 0 },
+    { node_id: "evidence_agent", label: "Evidence agent", stage: "evidence", kind: "model", summary: "Choose bounded evidence tools.", order: 0 },
+    { node_id: "actionable_tradeoff_interrupt", label: "Actionable trade-off", stage: "validation", kind: "hitl", summary: "Pause for a human choice.", order: 0 },
+    { node_id: "grounding_and_safety_checks", label: "Grounding and safety checks", stage: "planning", kind: "deterministic", summary: "Verify grounded claims.", order: 0 },
+    { node_id: "__end__", label: "End", stage: "outcome", kind: "end", summary: "Persist the outcome.", order: 0 },
+  ],
+  edges: [
+    { source: "__start__", target: "evidence_agent", conditional: false },
+    { source: "evidence_agent", target: "actionable_tradeoff_interrupt", conditional: true },
+    { source: "evidence_agent", target: "grounding_and_safety_checks", conditional: true },
+    { source: "grounding_and_safety_checks", target: "__end__", conditional: false },
+  ],
+};
+
 export const comparisonFixture: PlanComparison = {
   thread_id: "thread-one",
   checkpoint_a: "checkpoint-final",
@@ -202,4 +230,32 @@ export const mapFixture: MapEvidenceView = {
   attributions: ["© OpenStreetMap contributors", "GBIF.org", "Open-Meteo"],
   limitations: ["Straight-line distance is not a walking route."],
   grid_note: "Only strong-gate aggregate cells are shown.",
+};
+
+export const stateFixture: StateView = {
+  schema_version: 1,
+  thread_id: "thread-one",
+  branch_id: "branch-original",
+  execution_id: "execution-original",
+  checkpoint_id: "checkpoint-final",
+  node_id: "grounding_and_safety_checks",
+  graph_step: 24,
+  source: "loop",
+  created_at: "2026-09-02T10:00:00Z",
+  next_nodes: [],
+  terminal_status: "completed",
+  request: { seasonal_window_radius_months: 2, search_radius_km: 6.9 },
+  location: { status: "resolved", administrative_district: "Royal Borough of Greenwich" },
+  taxon: { status: "resolved", accepted_taxon_key: 2478523, canonical_name: "Picus viridis" },
+  evidence: { safe_map_cell_count: 4, candidate_site_count: 0, contextual_site_count: 8, tool_error_count: 1 },
+  plan: { recommended_site_count: 0, contextual_site_count: 8, evidence_gate_passed: true, low_confidence_accepted: false, grounding_error_count: 0 },
+  hitl: {
+    waiting: false,
+    applied_decisions: [
+      { kind: "actionable_tradeoff", option: "widen_seasonal_window", seasonal_window_radius_months: 2, changed_fields: [] },
+      { kind: "actionable_tradeoff", option: "expand_search_radius", search_radius_km: 6.9, changed_fields: [] },
+    ],
+  },
+  counters: { evidence_loop_count: 3, plan_revision_count: 0, recorded_tool_call_count: 3 },
+  invalidated_evidence: [],
 };

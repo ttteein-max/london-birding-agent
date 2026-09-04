@@ -33,7 +33,8 @@ test("Common woodpigeon strong-evidence happy path", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Columba palumbus" })).toBeVisible();
   await expect(page.getByText("Evidence gate passed", { exact: true })).toBeVisible();
   await expect(page.locator(".plan-columns > div").first().locator("li")).not.toHaveCount(0);
-  await expect(page.getByLabel("Map legend")).toContainText("Evidence-grounded candidate");
+  await expect(page.getByLabel("Map legend", { exact: true })).toContainText("Evidence-grounded candidate");
+  await page.getByText(/Event audit · \d+ live events/).click();
   await expect(page.getByLabel("Ordered agent events").locator("li")).not.toHaveCount(0);
   await page.getByRole("button", { name: /Inspect state for/ }).last().click();
   await expect(page.getByRole("heading", { name: "Safe state inspector" })).toBeVisible();
@@ -93,8 +94,8 @@ test("forked constraints compare without replacing the original final", async ({
   expect(original?.final_checkpoint_id).toBeTruthy();
   expect(forked?.final_checkpoint_id).toBeTruthy();
 
-  await page.getByLabel("Checkpoint A").selectOption(original.final_checkpoint_id);
-  await page.getByLabel("Checkpoint B").selectOption(forked.final_checkpoint_id);
+  await page.getByLabel("Checkpoint A", { exact: true }).selectOption(original.final_checkpoint_id);
+  await page.getByLabel("Checkpoint B", { exact: true }).selectOption(forked.final_checkpoint_id);
   await page.getByRole("button", { name: "Compare plans" }).click();
   await expect(page.locator(".comparison-results article.changed")).not.toHaveCount(0);
   await expect(page.getByText("The original final plan remains immutable when replaying or forking.")).toBeVisible();

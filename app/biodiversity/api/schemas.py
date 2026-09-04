@@ -39,6 +39,19 @@ OperationKind = Literal["start", "resume", "replay", "fork"]
 EvidenceDisplayStatus = Literal[
     "pending", "strong", "limited", "insufficient", "source_failure"
 ]
+WorkflowNodeKind = Literal[
+    "start", "end", "model", "deterministic", "tool", "hitl", "terminal"
+]
+WorkflowStage = Literal[
+    "entry",
+    "intake",
+    "location",
+    "taxonomy",
+    "evidence",
+    "validation",
+    "planning",
+    "outcome",
+]
 
 
 class RunModeView(StrictModel):
@@ -67,6 +80,28 @@ class HealthView(StrictModel):
     default_model_mode: Literal["scripted", "live"]
     allowed_run_modes: list[RunModeView]
     public_demo: bool
+
+
+class WorkflowNodeView(StrictModel):
+    node_id: NonEmptyText
+    label: NonEmptyText
+    stage: WorkflowStage
+    kind: WorkflowNodeKind
+    summary: NonEmptyText
+    order: int = Field(ge=0)
+
+
+class WorkflowEdgeView(StrictModel):
+    source: NonEmptyText
+    target: NonEmptyText
+    conditional: bool = False
+    route_label: str | None = None
+
+
+class WorkflowTopologyView(StrictModel):
+    workflow_version: NonEmptyText
+    nodes: list[WorkflowNodeView]
+    edges: list[WorkflowEdgeView]
 
 
 class CreateRunRequest(StrictModel):
@@ -256,6 +291,22 @@ class HitlOptionView(StrictModel):
     maximum_radius_months: int | None = None
     candidate_count: int | None = None
     relation_levels: list[str] = Field(default_factory=list)
+    current_seasonal_months: list[int] = Field(default_factory=list)
+    next_seasonal_months: list[int] = Field(default_factory=list)
+    year_window: tuple[int, int] | None = None
+    current_server_match_count: int | None = Field(default=None, ge=0)
+    current_ranking_eligible_count: int | None = Field(default=None, ge=0)
+
+
+class ParsedRequestDraftView(StrictModel):
+    """Safe, editable request fields already extracted before clarification."""
+
+    bird_input: str | None = None
+    postcode: str | None = None
+    location_query: str | None = None
+    has_explicit_start_point: bool = False
+    target_local_date: date | None = None
+    duration_hours: float | None = Field(default=None, gt=0, le=24)
 
 
 class PendingDecisionView(StrictModel):
@@ -279,6 +330,7 @@ class PendingDecisionView(StrictModel):
         default_factory=list
     )
     options: list[HitlOptionView] = Field(default_factory=list)
+    parsed_draft: ParsedRequestDraftView | None = None
 
 
 class PlanSiteView(StrictModel):
@@ -360,6 +412,7 @@ class EvidenceCountsView(StrictModel):
 
 class EvidenceQualityView(StrictModel):
     spatial_cell_count: int = Field(default=0, ge=0)
+    safe_map_cell_count: int = Field(default=0, ge=0)
     retained_dataset_count: int = Field(default=0, ge=0)
     ranking_dataset_count: int = Field(default=0, ge=0)
     dominant_ranking_dataset_share: float = Field(default=0, ge=0, le=1)
@@ -368,6 +421,21 @@ class EvidenceQualityView(StrictModel):
     year_distribution: dict[str, int] = Field(default_factory=dict)
     month_distribution: dict[str, int] = Field(default_factory=dict)
     warnings: list[str] = Field(default_factory=list)
+
+
+class EvidenceGateCriterionView(StrictModel):
+    key: Literal[
+        "ranking_eligible_records", "spatial_cells_1km", "ranking_datasets"
+    ]
+    label: NonEmptyText
+    value: int = Field(ge=0)
+    minimum: int = Field(gt=0)
+    passed: bool
+
+
+class EvidenceGateView(StrictModel):
+    passed: bool
+    criteria: list[EvidenceGateCriterionView]
 
 
 class ProvenanceView(StrictModel):
@@ -391,6 +459,7 @@ class EvidenceView(StrictModel):
     reason: str | None = None
     counts: EvidenceCountsView
     quality: EvidenceQualityView
+    gate: EvidenceGateView
     seasonal_target_month: int | None = None
     seasonal_months: list[int] = Field(default_factory=list)
     year_window: tuple[int, int] | None = None

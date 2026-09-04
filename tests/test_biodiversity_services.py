@@ -143,10 +143,48 @@ def test_live_geocoder_uses_bounded_london_query_and_drops_provider_ids(
     assert params["countrycodes"] == "gb"
     assert params["bounded"] == 1
     assert params["limit"] == 3
+    assert "layer" not in params
     candidate = result["payload"]["candidates"][0]
     assert candidate["label"] == "Kensal Road"
     assert "place_id" not in candidate
     assert "osm_id" not in candidate
+
+
+def test_live_geocoder_keeps_natural_named_places_without_a_postcode(
+    monkeypatch,
+) -> None:
+    class StubClient:
+        def get_json(self, base_url: str, params: dict[str, Any]):
+            del base_url
+            assert "layer" not in params
+            return ([{
+                "lat": "51.5014966",
+                "lon": "0.2025856",
+                "category": "natural",
+                "type": "wetland",
+                "name": "Rainham Marshes",
+                "address": {
+                    "wetland": "Rainham Marshes",
+                    "city_district": "London Borough of Havering",
+                    "city": "Greater London",
+                    "country_code": "gb",
+                },
+            }], "https://nominatim.example/search?redacted")
+
+    monkeypatch.setattr(
+        LivePlaceGeocoderRepository,
+        "_minimum_interval_seconds",
+        0,
+    )
+    result = LivePlaceGeocoderRepository(client=StubClient()).search(
+        "Rainham Marshes"
+    )
+    candidate = result["payload"]["candidates"][0]
+    assert candidate["label"] == "Rainham Marshes"
+    assert candidate["category"] == "natural"
+    assert candidate["place_type"] == "wetland"
+    assert candidate["postcode"] is None
+    assert candidate["administrative_district"] == "London Borough of Havering"
 
 
 def test_weather_requires_exact_requested_date() -> None:

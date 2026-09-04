@@ -37,6 +37,7 @@ from app.biodiversity.run_models import (
     StateTaxonView,
     StateView,
 )
+from app.biodiversity.request_parsing import merge_request_draft
 
 
 DERIVED_FORK_FIELDS = {
@@ -106,13 +107,70 @@ def checkpoint_node_id(
 
 
 def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
-    return [
-        StateDecisionView(
-            kind=str(item.get("kind") or "unknown"),
-            option=(str(item["option"]) if item.get("option") else None),
+    resolved_taxon = dict(values.get("resolved_taxon") or {})
+    resolved_key = resolved_taxon.get("accepted_taxon_key")
+    resolved_name = (
+        resolved_taxon.get("common_name")
+        or resolved_taxon.get("canonical_name")
+        or resolved_taxon.get("scientific_name")
+    )
+    decisions: list[StateDecisionView] = []
+    for raw in values.get("applied_user_decisions") or []:
+        item = dict(raw)
+        accepted_key = item.get("accepted_taxon_key")
+        selected_name = (
+            str(resolved_name)
+            if accepted_key is not None
+            and accepted_key == resolved_key
+            and resolved_name
+            else None
         )
-        for item in values.get("applied_user_decisions") or []
-    ]
+        updates = item.get("updates")
+        decisions.append(
+            StateDecisionView(
+                kind=str(item.get("kind") or "unknown"),
+                option=(str(item["option"]) if item.get("option") else None),
+                accepted_taxon_key=(
+                    int(accepted_key)
+                    if isinstance(accepted_key, int)
+                    and not isinstance(accepted_key, bool)
+                    and accepted_key > 0
+                    else None
+                ),
+                selected_taxon_name=selected_name,
+                bird_input=(
+                    str(item["bird_input"]) if item.get("bird_input") else None
+                ),
+                relation_level=(
+                    str(item["relation_level"])
+                    if item.get("relation_level")
+                    else None
+                ),
+                rationale=(
+                    str(item["rationale"]) if item.get("rationale") else None
+                ),
+                search_radius_km=(
+                    float(item["search_radius_km"])
+                    if isinstance(item.get("search_radius_km"), (int, float))
+                    and not isinstance(item.get("search_radius_km"), bool)
+                    else None
+                ),
+                seasonal_window_radius_months=(
+                    int(item["seasonal_window_radius_months"])
+                    if isinstance(item.get("seasonal_window_radius_months"), int)
+                    and not isinstance(
+                        item.get("seasonal_window_radius_months"), bool
+                    )
+                    else None
+                ),
+                changed_fields=(
+                    sorted(str(key) for key in updates)
+                    if isinstance(updates, dict)
+                    else []
+                ),
+            )
+        )
+    return decisions
 
 
 def _execution_id(snapshot: Any) -> str:
@@ -215,7 +273,11 @@ def _validate_resume_payload(
     elif kind == "request_clarification":
         if set(resume) != {"updates"} or not isinstance(resume["updates"], dict):
             raise ValueError("Resume must be {'updates': {...}}")
-        merged = dict(state.get("parsed_request_draft") or {})
+        recovered = merge_request_draft(
+            state.get("parsed_request_draft"),
+            str(state.get("original_request_text") or ""),
+        )
+        merged = recovered.model_dump(mode="python") if recovered else {}
         merged.update(resume["updates"])
         draft = ExpeditionRequestDraft.model_validate(merged)
         values = draft.model_dump(exclude_none=True)

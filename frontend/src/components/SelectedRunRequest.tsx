@@ -1,11 +1,13 @@
-import type { RunDetail } from "../api/contracts";
-import { compactDate } from "../utils";
+import type { RunDetail, StateView } from "../api/contracts";
+import { compactDate, shortId } from "../utils";
+import { DecisionHistory } from "./DecisionHistory";
 
 interface Props {
   detail: RunDetail | null;
+  state: StateView | null;
 }
 
-export function SelectedRunRequest({ detail }: Props) {
+export function SelectedRunRequest({ detail, state }: Props) {
   const request = detail?.submitted_request;
   if (!detail || !request) return null;
 
@@ -26,6 +28,16 @@ export function SelectedRunRequest({ detail }: Props) {
         <span>Submitted {compactDate(detail.run.created_at)}</span>
         <span>{request.language} · local history</span>
       </div>
+      {state && (
+        <div className="selected-hitl-record" aria-label="HITL decisions for selected execution">
+          <div className="selected-hitl-heading">
+            <div><strong>HITL decision record</strong><span>Selected execution {shortId(state.execution_id)}</span></div>
+            <span className="count-badge">{state.hitl.applied_decisions?.length ?? 0}</span>
+          </div>
+          <p>The natural-language request above is immutable. These validated choices show how this execution departed from it.</p>
+          <DecisionHistory decisions={state.hitl.applied_decisions} emptyMessage="This execution did not apply any HITL choices." />
+        </div>
+      )}
     </section>
   );
 }

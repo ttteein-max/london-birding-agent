@@ -58,6 +58,7 @@ from app.biodiversity.orchestration import (
     BackendDependencies,
     build_deterministic_expedition_plan,
 )
+from app.biodiversity.request_parsing import merge_request_draft
 from app.biodiversity.tools import (
     build_expedition_evidence_bundle,
     find_public_green_spaces,
@@ -74,6 +75,63 @@ def _json(value: Any) -> Any:
     if hasattr(value, "model_dump"):
         return value.model_dump(mode="json")
     return value
+
+
+def _raw_structured_arguments(response: Any) -> dict[str, Any] | None:
+    """Read function arguments without retaining raw model output."""
+
+    if not isinstance(response, dict):
+        return None
+    raw = response.get("raw")
+    for call in getattr(raw, "tool_calls", None) or []:
+        if isinstance(call, dict) and isinstance(call.get("args"), dict):
+            return dict(call["args"])
+    additional = getattr(raw, "additional_kwargs", None)
+    if not isinstance(additional, dict):
+        return None
+    for call in additional.get("tool_calls") or []:
+        if not isinstance(call, dict):
+            continue
+        function = call.get("function")
+        if not isinstance(function, dict):
+            continue
+        arguments = function.get("arguments")
+        if isinstance(arguments, dict):
+            return dict(arguments)
+        if isinstance(arguments, str):
+            try:
+                decoded = json.loads(arguments)
+            except json.JSONDecodeError:
+                continue
+            if isinstance(decoded, dict):
+                return decoded
+    return None
+
+
+def _recover_valid_draft_fields(
+    response: Any,
+) -> tuple[ExpeditionRequestDraft | None, list[str]]:
+    """Keep independently valid fields from a partially invalid tool call."""
+
+    arguments = _raw_structured_arguments(response)
+    if arguments is None:
+        return None, []
+    recovered: dict[str, Any] = {}
+    errors: list[str] = []
+    for name in ExpeditionRequestDraft.model_fields:
+        if name not in arguments or arguments[name] is None:
+            continue
+        try:
+            single_field = ExpeditionRequestDraft.model_validate(
+                {name: arguments[name]}
+            )
+        except ValidationError:
+            errors.append(
+                f"Could not safely use the model value for {name}; please correct it."
+            )
+            continue
+        recovered[name] = getattr(single_field, name)
+    return ExpeditionRequestDraft.model_validate(recovered), errors
 
 
 def _request_from_draft(draft: ExpeditionRequestDraft) -> tuple[ExpeditionRequest | None, list[str]]:
@@ -145,10 +203,16 @@ def build_parse_request_node(parser_model: Any) -> Callable[[BiodiversityAgentSt
             ):
                 parsed = response.get("parsed")
                 if parsed is None:
-                    draft = ExpeditionRequestDraft()
-                    parser_errors.append(
-                        "The model response did not match the structured request contract."
-                    )
+                    recovered, recovery_errors = _recover_valid_draft_fields(response)
+                    recovered = merge_request_draft(recovered, original)
+                    if recovered is None:
+                        draft = ExpeditionRequestDraft()
+                        parser_errors.append(
+                            "The model response did not match the structured request contract."
+                        )
+                    else:
+                        draft = recovered
+                        parser_errors.extend(recovery_errors)
                 else:
                     draft = (
                         parsed
@@ -166,10 +230,11 @@ def build_parse_request_node(parser_model: Any) -> Callable[[BiodiversityAgentSt
             # of returning ``parsing_error``. Treat an invalid model-shaped draft as
             # missing untrusted input and move to the typed HITL correction flow.
             # Raw model output and exception text are deliberately not persisted.
-            draft = ExpeditionRequestDraft()
-            parser_errors.append(
-                "The model response did not match the structured request contract."
-            )
+            draft = merge_request_draft(None, original) or ExpeditionRequestDraft()
+            if not draft.model_dump(mode="python", exclude_none=True):
+                parser_errors.append(
+                    "The model response did not match the structured request contract."
+                )
         request, errors = _request_from_draft(draft)
         errors = [*parser_errors, *errors]
         payload = None
@@ -222,7 +287,11 @@ def request_clarification_interrupt(state: BiodiversityAgentState) -> dict[str, 
     unknown = set(resumed["updates"]) - allowed
     if unknown:
         raise ValueError(f"Unsupported request correction fields: {sorted(unknown)}")
-    merged = dict(state.get("parsed_request_draft") or {})
+    recovered = merge_request_draft(
+        state.get("parsed_request_draft"),
+        str(state.get("original_request_text") or ""),
+    )
+    merged = recovered.model_dump(mode="python") if recovered else {}
     merged.update(resumed["updates"])
     try:
         draft = ExpeditionRequestDraft.model_validate(merged)
@@ -799,12 +868,33 @@ def _actionable_tradeoff(
         and not state.get("low_confidence_accepted", False)
     ):
         options: list[dict[str, Any]] = []
+        occurrence = bundle.occurrence
         if request.seasonal_window_radius_months < 3:
+            next_radius = request.seasonal_window_radius_months + 1
+            next_months = sorted(
+                {
+                    ((request.seasonal_target_month + offset - 1) % 12) + 1
+                    for offset in range(-next_radius, next_radius + 1)
+                }
+            )
             options.append(
                 {
                     "option": "widen_seasonal_window",
                     "current_radius_months": request.seasonal_window_radius_months,
                     "maximum_radius_months": 3,
+                    "current_seasonal_months": (
+                        list(occurrence.seasonal_months) if occurrence else []
+                    ),
+                    "next_seasonal_months": next_months,
+                    "year_window": (
+                        list(occurrence.year_window) if occurrence else None
+                    ),
+                    "current_server_match_count": (
+                        occurrence.counts.server_match_count if occurrence else 0
+                    ),
+                    "current_ranking_eligible_count": (
+                        occurrence.counts.ranking_eligible_count if occurrence else 0
+                    ),
                 }
             )
         if related_candidates:
@@ -822,8 +912,10 @@ def _actionable_tradeoff(
             "kind": "actionable_tradeoff",
             "question": "How should the low historical-evidence result continue?",
             "reason": (
-                "London-wide occurrence evidence does not pass the deterministic gate; "
-                "expanding the local site radius would not solve this condition."
+                "The current multi-year seasonal occurrence query does not pass the "
+                "deterministic gate. Widening changes the queried months, not the target "
+                "species or historical year window; expanding the local site radius "
+                "would not solve this evidence condition."
             ),
             "options": options,
             "resume_schema": {

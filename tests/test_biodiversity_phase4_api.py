@@ -9,6 +9,7 @@ from collections.abc import Iterator
 from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -124,6 +125,82 @@ def test_app_lifespan_health_and_create_run_return_202(client: TestClient) -> No
     assert STRONG_REQUEST.encode() not in catalog_bytes
 
 
+def test_request_clarification_returns_the_safe_partial_parse(client: TestClient) -> None:
+    accepted = _create(
+        client,
+        "partial-request",
+        "Plan an expedition from Kensal Road on 15 June 2026.",
+    )
+    assert _wait(client, accepted["operation_id"])["status"] == "waiting_for_input"
+    detail = client.get("/api/v1/runs/partial-request").json()
+    decision = detail["pending_decisions"][0]
+    assert decision["kind"] == "request_clarification"
+    assert decision["parsed_draft"] == {
+        "bird_input": None,
+        "postcode": None,
+        "location_query": "Kensal Road",
+        "has_explicit_start_point": False,
+        "target_local_date": "2026-06-15",
+        "duration_hours": None,
+    }
+
+
+def test_old_empty_clarification_view_recovers_explicit_request_fields(
+    client: TestClient,
+) -> None:
+    raw = {
+        "kind": "request_clarification",
+        "question": "Please provide corrections.",
+        "parsed_draft": {},
+        "validation_errors": [
+            "The model response did not match the structured request contract.",
+            "Missing or contradictory field: bird_input.",
+            "Missing or contradictory field: target_local_date.",
+            "Missing or contradictory field: duration_hours.",
+            "Missing or contradictory field: postcode_start_point_or_location_query.",
+        ],
+    }
+    decision = client.app.state.phase4.views._pending_decision(
+        raw,
+        SimpleNamespace(
+            checkpoint_id="old-checkpoint",
+            branch_id="old-branch",
+            execution_id="old-execution",
+        ),
+        original_request_text=(
+            "Where should I go for a 3-hour hunt near Rainham Marshes "
+            "next Saturday to spot a vagrant Yellow-browed Warbler?"
+        ),
+    )
+    assert decision.parsed_draft is not None
+    assert decision.parsed_draft.location_query == "Rainham Marshes"
+    assert decision.parsed_draft.bird_input == "Yellow-browed Warbler"
+    assert decision.parsed_draft.duration_hours == 3.0
+    assert decision.parsed_draft.target_local_date is None
+    assert decision.validation_errors == [
+        "Missing or contradictory field: target_local_date."
+    ]
+
+
+def test_workflow_topology_is_exported_from_the_compiled_graph(
+    client: TestClient,
+) -> None:
+    response = client.get("/api/v1/workflow/topology")
+    assert response.status_code == 200
+    topology = response.json()
+    assert topology["workflow_version"] == "phase-3.1"
+    assert len(topology["nodes"]) == 25
+    assert len(topology["edges"]) == 42
+    node_ids = {item["node_id"] for item in topology["nodes"]}
+    assert {"__start__", "evidence_agent", "actionable_tradeoff_interrupt", "__end__"} <= node_ids
+    assert next(
+        item
+        for item in topology["nodes"]
+        if item["node_id"] == "actionable_tradeoff_interrupt"
+    )["kind"] == "hitl"
+    assert all(set(item) == {"source", "target", "conditional", "route_label"} for item in topology["edges"])
+
+
 def test_public_demo_enforces_mode_policy_and_hides_api_docs(tmp_path: Path) -> None:
     with TestClient(create_app(_public_settings(tmp_path))) as client:
         health = client.get("/api/v1/health")
@@ -146,6 +223,18 @@ def test_public_demo_enforces_mode_policy_and_hides_api_docs(tmp_path: Path) -> 
         detail = client.get("/api/v1/runs/public-request-hidden").json()
         assert detail["submitted_request"] is None
         assert STRONG_REQUEST not in json.dumps(detail)
+        incomplete = _create(
+            client,
+            "public-partial-request-hidden",
+            "Plan an expedition from Kensal Road on 15 June 2026.",
+        )
+        assert _wait(client, incomplete["operation_id"])["status"] == (
+            "waiting_for_input"
+        )
+        partial_detail = client.get(
+            "/api/v1/runs/public-partial-request-hidden"
+        ).json()
+        assert partial_detail["pending_decisions"][0]["parsed_draft"] is None
         assert client.get("/docs").status_code == 404
         assert client.get("/openapi.json").status_code == 404
 
@@ -236,6 +325,16 @@ def test_production_frontend_is_served_from_the_same_origin(tmp_path: Path) -> N
 def test_fixture_scripted_hitl_resume_and_low_evidence_safety(client: TestClient) -> None:
     _operation, detail = _start_waiting(client, "low-evidence")
     decision = detail["pending_decisions"][0]
+    assert "multi-year seasonal occurrence query" in decision["rationale"]
+    widen = next(
+        item for item in decision["options"]
+        if item["option"] == "widen_seasonal_window"
+    )
+    assert widen["year_window"] == [2021, 2026]
+    assert widen["current_seasonal_months"]
+    assert len(widen["next_seasonal_months"]) > len(
+        widen["current_seasonal_months"]
+    )
     response = client.post(
         "/api/v1/runs/low-evidence/resume",
         json={
@@ -623,8 +722,46 @@ def test_exact_state_evidence_and_map_views_are_private(client: TestClient) -> N
     map_response = client.get(
         f"/api/v1/runs/privacy/checkpoints/{checkpoint['checkpoint_id']}/map"
     )
+    plan_response = client.get(
+        f"/api/v1/runs/privacy/checkpoints/{checkpoint['checkpoint_id']}/plan"
+    )
     assert evidence.json()["status"] == "strong"
+    assert evidence.json()["quality"]["safe_map_cell_count"] == len(
+        map_response.json()["aggregate_grid"]
+    )
+    assert evidence.json()["gate"] == {
+        "passed": True,
+        "criteria": [
+            {
+                "key": "ranking_eligible_records",
+                "label": "Ranking-eligible records",
+                "value": evidence.json()["counts"]["ranking_eligible_count"],
+                "minimum": 50,
+                "passed": True,
+            },
+            {
+                "key": "spatial_cells_1km",
+                "label": "Distinct ranking 1 km cells",
+                "value": evidence.json()["quality"]["spatial_cell_count"],
+                "minimum": 5,
+                "passed": True,
+            },
+            {
+                "key": "ranking_datasets",
+                "label": "Ranking datasets",
+                "value": evidence.json()["quality"]["ranking_dataset_count"],
+                "minimum": 2,
+                "passed": True,
+            },
+        ],
+    }
     mapped = map_response.json()
+    detail = client.get("/api/v1/runs/privacy").json()
+    assert plan_response.status_code == 200
+    assert (
+        plan_response.json()["target_species"]
+        == detail["final_plan"]["target_species"]
+    )
     assert mapped["aggregate_grid"]
     assert mapped["candidate_sites"]
     assert all(
@@ -635,7 +772,6 @@ def test_exact_state_evidence_and_map_views_are_private(client: TestClient) -> N
         feature["properties"]["display_id"].startswith("grid-")
         for feature in mapped["aggregate_grid"]
     )
-    detail = client.get("/api/v1/runs/privacy").json()
     assert detail["submitted_request"]["text"] == STRONG_REQUEST
     detail_without_local_request = {**detail, "submitted_request": None}
     public_payload = json.dumps(
@@ -643,6 +779,7 @@ def test_exact_state_evidence_and_map_views_are_private(client: TestClient) -> N
             "state": state.json(),
             "evidence": evidence.json(),
             "map": mapped,
+            "plan": plan_response.json(),
             "detail": detail_without_local_request,
             "runs": client.get("/api/v1/runs").json(),
             "history": client.get("/api/v1/runs/privacy/history").json(),

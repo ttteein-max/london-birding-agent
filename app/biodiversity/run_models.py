@@ -110,6 +110,14 @@ class StatePlanView(StrictModel):
 class StateDecisionView(StrictModel):
     kind: str = Field(min_length=1)
     option: str | None = None
+    accepted_taxon_key: int | None = Field(default=None, gt=0)
+    selected_taxon_name: str | None = None
+    bird_input: str | None = None
+    relation_level: str | None = None
+    rationale: str | None = None
+    search_radius_km: float | None = Field(default=None, gt=0, le=25)
+    seasonal_window_radius_months: int | None = Field(default=None, ge=1, le=3)
+    changed_fields: list[str] = Field(default_factory=list)
 
 
 class StateHitlView(StrictModel):

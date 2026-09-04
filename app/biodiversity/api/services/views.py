@@ -9,6 +9,8 @@ from urllib.parse import urlsplit, urlunsplit
 from app.biodiversity.api.schemas import (
     ConstraintView,
     EvidenceCountsView,
+    EvidenceGateCriterionView,
+    EvidenceGateView,
     EvidenceQualityView,
     EvidenceView,
     FinalPlanView,
@@ -21,6 +23,7 @@ from app.biodiversity.api.schemas import (
     MapSiteFeature,
     MapSiteProperties,
     MapStartContext,
+    ParsedRequestDraftView,
     PendingDecisionView,
     PlanSiteView,
     ProvenanceView,
@@ -29,7 +32,9 @@ from app.biodiversity.api.schemas import (
     WeatherDayView,
 )
 from app.biodiversity.repositories import SnapshotGreenSpaceRepository
+from app.biodiversity.request_parsing import merge_request_draft
 from app.biodiversity.runs import BiodiversityRunManager
+from app.feasibility.core import STRONG_EVIDENCE_RULE
 
 
 MAP_ATTRIBUTIONS = [
@@ -111,8 +116,14 @@ def evidence_status(outcome: str | None) -> str:
 class SafeCheckpointViews:
     """Build public views while retaining raw snapshots only inside the service."""
 
-    def __init__(self, osm_directory: Any) -> None:
+    def __init__(
+        self,
+        osm_directory: Any,
+        *,
+        expose_request_details: bool = True,
+    ) -> None:
         features, _provenance = SnapshotGreenSpaceRepository(osm_directory).snapshot()
+        self._expose_request_details = expose_request_details
         self._site_features = {
             str(feature.get("id")): feature
             for feature in features
@@ -148,7 +159,15 @@ class SafeCheckpointViews:
             if not raw:
                 continue
             summary = summaries[execution.head_checkpoint_id]
-            output.append(self._pending_decision(raw, summary))
+            output.append(
+                self._pending_decision(
+                    raw,
+                    summary,
+                    original_request_text=str(
+                        snapshot.values.get("original_request_text") or ""
+                    ),
+                )
+            )
         return output
 
     @staticmethod
@@ -186,7 +205,13 @@ class SafeCheckpointViews:
             ),
         )
 
-    def _pending_decision(self, raw: dict[str, Any], summary: Any) -> PendingDecisionView:
+    def _pending_decision(
+        self,
+        raw: dict[str, Any],
+        summary: Any,
+        *,
+        original_request_text: str = "",
+    ) -> PendingDecisionView:
         kind = str(raw.get("kind"))
         if kind not in {
             "request_clarification",
@@ -198,17 +223,78 @@ class SafeCheckpointViews:
         }:
             raise ValueError("Unsupported interrupt kind")
         question = str(raw.get("question") or "Human input is required.")
+        raw_draft = raw.get("parsed_draft")
+        parsed_draft = None
+        validation_errors = [
+            str(item) for item in raw.get("validation_errors") or []
+        ]
+        if (
+            self._expose_request_details
+            and kind == "request_clarification"
+            and isinstance(raw_draft, dict)
+        ):
+            recovered = merge_request_draft(raw_draft, original_request_text)
+            if recovered is not None:
+                raw_draft = recovered.model_dump(mode="python")
+                recovered_fields = {
+                    name
+                    for name in ("bird_input", "target_local_date", "duration_hours")
+                    if raw_draft.get(name) not in {None, ""}
+                }
+                if any(
+                    (
+                        raw_draft.get("postcode"),
+                        raw_draft.get("start_point"),
+                        str(raw_draft.get("location_query") or "").strip(),
+                    )
+                ):
+                    recovered_fields.add("postcode_start_point_or_location_query")
+                validation_errors = [
+                    error
+                    for error in validation_errors
+                    if error
+                    != "The model response did not match the structured request contract."
+                    and not any(
+                        error
+                        == f"Missing or contradictory field: {field}."
+                        for field in recovered_fields
+                    )
+                ]
+            parsed_draft = ParsedRequestDraftView(
+                bird_input=(
+                    str(raw_draft["bird_input"])
+                    if raw_draft.get("bird_input")
+                    else None
+                ),
+                postcode=(
+                    str(raw_draft["postcode"])
+                    if raw_draft.get("postcode")
+                    else None
+                ),
+                location_query=(
+                    str(raw_draft["location_query"])
+                    if raw_draft.get("location_query")
+                    else None
+                ),
+                has_explicit_start_point=isinstance(
+                    raw_draft.get("start_point"), dict
+                ),
+                target_local_date=raw_draft.get("target_local_date"),
+                duration_hours=raw_draft.get("duration_hours"),
+            )
         return PendingDecisionView(
             kind=kind,
             question=question,
             checkpoint_id=summary.checkpoint_id,
             branch_id=summary.branch_id,
             execution_id=summary.execution_id,
-            validation_errors=[
-                str(item) for item in raw.get("validation_errors") or []
-            ],
+            validation_errors=validation_errors,
             status=(str(raw["status"]) if raw.get("status") else None),
-            rationale=(str(raw["rationale"]) if raw.get("rationale") else None),
+            rationale=(
+                str(raw.get("rationale") or raw.get("reason"))
+                if raw.get("rationale") or raw.get("reason")
+                else None
+            ),
             candidates=[
                 self._candidate(dict(item)) for item in raw.get("candidates") or []
             ],
@@ -235,6 +321,7 @@ class SafeCheckpointViews:
                 HitlOptionView.model_validate(item)
                 for item in raw.get("options") or []
             ],
+            parsed_draft=parsed_draft,
         )
 
     def final_plan(self, snapshot: Any) -> FinalPlanView | None:
@@ -276,6 +363,21 @@ class SafeCheckpointViews:
             explanation=value["explanation"],
             generated_by=value["generated_by"],
         )
+
+    def checkpoint_plan(
+        self,
+        manager: BiodiversityRunManager,
+        *,
+        thread_id: str,
+        checkpoint_id: str,
+    ) -> FinalPlanView | None:
+        """Return the final plan stored at one exact execution checkpoint."""
+
+        snapshot = manager.snapshot(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+        )
+        return self.final_plan(snapshot)
 
     def evidence(
         self,
@@ -360,6 +462,7 @@ class SafeCheckpointViews:
             ),
             quality=EvidenceQualityView(
                 spatial_cell_count=int(quality.get("spatial_cell_count") or 0),
+                safe_map_cell_count=len(occurrence.get("safe_map_cells") or []),
                 retained_dataset_count=int(
                     quality.get("retained_dataset_count") or 0
                 ),
@@ -376,6 +479,51 @@ class SafeCheckpointViews:
                 year_distribution=dict(quality.get("year_distribution") or {}),
                 month_distribution=dict(quality.get("month_distribution") or {}),
                 warnings=list(quality.get("warnings") or []),
+            ),
+            gate=EvidenceGateView(
+                passed=(
+                    evidence_status(occurrence.get("outcome")) == "strong"
+                ),
+                criteria=[
+                    EvidenceGateCriterionView(
+                        key="ranking_eligible_records",
+                        label="Ranking-eligible records",
+                        value=int(counts.get("ranking_eligible_count") or 0),
+                        minimum=STRONG_EVIDENCE_RULE[
+                            "minimum_ranking_eligible_records"
+                        ],
+                        passed=(
+                            int(counts.get("ranking_eligible_count") or 0)
+                            >= STRONG_EVIDENCE_RULE[
+                                "minimum_ranking_eligible_records"
+                            ]
+                        ),
+                    ),
+                    EvidenceGateCriterionView(
+                        key="spatial_cells_1km",
+                        label="Distinct ranking 1 km cells",
+                        value=int(quality.get("spatial_cell_count") or 0),
+                        minimum=STRONG_EVIDENCE_RULE[
+                            "minimum_spatial_cells_1km"
+                        ],
+                        passed=(
+                            int(quality.get("spatial_cell_count") or 0)
+                            >= STRONG_EVIDENCE_RULE[
+                                "minimum_spatial_cells_1km"
+                            ]
+                        ),
+                    ),
+                    EvidenceGateCriterionView(
+                        key="ranking_datasets",
+                        label="Ranking datasets",
+                        value=int(quality.get("ranking_dataset_count") or 0),
+                        minimum=STRONG_EVIDENCE_RULE["minimum_datasets"],
+                        passed=(
+                            int(quality.get("ranking_dataset_count") or 0)
+                            >= STRONG_EVIDENCE_RULE["minimum_datasets"]
+                        ),
+                    ),
+                ],
             ),
             seasonal_target_month=occurrence.get("seasonal_target_month"),
             seasonal_months=list(occurrence.get("seasonal_months") or []),
