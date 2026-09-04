@@ -9,10 +9,13 @@ import type {
   ForkRunRequest,
   HealthView,
   HistoryView,
+  MapConfigView,
   MapEvidenceView,
   OperationAccepted,
   PlanComparison,
   ResumeRunRequest,
+  RouteGeometryView,
+  RouteOptionsView,
   RunDetail,
   RunModeView,
   RunSummary,
@@ -66,6 +69,10 @@ export default function App() {
   const [history, setHistory] = useState<HistoryView | null>(null);
   const [evidence, setEvidence] = useState<EvidenceView | null>(null);
   const [mapData, setMapData] = useState<MapEvidenceView | null>(null);
+  const [mapConfig, setMapConfig] = useState<MapConfigView | null>(null);
+  const [routeOptions, setRouteOptions] = useState<RouteOptionsView | null>(null);
+  const [routeGeometry, setRouteGeometry] = useState<RouteGeometryView | null>(null);
+  const [mapCheckpointId, setMapCheckpointId] = useState<string | null>(null);
   const [plan, setPlan] = useState<FinalPlanView | null>(null);
   const [executionState, setExecutionState] = useState<StateView | null>(null);
   const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
@@ -77,6 +84,7 @@ export default function App() {
   const [busy, setBusy] = useState(false);
   const [loadingRun, setLoadingRun] = useState(false);
   const [loadingMap, setLoadingMap] = useState(false);
+  const [loadingRoute, setLoadingRoute] = useState(false);
   const [loadingState, setLoadingState] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const stopStream = useRef<(() => void) | null>(null);
@@ -95,9 +103,10 @@ export default function App() {
     setLoadingMap(true);
     setExecutionState(null);
     try {
-      const [nextEvidence, nextMap, nextState] = await Promise.all([
+      const [nextEvidence, nextMap, nextRoutes, nextState] = await Promise.all([
         api.evidence(threadId, checkpointId),
         api.map(threadId, checkpointId),
+        api.routes(threadId, checkpointId),
         checkpoint && Number.isInteger(checkpoint.graph_step)
           ? api.state(threadId, checkpointId, checkpoint.node_id, checkpoint.graph_step ?? -1)
           : Promise.resolve(null),
@@ -113,13 +122,42 @@ export default function App() {
       if (selectionEpoch.current !== epoch || checkpointViewEpoch.current !== viewEpoch) return;
       setEvidence(nextEvidence);
       setMapData(nextMap);
+      setMapCheckpointId(checkpointId);
+      setRouteOptions(nextRoutes);
       setPlan(nextPlan);
       setExecutionState(nextState);
+      const routeReference = nextMap.route_geometry_reference;
+      if (routeReference) {
+        setLoadingRoute(true);
+        try {
+          const geometry = await api.routeGeometry(
+            threadId,
+            checkpointId,
+            routeReference,
+          );
+          if (selectionEpoch.current === epoch && checkpointViewEpoch.current === viewEpoch) {
+            setRouteGeometry(geometry);
+          }
+        } catch {
+          if (selectionEpoch.current === epoch && checkpointViewEpoch.current === viewEpoch) {
+            setRouteGeometry(null);
+          }
+        } finally {
+          if (selectionEpoch.current === epoch && checkpointViewEpoch.current === viewEpoch) {
+            setLoadingRoute(false);
+          }
+        }
+      } else {
+        setRouteGeometry(null);
+      }
     } catch (caught) {
       if (selectionEpoch.current !== epoch || checkpointViewEpoch.current !== viewEpoch) return;
       setError(message(caught));
       setEvidence(null);
       setMapData(null);
+      setRouteOptions(null);
+      setRouteGeometry(null);
+      setMapCheckpointId(null);
       setPlan(null);
       setExecutionState(null);
     } finally {
@@ -219,12 +257,14 @@ export default function App() {
     void (async () => {
       const epoch = selectionEpoch.current;
       try {
-        const [nextHealth, nextTopology, nextRuns] = await Promise.all([
+        const [nextHealth, nextMapConfig, nextTopology, nextRuns] = await Promise.all([
           api.health(),
+          api.mapConfig(),
           api.topology(),
           api.listRuns(),
         ]);
         setHealth(nextHealth);
+        setMapConfig(nextMapConfig);
         setTopology(nextTopology);
         if (selectionEpoch.current !== epoch) return;
         setRuns(nextRuns);
@@ -258,6 +298,9 @@ export default function App() {
       setHistory(null);
       setEvidence(null);
       setMapData(null);
+      setRouteOptions(null);
+      setRouteGeometry(null);
+      setMapCheckpointId(null);
       setPlan(null);
       setExecutionState(null);
       setSelectedThread(accepted.thread_id);
@@ -283,6 +326,9 @@ export default function App() {
     setHistory(null);
     setEvidence(null);
     setMapData(null);
+    setRouteOptions(null);
+    setRouteGeometry(null);
+    setMapCheckpointId(null);
     setPlan(null);
     setExecutionState(null);
     await begin(() => api.createRun({ request, ...mode }));
@@ -340,6 +386,22 @@ export default function App() {
       (item) => item.checkpoint_id === checkpointId,
     ) ?? null;
     await loadCheckpoint(selectedThread, checkpointId, selectionEpoch.current, fallbackPlan, checkpoint);
+  };
+
+  const selectRoute = async (reference: string) => {
+    if (!selectedThread || !mapCheckpointId) return;
+    setLoadingRoute(true);
+    try {
+      setRouteGeometry(await api.routeGeometry(
+        selectedThread,
+        mapCheckpointId,
+        reference,
+      ));
+    } catch (caught) {
+      setError(message(caught));
+    } finally {
+      setLoadingRoute(false);
+    }
   };
 
   const inspectCheckpoint = async (checkpoint: CheckpointSummary) => {
@@ -404,7 +466,17 @@ export default function App() {
         {decision && <HitlPanel key={decision.checkpoint_id} decision={decision} busy={busy} onResume={resume} />}
         <div className="workspace-grid">
           <RunSidebar runs={runs} selectedThread={selectedThread} detail={detail} onSelect={(id) => void selectRun(id)} />
-          <EvidenceMap data={mapData} loading={loadingMap} error={error} />
+          <EvidenceMap
+            data={mapData}
+            loading={loadingMap}
+            error={error}
+            basemapStyleUrl={mapConfig?.style_url}
+            basemapAttributions={mapConfig?.attributions}
+            routeGeometry={routeGeometry}
+            routeOptions={routeOptions}
+            routeLoading={loadingRoute}
+            onRouteSelect={(reference) => void selectRoute(reference)}
+          />
           <aside className="evidence-rail" aria-label="Plan and evidence notebook">
             {(loadingRun || loadingMap) && <AsyncState kind="loading" title="Opening execution" detail="Reading its durable final checkpoint…" />}
             {!loadingRun && !loadingMap && plan && <PlanPanel plan={plan} />}
@@ -428,7 +500,7 @@ export default function App() {
       </main>
       <footer>
         <span>London-only · birds-first · historical evidence</span>
-        <span>No routes, access guarantees, field actions, or sighting predictions</span>
+        <span>Routes end at audited public-site entrances; access conditions and sightings are never guaranteed</span>
       </footer>
       <StateInspector state={inspectedState} loading={loadingState} onClose={() => setInspectedState(null)} />
     </div>

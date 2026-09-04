@@ -1,0 +1,47 @@
+{
+  "source_name": "OpenStreetMap via Overpass API",
+  "source_url": "https://www.openstreetmap.org/",
+  "endpoint": "https://overpass-api.de/api/interpreter",
+  "request_parameters": {
+    "query_file": "data/osm/london-green-space-entrances.overpassql",
+    "captured_scope": "Audited public-demo subset for Hyde Park, St. James's Park and Kensington Gardens"
+  },
+  "retrieved_at_utc": "2026-09-04T15:18:00Z",
+  "snapshot_version": "2026-09-04",
+  "licence": "Open Database Licence (ODbL) 1.0",
+  "attribution": "© OpenStreetMap contributors",
+  "checksum_sha256": "55f67eef50a9e8ef522859ecc57f0f746c42ca58d6afbf36ad031fce9626ec1e",
+  "query_sha256": "bf733935c1fb64b5a80170bbcf50659a86c7126ecc649fd6ce7eaeeb24c2f2bb",
+  "feature_count": 9,
+  "record_counts": {
+    "queried_candidate_sites": 8,
+    "tagged_boundary_nodes_returned": 60,
+    "retained_demo_nodes": 9,
+    "sites_with_routable_entrances": 3,
+    "sites_with_no_valid_entrance_in_snapshot": 5
+  },
+  "filtering_rules": [
+    "Use entrance=*, routing:entrance=* and barrier=gate tags on nodes that are members of the associated green-space boundary.",
+    "Exclude access=no/private, foot=no/private and service, emergency or exit-only entries before runtime exposure.",
+    "Treat missing access as uncertain; entrance and barrier tags do not prove public access rights.",
+    "Prefer routing:entrance=main/main_entrance, then entrance=main/main_entrance, then explicit-public access and stable OSM identity.",
+    "Never generate an entrance from a polygon centroid, interior sample or nearest road point."
+  ],
+  "fixture_coverage": [
+    "multiple entrances",
+    "explicit-public access",
+    "uncertain access",
+    "explicitly prohibited nodes excluded during processing",
+    "foot-prohibited nodes excluded during processing",
+    "candidate sites with no valid entrance"
+  ],
+  "known_limitations": [
+    "The committed snapshot is an intentionally small, audited London demo subset, not complete entrance coverage for every London green space.",
+    "A full saved-query refresh was attempted but the public Overpass response terminated before completion; live runtime never compensates with an unbounded Overpass call.",
+    "OSM entrance tags identify mapped physical access points, not legal access rights or guaranteed opening.",
+    "Community-maintained access, foot, wheelchair and opening-hours tags may be incomplete or outdated.",
+    "Only boundary-member associations are accepted, so nearby unassociated gates are deliberately omitted."
+  ],
+  "generation_command": "python -m scripts.generate_entrance_snapshot --live-refresh",
+  "verification_command": "shasum -a 256 data/osm/london-public-green-space-entrances-2026-09-04.geojson"
+}

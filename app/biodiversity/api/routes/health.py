@@ -3,12 +3,39 @@
 from fastapi import APIRouter, Depends
 
 from app.biodiversity.api.dependencies import application
-from app.biodiversity.api.schemas import HealthView, RunModeView, WorkflowTopologyView
+from app.biodiversity.api.schemas import (
+    HealthView,
+    MapConfigView,
+    RunModeView,
+    WorkflowTopologyView,
+)
 from app.biodiversity.api.services.operations import Phase4Application
 from app.biodiversity.run_models import WORKFLOW_VERSION
 
 
 router = APIRouter(tags=["health"])
+
+
+@router.get("/map/config", response_model=MapConfigView)
+async def map_config(
+    service: Phase4Application = Depends(application),
+) -> MapConfigView:
+    return MapConfigView(
+        style_url=service.settings.basemap_style_url,
+        provider=(
+            "OpenFreeMap Liberty"
+            if service.settings.basemap_style_url
+            == "https://tiles.openfreemap.org/styles/liberty"
+            else "Configured MapLibre style"
+            if service.settings.basemap_style_url
+            else "Unavailable"
+        ),
+        attributions=[
+            "© OpenFreeMap",
+            "© OpenMapTiles",
+            "© OpenStreetMap contributors",
+        ],
+    )
 
 
 @router.get("/health", response_model=HealthView)

@@ -4,9 +4,9 @@ An explainable, evidence-grounded planner for urban birdwatching expeditions in 
 
 The project is London-only, birds-first and English-only. It identifies areas with stronger historical occurrence evidence. It does not predict sightings, convert record counts into abundance or population estimates, guarantee access, or guarantee that a bird will be observed.
 
-Phase 4 adds a FastAPI application boundary, durable run catalog, reconnect-safe SSE and a React/TypeScript/MapLibre cartographic field notebook above the Phase 3 durable LangGraph agent. Earlier incident-investigation code remains a regression-protected reference and is not the biodiversity agent.
+Phase 5 adds audited public-site entrances, deterministic walking-route validation, private route-geometry views and a configurable real MapLibre basemap above the Phase 4 product. Earlier incident-investigation code remains a regression-protected reference and is not the biodiversity agent.
 
-## Phase 4 visual product quick start
+## Phase 5 geospatial routing quick start
 
 The shortest reproducible browser flow is entirely fixture/scripted and offline after dependency installation. Local development exposes a run-mode selector with all four data/model combinations; the selected mode is still validated by the server.
 
@@ -42,7 +42,9 @@ The shortest reproducible browser flow is entirely fixture/scripted and offline 
 
 5. Open `http://127.0.0.1:5173`, select **Strong evidence**, then choose **Start expedition**. For the complete fixture/scripted browser demonstration, run `npm run test:e2e` from `frontend/`.
 
-The browser receives an operation immediately, streams the existing Phase 3 node/model/tool/checkpoint events, and reads only allow-listed state/evidence/map DTOs. It supports typed HITL resume, replay, constrained fork and deterministic comparison without exposing raw LangGraph state or occurrence-level data. See [the Phase 4 visual product documentation](docs/phase-4-visual-product.md) and [OpenAPI contract](docs/phase-4-openapi.json).
+The browser receives an operation immediately, streams node/model/tool/provider/checkpoint events, and reads only allow-listed state/evidence/map/route DTOs. A walking route is calculated only after the evidence gate, directly-grounded site and mapped-entrance checks pass. The route terminates at an audited public-site entrance—never an occurrence point, safe-cell centre, polygon centroid or arbitrary road point. See [the Phase 5 geospatial and routing documentation](docs/phase-5-geospatial-routing.md), [routing ADR](docs/adr/0001-phase-5-routing-semantics.md) and [OpenAPI contract](docs/phase-5-openapi.json).
+
+The default basemap is the keyless OpenFreeMap Liberty MapLibre style. Configure or disable it with the backend-only `BIODIVERSITY_BASEMAP_STYLE_URL`; the URL is validated and returned as safe map configuration. For a custom style, list its additional HTTPS sprite, glyph and tile origins in `BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS`; the style host itself is added to CSP automatically. Do not place secret-bearing styles or provider keys in `VITE_*`. If the style fails, the browser explicitly switches to the empty style while keeping evidence and route overlays available. Default unit and Playwright tests mock the style and never contact public tile servers.
 
 Selecting an item in **Recent runs** also opens a compact **Natural-language request** record above the workspace. The request is read from the durable checkpoint rather than copied into the run catalog. It is available in the local profile only; unauthenticated public-demo mode suppresses it so one visitor cannot read another visitor's submitted text.
 
@@ -55,6 +57,10 @@ Set the model credentials in the shell that starts FastAPI, then select `live/li
 ```bash
 export OPENAI_API_KEY='your-key'
 export OPENAI_MODEL='your-model-id'
+# Required by live data mode when routing is reached:
+export ORS_API_KEY='your-openrouteservice-key'
+# Optional second live routing provider:
+export GRAPHHOPPER_API_KEY='your-graphhopper-key'
 # Optional for an OpenAI-compatible provider:
 export OPENAI_BASE_URL='https://provider.example/v1'
 
@@ -78,7 +84,7 @@ The production image builds React and serves it from the same FastAPI origin. Th
 docker compose up --build
 ```
 
-Open `http://127.0.0.1:8080`. The public profile disables interactive API docs and enforces bounded concurrency, mutation rate, thread count, storage, and 24-hour stale-run cleanup. Local Docker data uses the named `biodiversity-demo-data` volume. See [the public demo and deployment guide](docs/phase-4-public-demo.md).
+Open `http://127.0.0.1:8080`. The public profile disables interactive API docs and enforces bounded concurrency, mutation rate, thread count, storage, and 24-hour stale-run cleanup. It serves only planned fixture origins; private-origin route geometry is available only in a local/private run. Local Docker data uses the named `biodiversity-demo-data` volume. See [the Phase 5 deployment section](docs/phase-5-geospatial-routing.md#operation-and-deployment) and [the Phase 4 public-demo foundation](docs/phase-4-public-demo.md).
 
 ## Phase 1 quick start
 
@@ -248,6 +254,7 @@ Boundary and OSM regeneration are also explicit:
 ```bash
 python -m scripts.generate_london_boundary --live-refresh
 python -m scripts.generate_osm_snapshot --live-refresh
+python -m scripts.generate_entrance_snapshot --live-refresh
 ```
 
 All public API requests are sequential, carry a project-specific User-Agent, have timeouts, at most three transport attempts and bounded backoff. Live data changes; exact dated fixture counts are not permanent product expectations.
@@ -261,6 +268,10 @@ All public API requests are sequential, carry a project-specific User-Agent, hav
 - OpenStreetMap/Nominatim: versioned Greater London boundary.
 - OpenStreetMap/Nominatim Search API: submitted named-place lookup in live data mode; versioned sanitized Kensal Road candidates in fixture mode.
 - OpenStreetMap/Overpass: one-off green-space candidate snapshot, not a runtime query.
+- OpenStreetMap/Overpass: versioned public-green-space entrance snapshot with exact OSM boundary-member associations; entrance tags are not proof of legal access.
+- OpenFreeMap Liberty: default keyless MapLibre basemap style, with OpenFreeMap/OpenMapTiles/OpenStreetMap attribution.
+- openrouteservice by HeiGIT: opt-in live foot-walking routes through the current `api.heigit.org` endpoint. The key stays on the backend.
+- GraphHopper: optional second live walking adapter; it is used only when configured and never as a fixture fallback.
 
 The public Nominatim service requires no API key for low-volume use, but it is not an unlimited or guaranteed hosting dependency. This application sends only explicit submitted searches, caps the response at three candidates, identifies itself with a project User-Agent, serializes requests to no more than one per second, and does not implement client-side autocomplete. OpenStreetMap attribution is retained. A larger public deployment should use a hosted geocoding plan or its own compliant instance.
 
@@ -272,8 +283,8 @@ GiGL Spaces to Visit and the authenticated GBIF bulk Download API are not depend
 - It does not guarantee that a mapped site is currently open or accessible.
 - It does not execute bookings or field actions.
 
-See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md) and [fixture schema](docs/fixture-schema.md).
+See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md), [fixture schema](docs/fixture-schema.md) and [data sources and licences](docs/data-sources-and-licences.md).
 
 ## Roadmap boundary
 
-Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent, Phase 3 durable HITL/time travel and the Phase 4 visual product are implemented. Phase 5 routing, Phase 6 habitat/conservation work and Phase 7 MCP, authentication and production multi-tenant hosting remain deferred.
+Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent, Phase 3 durable HITL/time travel, the Phase 4 visual product and Phase 5 geospatial/routing hardening are implemented. Phase 6 rarity, habitat/conservation designation and legal conclusions remain explicitly out of scope; Phase 7 MCP, authentication and production multi-tenant hosting also remain deferred.

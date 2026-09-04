@@ -6,7 +6,7 @@ import json
 import threading
 import time
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from typing import Any, Literal, Protocol
 from uuid import uuid4
@@ -14,7 +14,7 @@ from uuid import uuid4
 from langchain_core.callbacks import BaseCallbackHandler
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
-SpanKind = Literal["node", "model", "tool"]
+SpanKind = Literal["node", "model", "tool", "provider"]
 SpanStatus = Literal["completed", "failed"]
 AgentRunEventType = Literal[
     "run_started",
@@ -39,6 +39,20 @@ AgentRunEventType = Literal[
     "fork_completed",
     "fork_failed",
     "comparison_created",
+    "entrance_resolution_started",
+    "entrance_resolution_completed",
+    "entrance_resolution_failed",
+    "routing_provider_started",
+    "routing_provider_completed",
+    "routing_provider_failed",
+    "provider_attempt",
+    "provider_failover",
+    "route_cache_hit",
+    "route_cache_miss",
+    "route_validation_completed",
+    "route_ranking_completed",
+    "route_hitl_requested",
+    "route_finalised",
     "run_completed",
     "run_failed",
 ]
@@ -282,6 +296,7 @@ class AgentRunRecorder(BaseCallbackHandler):
         self._status: Literal["running", "completed", "failed"] = "running"
         self._sequence = 0
         self._active: dict[str, _ActiveSpan] = {}
+        self._active_provider_spans: dict[str, _ActiveSpan] = {}
         self._events: list[AgentRunEvent] = []
         self._spans: list[AgentRunSpan] = []
         self._append_event(
@@ -380,13 +395,109 @@ class AgentRunRecorder(BaseCallbackHandler):
                     validate(item, f"{path}[{index}]")
 
         safe_payload = dict(payload or {})
+        safe_payload.setdefault("operation_id", self.run_id)
+        safe_payload.setdefault("thread_id", self.thread_id)
+        safe_payload.setdefault("branch_id", None)
+        safe_payload.setdefault("execution_id", None)
+        # A node's new checkpoint does not exist until after it completes. The
+        # field is explicit and may therefore be null on in-flight provider
+        # events; the subsequent checkpoint_created event supplies the exact ID.
+        safe_payload.setdefault("checkpoint_id", None)
         validate(safe_payload)
+        now = datetime.now(UTC)
+        raw_duration = safe_payload.get("duration_ms")
+        duration_ms = (
+            max(0.0, float(raw_duration))
+            if isinstance(raw_duration, (int, float))
+            and not isinstance(raw_duration, bool)
+            else 0.0
+        )
+        node_id = node_id or {
+            "entrance_resolution_started": "resolve_public_site_entrances",
+            "entrance_resolution_completed": "resolve_public_site_entrances",
+            "entrance_resolution_failed": "resolve_public_site_entrances",
+            "routing_provider_started": "request_walking_routes",
+            "routing_provider_completed": "request_walking_routes",
+            "routing_provider_failed": "request_walking_routes",
+            "provider_attempt": "request_walking_routes",
+            "provider_failover": "request_walking_routes",
+            "route_cache_hit": "request_walking_routes",
+            "route_cache_miss": "request_walking_routes",
+            "route_validation_completed": "validate_route_constraints",
+            "route_ranking_completed": "rank_route_options",
+            "route_hitl_requested": "route_tradeoff_interrupt",
+            "route_finalised": "compose_expedition_plan",
+        }.get(event_type)
+        provider = safe_payload.get("provider")
         with self._lock:
-            return self._append_event(
+            route_id = str(safe_payload.get("route_id") or "")
+            active_provider = self._active_provider_spans.get(route_id)
+            span_id = active_provider.span_id if active_provider else None
+            if event_type == "routing_provider_started" and route_id:
+                span_id = f"provider-{uuid4().hex}"
+            event = self._append_event(
                 event_type,
+                span_id=span_id,
                 node_id=node_id,
+                tool_name=str(provider) if provider else None,
+                timestamp=now,
+                started_at=now - timedelta(milliseconds=duration_ms),
+                finished_at=now,
+                duration_ms=duration_ms,
                 payload=safe_payload,
             )
+            if event_type == "routing_provider_started" and route_id and span_id:
+                self._active_provider_spans[route_id] = _ActiveSpan(
+                    start_sequence=event.sequence,
+                    span_id=span_id,
+                    parent_span_id=None,
+                    kind="provider",
+                    name=str(provider or "routing_provider"),
+                    node_id=node_id,
+                    tool_name=str(provider) if provider else None,
+                    tool_call_id=route_id,
+                    started_at=now,
+                    started_ns=time.perf_counter_ns(),
+                    payload=safe_payload,
+                )
+            measured_completion = (
+                event_type
+                in {"routing_provider_completed", "routing_provider_failed"}
+                and isinstance(raw_duration, (int, float))
+                and not isinstance(raw_duration, bool)
+            )
+            if measured_completion and active_provider is not None:
+                self._active_provider_spans.pop(route_id, None)
+                started_at = now - timedelta(milliseconds=duration_ms)
+                error_type = (
+                    str(safe_payload.get("error_category"))
+                    if event_type == "routing_provider_failed"
+                    and safe_payload.get("error_category")
+                    else None
+                )
+                self._spans.append(
+                    AgentRunSpan(
+                        start_sequence=active_provider.start_sequence,
+                        completion_sequence=event.sequence,
+                        span_id=active_provider.span_id,
+                        parent_span_id=None,
+                        kind="provider",
+                        name=str(provider or active_provider.name),
+                        node_id=node_id,
+                        tool_name=str(provider) if provider else None,
+                        tool_call_id=route_id,
+                        started_at=started_at,
+                        finished_at=now,
+                        duration_ms=duration_ms,
+                        status=(
+                            "failed"
+                            if event_type == "routing_provider_failed"
+                            else "completed"
+                        ),
+                        error_type=error_type,
+                    )
+                )
+            return event
 
     def _begin(
         self,

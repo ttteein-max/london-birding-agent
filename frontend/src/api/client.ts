@@ -7,10 +7,13 @@ import type {
   HealthView,
   HistoryView,
   MapEvidenceView,
+  MapConfigView,
   OperationAccepted,
   OperationView,
   PlanComparison,
   ReplayRunRequest,
+  RouteGeometryView,
+  RouteOptionsView,
   ResumeRunRequest,
   RunDetail,
   RunSummary,
@@ -69,6 +72,7 @@ function encoded(value: string): string {
 
 export const api = {
   health: () => request<HealthView>("/api/v1/health"),
+  mapConfig: () => request<MapConfigView>("/api/v1/map/config"),
   topology: () => request<WorkflowTopologyView>("/api/v1/workflow/topology"),
   listRuns: () => request<RunSummary[]>("/api/v1/runs"),
   createRun: (body: CreateRunRequest) =>
@@ -108,6 +112,17 @@ export const api = {
     request<MapEvidenceView>(
       `/api/v1/runs/${encoded(threadId)}/checkpoints/${encoded(checkpointId)}/map`,
     ),
+  routes: (threadId: string, checkpointId: string) =>
+    request<RouteOptionsView>(
+      `/api/v1/runs/${encoded(threadId)}/checkpoints/${encoded(checkpointId)}/routes`,
+    ),
+  routeGeometry: (
+    threadId: string,
+    checkpointId: string,
+    routeGeometryReference: string,
+  ) => request<RouteGeometryView>(
+    `/api/v1/runs/${encoded(threadId)}/checkpoints/${encoded(checkpointId)}/route-geometry/${encoded(routeGeometryReference)}`,
+  ),
   resume: (threadId: string, body: ResumeRunRequest) =>
     request<OperationAccepted>(`/api/v1/runs/${encoded(threadId)}/resume`, {
       method: "POST",

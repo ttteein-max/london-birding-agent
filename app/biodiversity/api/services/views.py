@@ -27,8 +27,14 @@ from app.biodiversity.api.schemas import (
     PendingDecisionView,
     PlanSiteView,
     ProvenanceView,
+    PublicEntranceView,
+    RouteConstraintView,
+    RouteGeometryView,
+    RouteOptionView,
+    RouteOptionsView,
     TaxonCandidateView,
     TaxonEvidencePreviewView,
+    ValidatedWalkingPlanView,
     WeatherDayView,
 )
 from app.biodiversity.repositories import SnapshotGreenSpaceRepository
@@ -78,6 +84,117 @@ def _constraint_view(value: dict[str, Any]) -> ConstraintView:
         status=str(value.get("status") or "unresolved"),
         severity=str(value.get("severity") or "information"),
         message=str(value.get("message") or "No detail is available."),
+    )
+
+
+def _entrance_view(value: dict[str, Any]) -> PublicEntranceView:
+    point = dict(value.get("point") or {})
+    return PublicEntranceView(
+        entrance_id=str(value.get("entrance_id") or "unknown-entrance"),
+        site_id=str(value.get("site_id") or "unknown-site"),
+        label=str(value.get("label") or "Public-site entrance"),
+        access_certainty=str(value.get("access_certainty") or "unspecified"),
+        longitude=float(point.get("longitude") or 0),
+        latitude=float(point.get("latitude") or 0),
+        wheelchair=value.get("wheelchair"),
+        opening_hours=value.get("opening_hours"),
+        association_method="osm_boundary_member",
+        limitations=list(value.get("limitations") or []),
+    )
+
+
+def _route_constraint_view(value: dict[str, Any]) -> RouteConstraintView:
+    return RouteConstraintView(
+        code=str(value.get("code") or "unknown"),
+        passed=bool(value.get("passed")),
+        actual_value=value.get("actual_value"),
+        limit_value=value.get("limit_value"),
+        unit=value.get("unit"),
+        message=str(value.get("message") or "No detail is available."),
+    )
+
+
+def _route_option_view(value: dict[str, Any]) -> RouteOptionView:
+    route = dict(value.get("route") or {})
+    outbound = dict(route.get("outbound") or {})
+    return_leg = dict(route.get("return_leg") or {})
+    return RouteOptionView(
+        option_id=str(value.get("option_id") or "unknown-route-option"),
+        status=str(value.get("status") or "no_route"),
+        site_id=str(value.get("site_id") or "unknown-site"),
+        site_name=str(value.get("site_name") or "Unnamed site"),
+        entrance=_entrance_view(dict(value.get("entrance") or {})),
+        outbound_distance_km=(
+            round(float(outbound["distance_m"]) / 1000, 3)
+            if outbound.get("distance_m") is not None
+            else None
+        ),
+        return_distance_km=(
+            round(float(return_leg["distance_m"]) / 1000, 3)
+            if return_leg.get("distance_m") is not None
+            else None
+        ),
+        total_distance_km=(
+            round(float(route["total_distance_m"]) / 1000, 3)
+            if route.get("total_distance_m") is not None
+            else None
+        ),
+        walking_duration_minutes=(
+            round(float(route["total_duration_seconds"]) / 60, 1)
+            if route.get("total_duration_seconds") is not None
+            else None
+        ),
+        feasible=bool(value.get("feasible")),
+        provider=(str(route["provider"]) if route.get("provider") else None),
+        cache_status=(
+            str(route["cache_status"]) if route.get("cache_status") else None
+        ),
+        route_geometry_reference=route.get("route_geometry_reference"),
+        constraint_results=[
+            _route_constraint_view(dict(item))
+            for item in value.get("constraint_results") or []
+        ],
+        warnings=list(value.get("warnings") or []),
+    )
+
+
+def _walking_plan_view(value: dict[str, Any]) -> ValidatedWalkingPlanView:
+    return ValidatedWalkingPlanView(
+        status=str(value.get("status") or "no_route"),
+        selected_site_id=value.get("selected_site_id"),
+        selected_site_name=value.get("selected_site_name"),
+        entrance=(
+            _entrance_view(dict(value["entrance"])) if value.get("entrance") else None
+        ),
+        routing_profile=str(value.get("routing_profile") or "foot-walking"),
+        outbound_distance_km=value.get("outbound_distance_km"),
+        return_distance_km=value.get("return_distance_km"),
+        total_distance_km=value.get("total_distance_km"),
+        walking_duration_minutes=value.get("walking_duration_minutes"),
+        expedition_duration_minutes=float(
+            value.get("expedition_duration_minutes") or 1
+        ),
+        remaining_field_time_minutes=value.get("remaining_field_time_minutes"),
+        ascent_m=value.get("ascent_m"),
+        descent_m=value.get("descent_m"),
+        elevation_profile=list(value.get("elevation_profile") or []),
+        route_geometry_reference=value.get("route_geometry_reference"),
+        provider=value.get("provider"),
+        provider_version=value.get("provider_version"),
+        retrieved_at=value.get("retrieved_at"),
+        licence=value.get("licence"),
+        attribution=value.get("attribution"),
+        cache_status=value.get("cache_status"),
+        constraint_results=[
+            _route_constraint_view(dict(item))
+            for item in value.get("constraint_results") or []
+        ],
+        alternative_feasible_routes=[
+            _route_option_view(dict(item))
+            for item in value.get("alternative_feasible_routes") or []
+        ],
+        warnings=list(value.get("warnings") or []),
+        limitations=list(value.get("limitations") or []),
     )
 
 
@@ -220,6 +337,7 @@ class SafeCheckpointViews:
             "taxon_selection",
             "actionable_tradeoff",
             "related_taxon_selection",
+            "route_tradeoff",
         }:
             raise ValueError("Unsupported interrupt kind")
         question = str(raw.get("question") or "Human input is required.")
@@ -360,6 +478,11 @@ class SafeCheckpointViews:
             evidence_gate_passed=bool(value.get("evidence_gate_passed")),
             low_confidence_accepted=bool(value.get("low_confidence_accepted")),
             low_confidence_notice=value.get("low_confidence_notice"),
+            walking_plan=(
+                _walking_plan_view(dict(value["walking_plan"]))
+                if value.get("walking_plan")
+                else None
+            ),
             explanation=value["explanation"],
             generated_by=value["generated_by"],
         )
@@ -616,6 +739,25 @@ class SafeCheckpointViews:
                     "precision": "rounded to approximately 0.01 degrees",
                 },
             )
+        walking_plan = dict(values.get("validated_walking_plan") or {})
+        entrance = dict(walking_plan.get("entrance") or {})
+        entrance_point = dict(entrance.get("point") or {})
+        selected_entrance = None
+        if entrance_point:
+            selected_entrance = MapStartContext(
+                geometry=GeoJSONGeometry(
+                    type="Point",
+                    coordinates=[
+                        float(entrance_point["longitude"]),
+                        float(entrance_point["latitude"]),
+                    ],
+                ),
+                properties={
+                    "layer": "selected_public_entrance",
+                    "label": str(entrance.get("label") or "Selected entrance"),
+                    "precision": "verified tagged OSM entrance point",
+                },
+            )
         grid_note = (
             "Only aggregate cells passing the deterministic strong-evidence gate are shown. Density is banded and response-local display IDs replace internal cell identifiers."
             if status == "strong"
@@ -631,9 +773,91 @@ class SafeCheckpointViews:
             candidate_sites=candidate_features,
             contextual_sites=contextual_features,
             start_context=start_context,
+            selected_entrance=selected_entrance,
+            selected_site_id=walking_plan.get("selected_site_id"),
+            route_status=walking_plan.get("status"),
+            route_geometry_reference=walking_plan.get("route_geometry_reference"),
             attributions=MAP_ATTRIBUTIONS,
             limitations=MAP_LIMITATIONS,
             grid_note=grid_note,
+        )
+
+    def route_options(
+        self,
+        manager: BiodiversityRunManager,
+        *,
+        thread_id: str,
+        checkpoint_id: str,
+    ) -> RouteOptionsView:
+        snapshot = manager.snapshot(thread_id=thread_id, checkpoint_id=checkpoint_id)
+        summary = next(
+            item
+            for item in manager.history(thread_id=thread_id)
+            if item.checkpoint_id == checkpoint_id
+        )
+        values = dict(snapshot.values)
+        walking_plan = dict(values.get("validated_walking_plan") or {})
+        options = [
+            _route_option_view(dict(item)) for item in values.get("route_options") or []
+        ]
+        selected_site_id = walking_plan.get("selected_site_id")
+        selected_option_id = next(
+            (item.option_id for item in options if item.site_id == selected_site_id),
+            None,
+        )
+        return RouteOptionsView(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            branch_id=summary.branch_id,
+            execution_id=summary.execution_id,
+            status=str(walking_plan.get("status") or "no_route"),
+            selected_option_id=selected_option_id,
+            options=options,
+            provider_status=(
+                str(walking_plan.get("provider"))
+                if walking_plan.get("provider")
+                else "not_called"
+            ),
+            limitations=list(walking_plan.get("limitations") or []),
+        )
+
+    def route_geometry(
+        self,
+        manager: BiodiversityRunManager,
+        geometry_store: Any,
+        *,
+        thread_id: str,
+        checkpoint_id: str,
+        route_geometry_reference: str,
+        public_demo: bool,
+    ) -> RouteGeometryView:
+        snapshot = manager.snapshot(thread_id=thread_id, checkpoint_id=checkpoint_id)
+        values = dict(snapshot.values)
+        allowed_references: set[str] = set()
+        walking_plan = dict(values.get("validated_walking_plan") or {})
+        if walking_plan.get("route_geometry_reference"):
+            allowed_references.add(str(walking_plan["route_geometry_reference"]))
+        for item in values.get("route_options") or []:
+            route = dict(item.get("route") or {})
+            if route.get("route_geometry_reference"):
+                allowed_references.add(str(route["route_geometry_reference"]))
+        if route_geometry_reference not in allowed_references:
+            raise ValueError("route_geometry_not_in_checkpoint")
+        geometry = geometry_store.get(route_geometry_reference)
+        if geometry is None:
+            raise ValueError("route_geometry_unavailable")
+        return RouteGeometryView(
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            route_geometry_reference=route_geometry_reference,
+            origin_visibility=(
+                "planned_public_fixture" if public_demo else "local_private"
+            ),
+            geojson=geometry,
+            limitations=[
+                "Route geometry is returned only by this dedicated browser endpoint and is omitted from events, logs, reports, and public checkpoint state views.",
+                "A route is practical guidance, not a guarantee of access conditions or a wildlife sighting.",
+            ],
         )
 
     def _site_map_features(

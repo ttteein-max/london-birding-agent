@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AgentTrace } from "../components/AgentTrace";
@@ -12,7 +12,7 @@ import { SelectedRunRequest } from "../components/SelectedRunRequest";
 import { StateInspector } from "../components/StateInspector";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
 import type { FinalPlanView, PendingDecisionView, RunDetail } from "../api/contracts";
-import { comparisonFixture, evidenceFixture, historyFixture, planFixture, stateFixture, workflowTopologyFixture } from "./fixtures";
+import { comparisonFixture, evidenceFixture, historyFixture, planFixture, routePlanFixture, stateFixture, walkingPlanFixture, workflowTopologyFixture } from "./fixtures";
 
 describe("field notebook cards", () => {
   it("renders plan, evidence, constraints, provenance, and exact-date weather", () => {
@@ -59,6 +59,38 @@ describe("field notebook cards", () => {
   it("makes deterministic fallback status explicit", () => {
     render(<PlanPanel plan={{ ...planFixture, generated_by: "deterministic_fallback" }} />);
     expect(screen.getByText("Deterministic fallback plan")).toBeInTheDocument();
+  });
+
+  it("renders the nested validated itinerary without creating a second final plan", () => {
+    render(<PlanPanel plan={routePlanFixture} />);
+    expect(screen.getByRole("heading", { name: "Validated walking itinerary" })).toBeInTheDocument();
+    expect(screen.getByText("Main gate · Explicit Public access evidence")).toBeInTheDocument();
+    expect(screen.getByText("9.13 km")).toBeInTheDocument();
+    expect(screen.getByText("58 min")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Walking route elevation profile/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Walking route constraints")).toHaveTextContent("Pass · Maximum Walking Distance");
+    expect(screen.getByText(/fixture-openrouteservice · foot-walking/)).toBeInTheDocument();
+  });
+
+  it("keeps a Phase 4 plan readable without a walking plan", () => {
+    render(<PlanPanel plan={planFixture} />);
+    expect(screen.getByText(/historical plan predates validated walking routes/)).toBeInTheDocument();
+  });
+
+  it("renders a typed routing-provider failure without inventing a route", () => {
+    render(<PlanPanel plan={{
+      ...routePlanFixture,
+      walking_plan: {
+        ...walkingPlanFixture,
+        status: "source_unavailable",
+        limitations: ["The configured live routing provider was unavailable."],
+      },
+    }} />);
+    expect(screen.getByText(/No walking route was fabricated/)).toHaveTextContent(
+      "Source Unavailable",
+    );
+    expect(screen.getByText("The configured live routing provider was unavailable.")).toBeInTheDocument();
+    expect(screen.queryByText("9.13 km")).not.toBeInTheDocument();
   });
 });
 
@@ -110,6 +142,33 @@ describe("typed human decisions", () => {
       checkpoint_id: "checkpoint-low",
       decision: { kind: "actionable_tradeoff", option: "keep_constraints_accept_low_confidence" },
     });
+  });
+
+  it("submits only the typed route limit change", async () => {
+    const onResume = vi.fn().mockResolvedValue(undefined);
+    const decision: PendingDecisionView = {
+      kind: "route_tradeoff",
+      question: "The computed route exceeds the supplied walking limit.",
+      checkpoint_id: "checkpoint-route",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      options: [{ option: "increase_maximum_walking_distance", minimum_walking_distance_km: 9.13 }],
+      candidates: [],
+      validation_errors: [],
+    };
+    render(<HitlPanel decision={decision} busy={false} onResume={onResume} />);
+    const input = screen.getByLabelText("Maximum full-excursion walking distance (km)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "10");
+    await userEvent.click(screen.getByRole("button", { name: "Recalculate routes" }));
+    await waitFor(() => expect(onResume).toHaveBeenCalledWith({
+      checkpoint_id: "checkpoint-route",
+      decision: {
+        kind: "route_tradeoff",
+        option: "increase_maximum_walking_distance",
+        maximum_walking_distance_km: 10,
+      },
+    }));
   });
 
   it("shows the safe partial parse and submits only the missing field", async () => {

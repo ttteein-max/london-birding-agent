@@ -177,6 +177,29 @@ def test_failed_revision_uses_deterministic_safe_fallback() -> None:
     assert result["final_validated_plan"]["recommended_sites"]
 
 
+def test_composer_failure_skips_a_second_model_call_and_keeps_validated_route() -> None:
+    composer = ScriptedPlanComposerModel([TimeoutError("provider timeout")])
+    graph = build_biodiversity_graph(
+        parser_model=ScriptedRequestParserModel(
+            ExpeditionRequestDraft(
+                bird_input="Common woodpigeon",
+                postcode="SW11 4NJ",
+                target_local_date=date(2026, 6, 15),
+                duration_hours=3,
+            )
+        ),
+        evidence_model=evidence(),
+        composer_model=composer,
+    )
+    result = graph.invoke({"original_request_text": "Grounding test"})
+    assert composer.invocations == 1
+    assert result["terminal_status"] == "completed_with_deterministic_fallback"
+    assert result["final_validated_plan"]["generated_by"] == "deterministic_fallback"
+    assert result["final_validated_plan"]["walking_plan"] == result[
+        "validated_walking_plan"
+    ]
+
+
 @pytest.mark.parametrize("field", ["status", "evidence_citations"])
 def test_grounding_rejects_status_disagreement_and_missing_citations(field: str) -> None:
     def unsafe(payload):

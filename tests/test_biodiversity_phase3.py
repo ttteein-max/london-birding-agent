@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from langgraph.types import Command
@@ -17,7 +18,7 @@ from app.biodiversity.graph import (
 )
 from app.biodiversity.observability import AgentRunRecorder
 from app.biodiversity.reporting import save_biodiversity_run_report
-from app.biodiversity.run_models import ForkRequest, RunProfile
+from app.biodiversity.run_models import ForkRequest, RunManifest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
 from app.biodiversity.testing import (
     ScriptedRequestParserModel,
@@ -124,6 +125,28 @@ def test_saved_run_manifest_rejects_runtime_mode_switch_without_mutation(
                 resume={"accepted_taxon_key": 2489281},
             )
         assert len(mismatched.history(thread_id="manifest")) == before
+
+
+def test_phase4_manifest_remains_readable_but_is_explicitly_read_only() -> None:
+    stored = RunManifest.model_validate(
+        {
+            "workflow_version": "phase-3.1",
+            "state_schema_version": 2,
+            "data_mode": "fixture",
+            "model_mode": "scripted",
+            "model_identifier": "scripted-biodiversity-v1",
+            "endpoint_fingerprint": "local-scripted",
+            "created_at": datetime.now(UTC),
+        }
+    )
+    assert stored.routing_provider is None
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    snapshot = SimpleNamespace(
+        values={"run_manifest": stored.model_dump(mode="json")}
+    )
+    with pytest.raises(ValueError, match="read-only.*new Phase 5 run"):
+        manager._validate_run_profile(snapshot)
 
 
 def test_ambiguous_payload_has_taxonomy_bounded_previews_and_no_private_data() -> None:

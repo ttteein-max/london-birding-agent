@@ -1,0 +1,46 @@
+flowchart LR
+    subgraph Evidence[Deterministic evidence authority]
+        Gate[Strong evidence gate]
+        Sites[Directly-grounded site order]
+        Cells[Private occurrence processing]
+    end
+
+    subgraph Routing[Deterministic route authority]
+        Entrances[Audited OSM entrances]
+        Resolve[Resolve public site entrances]
+        Provider[Fixture or configured live walking provider]
+        Validate[Outbound + return constraints]
+        Rank[Stable route ranking]
+        Cache[(Private cache and geometry store)]
+    end
+
+    subgraph Plan[One expedition plan]
+        Typed[ValidatedWalkingPlan]
+        Compose[British English composition]
+        Ground[Grounding and route safety checks]
+        Fallback[Deterministic fallback]
+    end
+
+    subgraph Browser[Safe browser views]
+        Basemap[MapLibre + OpenFreeMap]
+        Overlay[Evidence, entrance and route overlays]
+        Itinerary[Validated walking itinerary]
+    end
+
+    Gate --> Sites --> Resolve
+    Entrances --> Resolve
+    Resolve --> Provider
+    Provider <--> Cache
+    Provider --> Validate --> Rank --> Typed
+    Typed --> Compose --> Ground
+    Ground -. model failure .-> Fallback
+    Fallback --> Itinerary
+    Ground --> Itinerary
+    Cache -->|reference-gated geometry| Overlay
+    Basemap --> Overlay
+    Cells -. never provider input .- Provider
+
+    classDef private fill:#7f312d,color:#fff,stroke:#4c1c19,stroke-width:2px;
+    classDef deterministic fill:#174f43,color:#fff,stroke:#0b382f,stroke-width:2px;
+    class Cells,Cache private;
+    class Gate,Sites,Entrances,Resolve,Validate,Rank,Typed,Ground,Fallback deterministic;

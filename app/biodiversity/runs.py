@@ -163,6 +163,16 @@ def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
                     )
                     else None
                 ),
+                maximum_walking_distance_km=(
+                    float(item["maximum_walking_distance_km"])
+                    if isinstance(
+                        item.get("maximum_walking_distance_km"), (int, float)
+                    )
+                    and not isinstance(
+                        item.get("maximum_walking_distance_km"), bool
+                    )
+                    else None
+                ),
                 changed_fields=(
                     sorted(str(key) for key in updates)
                     if isinstance(updates, dict)
@@ -270,6 +280,27 @@ def _validate_resume_payload(
                 raise ValueError("Seasonal window is outside the offered range")
         elif set(resume) != {"option"}:
             raise ValueError("This option accepts no additional fields")
+    elif kind == "route_tradeoff":
+        option = resume.get("option")
+        allowed = {item.get("option") for item in payload.get("options", [])}
+        if not isinstance(option, str) or option not in allowed:
+            raise ValueError("Route trade-off option is not present in the offered list")
+        if option == "increase_maximum_walking_distance":
+            if set(resume) != {"option", "maximum_walking_distance_km"}:
+                raise ValueError("Increasing the walking limit requires one numeric value")
+            value = resume.get("maximum_walking_distance_km")
+            offered = next(
+                item for item in payload["options"] if item.get("option") == option
+            )
+            minimum = float(offered["minimum_walking_distance_km"])
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not minimum <= float(value) <= 50
+            ):
+                raise ValueError("The walking limit is outside the offered range")
+        elif set(resume) != {"option"}:
+            raise ValueError("This route option accepts no additional fields")
     elif kind == "request_clarification":
         if set(resume) != {"updates"} or not isinstance(resume["updates"], dict):
             raise ValueError("Resume must be {'updates': {...}}")
@@ -564,6 +595,12 @@ class BiodiversityRunManager:
         if not raw:
             return
         stored = RunManifest.model_validate(raw)
+        if stored.workflow_version != self.run_profile.workflow_version:
+            if stored.workflow_version == "phase-3.1":
+                raise ValueError(
+                    "Phase 4 execution is read-only in the Phase 5 graph; create a new Phase 5 run."
+                )
+            raise ValueError("Saved workflow version does not match this runtime")
         current = self.run_profile.model_dump(mode="json")
         expected = stored.model_dump(mode="json", exclude={"created_at"})
         if current != expected:
@@ -991,6 +1028,7 @@ class BiodiversityRunManager:
         weather = dict(values.get("weather_evidence") or {})
         sites = dict(values.get("public_site_search") or {})
         final_plan = dict(values.get("final_validated_plan") or {})
+        walking_plan = dict(values.get("validated_walking_plan") or {})
         decisions = _safe_decision_views(values)
         interrupt_kind = _interrupt_kind(snapshot)
         return StateView(
@@ -1069,6 +1107,10 @@ class BiodiversityRunManager:
                 contextual_site_count=len(
                     sites.get("contextual_sites") or []
                 ),
+                public_entrance_count=len(
+                    values.get("public_entrance_candidates") or []
+                ),
+                route_option_count=len(values.get("route_options") or []),
                 tool_error_count=len(values.get("tool_errors") or []),
             ),
             plan=StatePlanView(
@@ -1088,6 +1130,14 @@ class BiodiversityRunManager:
                     else values.get("low_confidence_accepted", False)
                 ),
                 grounding_error_count=len(values.get("grounding_errors") or []),
+                route_status=walking_plan.get("status"),
+                selected_route_site_id=walking_plan.get("selected_site_id"),
+                total_walking_distance_km=walking_plan.get("total_distance_km"),
+                remaining_field_time_minutes=walking_plan.get(
+                    "remaining_field_time_minutes"
+                ),
+                routing_provider=walking_plan.get("provider"),
+                route_cache_status=walking_plan.get("cache_status"),
             ),
             hitl=StateHitlView(
                 waiting=interrupt_kind is not None,
@@ -1288,6 +1338,15 @@ class BiodiversityRunManager:
             invalidated.add("weather")
             if updated_request.target_month_override is None:
                 invalidated.update({"occurrence", "public_sites"})
+        if {
+            "search_radius_km",
+            "seasonal_window_radius_months",
+            "target_month_override",
+            "target_local_date",
+            "duration_hours",
+            "maximum_walking_distance_km",
+        }.intersection(changed) or selected_taxon:
+            invalidated.add("routes")
 
         branch_id = uuid4().hex
         execution_id = uuid4().hex
@@ -1321,6 +1380,12 @@ class BiodiversityRunManager:
             "draft_llm_plan": None,
             "final_validated_plan": None,
             "grounding_errors": [],
+            "public_entrance_candidates": [],
+            "route_options": [],
+            "validated_walking_plan": None,
+            "route_allow_uncertain_entrance": False,
+            "route_uncertain_entrance_available": False,
+            "route_decision_route": None,
             "pending_hitl_kind": None,
             "pending_hitl_payload": None,
             "pending_user_choice": None,
@@ -1539,6 +1604,7 @@ class BiodiversityRunManager:
                     "target_month_override",
                     "seasonal_window_radius_months",
                     "search_radius_km",
+                    "maximum_walking_distance_km",
                 )
             },
             "selected_taxon": {
@@ -1575,6 +1641,37 @@ class BiodiversityRunManager:
                 item.model_dump(mode="json")
                 for item in _safe_decision_views(values)
             ],
+            "route_status": (plan.get("walking_plan") or {}).get("status")
+            or (values.get("validated_walking_plan") or {}).get("status"),
+            "selected_route_site_id": (
+                (plan.get("walking_plan") or {}).get("selected_site_id")
+                or (values.get("validated_walking_plan") or {}).get(
+                    "selected_site_id"
+                )
+            ),
+            "total_walking_distance_km": (
+                (plan.get("walking_plan") or {}).get("total_distance_km")
+                if plan.get("walking_plan")
+                else (values.get("validated_walking_plan") or {}).get(
+                    "total_distance_km"
+                )
+            ),
+            "remaining_field_time_minutes": (
+                (plan.get("walking_plan") or {}).get(
+                    "remaining_field_time_minutes"
+                )
+                if plan.get("walking_plan")
+                else (values.get("validated_walking_plan") or {}).get(
+                    "remaining_field_time_minutes"
+                )
+            ),
+            "route_constraints": list(
+                (plan.get("walking_plan") or {}).get("constraint_results")
+                or (values.get("validated_walking_plan") or {}).get(
+                    "constraint_results"
+                )
+                or []
+            ),
         }
 
     def compare(

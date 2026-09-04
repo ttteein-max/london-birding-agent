@@ -42,4 +42,5 @@ reports/runs/
 data/raw/
 data/downloads/
 data/candidates/
+data/runtime/routes/
 *.overpass.json

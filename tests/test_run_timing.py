@@ -69,6 +69,13 @@ def test_recorder_times_every_completed_biodiversity_node_and_tool() -> None:
     assert event_types.count("node_started") == event_types.count("node_completed")
     assert "model_started" in event_types
     assert "model_completed" in event_types
+    assert {
+        span.name for span in report.spans if span.kind == "model"
+    } == {
+        "ScriptedRequestParserModel",
+        "ScriptedEvidenceModel",
+        "ScriptedPlanComposerModel",
+    }
 
 
 def test_saved_report_contains_phase4_events_and_timing_spans(tmp_path) -> None:

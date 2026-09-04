@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="720" viewBox="0 0 1400 720" role="img" aria-labelledby="title desc">
+  <title id="title">Phase 5 geospatial routing architecture</title>
+  <desc id="desc">Historical evidence gates directly grounded sites. Audited OSM entrances and a bounded route provider feed deterministic constraint validation and ranking. A nested validated walking plan is exposed through privacy-safe API and MapLibre views, while private origins and geometry remain in runtime storage.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#56645f"/></marker>
+    <style>
+      .group{fill:#f5f0e4;stroke:#b5aa93;stroke-width:2}.box{fill:#fffdf7;stroke:#56645f;stroke-width:2;rx:12}.authority{fill:#174f43;stroke:#0b382f}.private{fill:#7f312d;stroke:#4c1c19}.label{font:600 20px system-ui,sans-serif;fill:#17231f}.small{font:15px system-ui,sans-serif;fill:#34423d}.white{fill:#fff}.line{stroke:#56645f;stroke-width:2.5;fill:none;marker-end:url(#arrow)}.dash{stroke-dasharray:8 7}
+    </style>
+  </defs>
+  <rect width="1400" height="720" fill="#e8e6dc"/>
+  <text x="42" y="48" class="label" font-size="28">Phase 5 · route authority and privacy boundaries</text>
+  <rect class="group" x="35" y="80" width="290" height="570" rx="18"/><text x="58" y="116" class="label">Evidence authority</text>
+  <rect class="box authority" x="62" y="150" width="236" height="76"/><text x="180" y="182" text-anchor="middle" class="label white">Strong evidence gate</text><text x="180" y="207" text-anchor="middle" class="small white">historical evidence only</text>
+  <rect class="box authority" x="62" y="275" width="236" height="82"/><text x="180" y="307" text-anchor="middle" class="label white">Directly-grounded sites</text><text x="180" y="333" text-anchor="middle" class="small white">stable evidence order</text>
+  <rect class="box private" x="62" y="485" width="236" height="92"/><text x="180" y="519" text-anchor="middle" class="label white">Occurrence processing</text><text x="180" y="545" text-anchor="middle" class="small white">coordinates and IDs private</text>
+
+  <rect class="group" x="355" y="80" width="480" height="570" rx="18"/><text x="378" y="116" class="label">Deterministic routing</text>
+  <rect class="box authority" x="382" y="150" width="194" height="76"/><text x="479" y="181" text-anchor="middle" class="label white">Audited entrances</text><text x="479" y="207" text-anchor="middle" class="small white">exact OSM association</text>
+  <rect class="box authority" x="613" y="150" width="194" height="76"/><text x="710" y="181" text-anchor="middle" class="label white">Resolve entrances</text><text x="710" y="207" text-anchor="middle" class="small white">no centroids</text>
+  <rect class="box" x="382" y="280" width="425" height="82"/><text x="594" y="312" text-anchor="middle" class="label">Bounded walking provider</text><text x="594" y="339" text-anchor="middle" class="small">fixture or configured live provider · max 3 sites</text>
+  <rect class="box authority" x="382" y="416" width="194" height="82"/><text x="479" y="448" text-anchor="middle" class="label white">Validate</text><text x="479" y="474" text-anchor="middle" class="small white">outbound + return</text>
+  <rect class="box authority" x="613" y="416" width="194" height="82"/><text x="710" y="448" text-anchor="middle" class="label white">Stable ranking</text><text x="710" y="474" text-anchor="middle" class="small white">constraints + tie-break</text>
+  <rect class="box private" x="382" y="545" width="425" height="70"/><text x="594" y="575" text-anchor="middle" class="label white">Private cache + route geometry</text><text x="594" y="600" text-anchor="middle" class="small white">gitignored · reference-gated</text>
+
+  <rect class="group" x="865" y="80" width="500" height="570" rx="18"/><text x="888" y="116" class="label">One plan · safe product views</text>
+  <rect class="box authority" x="892" y="150" width="208" height="82"/><text x="996" y="181" text-anchor="middle" class="label white">ValidatedWalkingPlan</text><text x="996" y="207" text-anchor="middle" class="small white">nested, typed facts</text>
+  <rect class="box" x="1130" y="150" width="208" height="82"/><text x="1234" y="181" text-anchor="middle" class="label">Plan composer</text><text x="1234" y="207" text-anchor="middle" class="small">language only</text>
+  <rect class="box authority" x="892" y="295" width="446" height="82"/><text x="1115" y="327" text-anchor="middle" class="label white">Grounding checks + deterministic fallback</text><text x="1115" y="353" text-anchor="middle" class="small white">route facts cannot be changed by the model</text>
+  <rect class="box" x="892" y="438" width="208" height="90"/><text x="996" y="470" text-anchor="middle" class="label">MapLibre</text><text x="996" y="495" text-anchor="middle" class="small">basemap + safe overlays</text>
+  <rect class="box" x="1130" y="438" width="208" height="90"/><text x="1234" y="470" text-anchor="middle" class="label">Itinerary panel</text><text x="1234" y="495" text-anchor="middle" class="small">route, elevation, limits</text>
+
+  <path class="line" d="M180 226 V275"/><path class="line" d="M298 316 H613"/><path class="line" d="M576 188 H613"/><path class="line" d="M710 226 L640 280"/><path class="line" d="M594 362 L479 416"/><path class="line" d="M576 457 H613"/><path class="line" d="M807 457 L892 191"/><path class="line" d="M1100 191 H1130"/><path class="line" d="M1234 232 L1160 295"/><path class="line" d="M996 232 L1045 295"/><path class="line" d="M1040 377 L996 438"/><path class="line" d="M1190 377 L1234 438"/><path class="line dash" d="M807 580 L930 528"/><path class="line dash" d="M298 530 C360 530 335 340 382 321"/>
+  <text x="328" y="513" class="small">never provider input</text>
+  <text x="850" y="582" class="small">exact local/private view only</text>
+  <text x="44" y="690" class="small">No occurrence point, safe-cell centre, polygon centroid or nearest-road guess can become a route destination.</text>
+</svg>

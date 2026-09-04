@@ -15,6 +15,8 @@ services:
         value: "true"
       - key: BIODIVERSITY_EXPOSE_API_DOCS
         value: "false"
+      - key: BIODIVERSITY_BASEMAP_STYLE_URL
+        value: https://tiles.openfreemap.org/styles/liberty
       - key: BIODIVERSITY_MUTATIONS_PER_MINUTE
         value: "20"
       - key: BIODIVERSITY_MAX_CONCURRENT_OPERATIONS

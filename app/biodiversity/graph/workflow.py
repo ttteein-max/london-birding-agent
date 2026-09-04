@@ -10,6 +10,7 @@ from langgraph.prebuilt import ToolNode
 
 from app.biodiversity.graph.nodes import (
     actionable_tradeoff_interrupt,
+    apply_route_tradeoff_choice,
     apply_validated_user_choice,
     bird_input_correction_interrupt,
     build_compose_plan_node,
@@ -17,6 +18,8 @@ from app.biodiversity.graph.nodes import (
     build_geocode_location_node,
     build_parse_request_node,
     build_prepare_taxon_selection_node,
+    build_request_walking_routes_node,
+    build_resolve_public_site_entrances_node,
     build_refresh_invalidated_evidence_node,
     build_resolve_location_node,
     build_resolve_taxon_node,
@@ -27,10 +30,13 @@ from app.biodiversity.graph.nodes import (
     grounding_and_safety_checks,
     location_correction_interrupt,
     record_structured_evidence,
+    rank_route_options,
     related_taxon_selection_interrupt,
     request_clarification_interrupt,
+    route_tradeoff_interrupt,
     source_resolution_failure,
     taxon_selection_interrupt,
+    validate_route_constraints,
 )
 from app.biodiversity.graph.routing import (
     route_after_evidence_agent,
@@ -38,6 +44,8 @@ from app.biodiversity.graph.routing import (
     route_after_location,
     route_after_request_clarification,
     route_after_request_parse,
+    route_after_route_choice,
+    route_after_route_ranking,
     route_after_taxon,
     route_after_user_choice,
     route_after_validation,
@@ -45,6 +53,7 @@ from app.biodiversity.graph.routing import (
 from app.biodiversity.graph.state import BiodiversityAgentState
 from app.biodiversity.graph.tool_adapters import build_evidence_tools
 from app.biodiversity.orchestration import BackendDependencies
+from app.biodiversity.routing import RoutingServices
 
 
 DEFAULT_MAXIMUM_EVIDENCE_ROUNDS = 6
@@ -57,6 +66,7 @@ def build_biodiversity_graph(
     evidence_model: Any | None = None,
     composer_model: Any | None = None,
     dependencies: BackendDependencies | None = None,
+    routing_services: RoutingServices | None = None,
     checkpointer: Any | None = None,
     maximum_evidence_rounds: int = DEFAULT_MAXIMUM_EVIDENCE_ROUNDS,
 ):
@@ -70,6 +80,7 @@ def build_biodiversity_graph(
     if maximum_evidence_rounds < 1:
         raise ValueError("maximum_evidence_rounds must be at least 1")
     dependencies = dependencies or BackendDependencies.fixture()
+    routing_services = routing_services or RoutingServices.fixture()
     evidence_tools = build_evidence_tools(dependencies)
 
     builder = StateGraph(BiodiversityAgentState)
@@ -114,6 +125,18 @@ def build_biodiversity_graph(
         "refresh_invalidated_evidence",
         build_refresh_invalidated_evidence_node(dependencies),
     )
+    builder.add_node(
+        "resolve_public_site_entrances",
+        build_resolve_public_site_entrances_node(routing_services),
+    )
+    builder.add_node(
+        "request_walking_routes",
+        build_request_walking_routes_node(routing_services),
+    )
+    builder.add_node("validate_route_constraints", validate_route_constraints)
+    builder.add_node("rank_route_options", rank_route_options)
+    builder.add_node("route_tradeoff_interrupt", route_tradeoff_interrupt)
+    builder.add_node("apply_route_tradeoff_choice", apply_route_tradeoff_choice)
     builder.add_node("compose_expedition_plan", build_compose_plan_node(composer_model))
     builder.add_node("revise_expedition_plan", build_revise_plan_node(composer_model))
     builder.add_node("grounding_and_safety_checks", grounding_and_safety_checks)
@@ -167,7 +190,7 @@ def build_biodiversity_graph(
         route_after_validation,
         {
             "actionable_tradeoff_interrupt": "actionable_tradeoff_interrupt",
-            "compose_expedition_plan": "compose_expedition_plan",
+            "resolve_public_site_entrances": "resolve_public_site_entrances",
             "terminal": END,
         },
     )
@@ -187,6 +210,20 @@ def build_biodiversity_graph(
         "refresh_invalidated_evidence",
     )
     builder.add_edge("refresh_invalidated_evidence", "deterministic_validation")
+    builder.add_edge("resolve_public_site_entrances", "request_walking_routes")
+    builder.add_edge("request_walking_routes", "validate_route_constraints")
+    builder.add_edge("validate_route_constraints", "rank_route_options")
+    builder.add_conditional_edges(
+        "rank_route_options",
+        route_after_route_ranking,
+        ["route_tradeoff_interrupt", "compose_expedition_plan"],
+    )
+    builder.add_edge("route_tradeoff_interrupt", "apply_route_tradeoff_choice")
+    builder.add_conditional_edges(
+        "apply_route_tradeoff_choice",
+        route_after_route_choice,
+        ["request_walking_routes", "compose_expedition_plan"],
+    )
     builder.add_edge("compose_expedition_plan", "grounding_and_safety_checks")
     builder.add_conditional_edges(
         "grounding_and_safety_checks",

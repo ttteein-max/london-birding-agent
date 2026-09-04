@@ -10,7 +10,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
-from app.biodiversity.api.dependencies import APISettings
+from app.biodiversity.api.dependencies import APISettings, basemap_csp_origins
 from app.biodiversity.api.errors import (
     APIError,
     api_error_handler,
@@ -50,10 +50,11 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
 
     app = FastAPI(
         title="London Biodiversity Expedition Planner API",
-        version="4.0.0",
+        version="5.0.0",
         description=(
             "A privacy-bounded API for London bird-expedition evidence, "
-            "agent execution, human decisions, and checkpoint time travel."
+            "agent execution, validated walking routes, human decisions, and "
+            "checkpoint time travel."
         ),
         lifespan=lifespan,
         docs_url="/docs" if configured.expose_api_docs else None,
@@ -67,6 +68,21 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
         allow_methods=["GET", "POST", "OPTIONS"],
         allow_headers=["Content-Type", "Last-Event-ID"],
     )
+    basemap_origins = " ".join(basemap_csp_origins(configured))
+
+    @app.middleware("http")
+    async def security_headers(request, call_next):  # type: ignore[no-untyped-def]
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; "
+            f"img-src 'self' data: blob: {basemap_origins}; connect-src 'self' "
+            f"{basemap_origins}; worker-src 'self' blob:; "
+            f"font-src 'self' data: {basemap_origins}; object-src 'none'; "
+            "base-uri 'self'; frame-ancestors 'none'"
+        )
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        return response
     app.add_exception_handler(APIError, api_error_handler)
     app.add_exception_handler(RequestValidationError, validation_error_handler)
     app.add_exception_handler(Exception, internal_error_handler)

@@ -6,6 +6,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING
+from urllib.parse import parse_qsl, urlsplit
 
 from fastapi import Request
 
@@ -16,6 +17,12 @@ if TYPE_CHECKING:
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[3]
+DEFAULT_BASEMAP_STYLE_URL = "https://tiles.openfreemap.org/styles/liberty"
+DEFAULT_BASEMAP_RESOURCE_ORIGINS = (
+    "https://tiles.openfreemap.org",
+    "https://*.openfreemap.org",
+    "https://*.tile.openstreetmap.org",
+)
 ALL_RUN_MODES = (
     ("fixture", "scripted"),
     ("live", "scripted"),
@@ -74,12 +81,74 @@ def _number(name: str, default: str, *, minimum: float = 0) -> float:
     return value
 
 
+def _basemap_style_url(value: str | None) -> str | None:
+    if value is not None and value.strip().casefold() in {"", "none", "disabled"}:
+        return None
+    url = (value or DEFAULT_BASEMAP_STYLE_URL).strip()
+    parts = urlsplit(url)
+    if parts.scheme != "https" or not parts.netloc:
+        raise ValueError("BIODIVERSITY_BASEMAP_STYLE_URL must be an HTTPS URL")
+    sensitive = {"access_token", "api_key", "apikey", "key", "token"}
+    if any(key.casefold() in sensitive for key, _value in parse_qsl(parts.query)):
+        raise ValueError(
+            "BIODIVERSITY_BASEMAP_STYLE_URL cannot contain a browser-visible secret"
+        )
+    return url
+
+
+def _basemap_resource_origins(value: str | None) -> tuple[str, ...]:
+    raw_origins = (
+        value.split(",") if value is not None else DEFAULT_BASEMAP_RESOURCE_ORIGINS
+    )
+    origins: list[str] = []
+    for raw_origin in raw_origins:
+        origin = raw_origin.strip().rstrip("/")
+        if not origin:
+            continue
+        parts = urlsplit(origin)
+        if (
+            parts.scheme != "https"
+            or not parts.netloc
+            or parts.path
+            or parts.query
+            or parts.fragment
+            or parts.username
+            or parts.password
+            or any(character.isspace() for character in origin)
+            or ";" in origin
+        ):
+            raise ValueError(
+                "BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS must contain only "
+                "comma-separated HTTPS origins"
+            )
+        if origin not in origins:
+            origins.append(origin)
+    if not origins:
+        raise ValueError("BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS cannot be empty")
+    return tuple(origins)
+
+
+def basemap_csp_origins(settings: "APISettings") -> tuple[str, ...]:
+    """Return validated CSP origins, always including the configured style host."""
+
+    origins = list(settings.basemap_resource_origins)
+    if settings.basemap_style_url:
+        style = urlsplit(settings.basemap_style_url)
+        style_origin = f"{style.scheme}://{style.netloc}"
+        if style_origin not in origins:
+            origins.append(style_origin)
+    return tuple(origins)
+
+
 @dataclass(frozen=True)
 class APISettings:
     checkpoint_db: Path = DEFAULT_BIODIVERSITY_CHECKPOINT_PATH
     catalog_db: Path = PROJECT_ROOT / "data/runtime/phase4-run-catalog.sqlite"
     report_root: Path = PROJECT_ROOT / "reports/runs/phase4"
+    route_runtime: Path = PROJECT_ROOT / "data/runtime/routes"
     osm_directory: Path = PROJECT_ROOT / "data/osm"
+    basemap_style_url: str | None = DEFAULT_BASEMAP_STYLE_URL
+    basemap_resource_origins: tuple[str, ...] = DEFAULT_BASEMAP_RESOURCE_ORIGINS
     cors_origins: tuple[str, ...] = (
         "http://127.0.0.1:5173",
         "http://localhost:5173",
@@ -112,6 +181,8 @@ class APISettings:
             raise ValueError("The default run mode must be included in the allowlist")
         if self.max_concurrent_operations < 1:
             raise ValueError("max_concurrent_operations must be positive")
+        _basemap_style_url(self.basemap_style_url)
+        _basemap_resource_origins(",".join(self.basemap_resource_origins))
         if self.public_demo:
             if self.allowed_run_modes != (("fixture", "scripted"),):
                 raise ValueError("Public demo mode permits only fixture/scripted runs")
@@ -157,11 +228,23 @@ class APISettings:
                     str(PROJECT_ROOT / "reports/runs/phase4"),
                 )
             ),
+            route_runtime=Path(
+                os.getenv(
+                    "BIODIVERSITY_ROUTE_RUNTIME",
+                    str(PROJECT_ROOT / "data/runtime/routes"),
+                )
+            ),
             osm_directory=Path(
                 os.getenv(
                     "BIODIVERSITY_OSM_DIRECTORY",
                     str(PROJECT_ROOT / "data/osm"),
                 )
+            ),
+            basemap_style_url=_basemap_style_url(
+                os.getenv("BIODIVERSITY_BASEMAP_STYLE_URL")
+            ),
+            basemap_resource_origins=_basemap_resource_origins(
+                os.getenv("BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS")
             ),
             cors_origins=_origins(os.getenv("BIODIVERSITY_CORS_ORIGINS")),
             default_data_mode=default_data_mode,

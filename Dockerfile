@@ -19,6 +19,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     BIODIVERSITY_CHECKPOINT_DB=/var/lib/biodiversity/checkpoints.sqlite \
     BIODIVERSITY_RUN_CATALOG_DB=/var/lib/biodiversity/catalog.sqlite \
     BIODIVERSITY_REPORT_ROOT=/var/lib/biodiversity/reports \
+    BIODIVERSITY_ROUTE_RUNTIME=/var/lib/biodiversity/routes \
+    BIODIVERSITY_BASEMAP_STYLE_URL=https://tiles.openfreemap.org/styles/liberty \
     BIODIVERSITY_FRONTEND_DIST=/app/frontend/dist
 
 WORKDIR /app
@@ -34,7 +36,7 @@ COPY data/osm/ ./data/osm/
 COPY --from=frontend-build /build/frontend/dist/ ./frontend/dist/
 
 RUN useradd --create-home --uid 10001 biodiversity \
-    && mkdir -p /var/lib/biodiversity/reports \
+    && mkdir -p /var/lib/biodiversity/reports /var/lib/biodiversity/routes \
     && chown -R biodiversity:biodiversity /var/lib/biodiversity
 
 USER biodiversity

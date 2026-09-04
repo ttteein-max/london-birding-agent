@@ -4,6 +4,8 @@ import type {
   HistoryView,
   MapEvidenceView,
   PlanComparison,
+  RouteGeometryView,
+  RouteOptionsView,
   StateView,
   WorkflowTopologyView,
 } from "../api/contracts";
@@ -131,6 +133,58 @@ export const planFixture: FinalPlanView = {
   generated_by: "llm_composer",
 };
 
+export const walkingPlanFixture: NonNullable<FinalPlanView["walking_plan"]> = {
+  status: "ready",
+  selected_site_id: "osm-way-1",
+  selected_site_name: "Evidence Garden",
+  entrance: {
+    entrance_id: "osm-node-101",
+    site_id: "osm-way-1",
+    label: "Main gate",
+    access_certainty: "explicit_public",
+    longitude: -0.1519,
+    latitude: 51.5076,
+    wheelchair: "yes",
+    opening_hours: null,
+    association_method: "osm_boundary_member",
+    limitations: [],
+  },
+  routing_profile: "foot-walking",
+  outbound_distance_km: 4.56,
+  return_distance_km: 4.57,
+  total_distance_km: 9.13,
+  walking_duration_minutes: 121.8,
+  expedition_duration_minutes: 180,
+  remaining_field_time_minutes: 58.2,
+  ascent_m: 31,
+  descent_m: 30,
+  elevation_profile: [
+    { distance_m: 0, elevation_m: 7 },
+    { distance_m: 4565, elevation_m: 20 },
+    { distance_m: 9130, elevation_m: 7 },
+  ],
+  route_geometry_reference: "route-aaaaaaaaaaaaaaaaaaaaaaaa",
+  provider: "fixture-openrouteservice",
+  provider_version: "ors-api-shaped-2026-09-04",
+  retrieved_at: "2026-09-04T00:00:00Z",
+  licence: "ODbL 1.0",
+  attribution: "openrouteservice by HeiGIT; © OpenStreetMap contributors",
+  cache_status: "miss",
+  constraint_results: [
+    { code: "maximum_walking_distance", passed: true, actual_value: 9.13, limit_value: 10, unit: "km", message: "The round trip is within the supplied limit." },
+    { code: "expedition_duration", passed: true, actual_value: 121.8, limit_value: 180, unit: "minutes", message: "Walking leaves positive field time." },
+  ],
+  alternative_feasible_routes: [],
+  warnings: [],
+  limitations: ["Historical evidence does not guarantee a sighting."],
+};
+
+export const routePlanFixture: FinalPlanView = {
+  ...planFixture,
+  duration_hours: 3,
+  walking_plan: walkingPlanFixture,
+};
+
 export const historyFixture: HistoryView = {
   checkpoints: [
     {
@@ -214,6 +268,11 @@ export const comparisonFixture: PlanComparison = {
   limitations: { checkpoint_a: [], checkpoint_b: [], changed: false },
   provenance_sources: { checkpoint_a: ["GBIF"], checkpoint_b: ["GBIF"], changed: false },
   applied_user_decisions: { checkpoint_a: [], checkpoint_b: [{ kind: "fork_update" }], changed: true },
+  route_status: { checkpoint_a: "ready", checkpoint_b: "ready", changed: false },
+  selected_route_site_id: { checkpoint_a: "osm-way-1", checkpoint_b: "osm-way-3", changed: true },
+  total_walking_distance_km: { checkpoint_a: 9.13, checkpoint_b: 8.7, changed: true },
+  remaining_field_time_minutes: { checkpoint_a: 58.2, checkpoint_b: 64, changed: true },
+  route_constraints: { checkpoint_a: [], checkpoint_b: [], changed: false },
   changed_fields: ["request_constraints", "recommended_site_ids", "applied_user_decisions"],
 };
 
@@ -226,10 +285,71 @@ export const mapFixture: MapEvidenceView = {
   aggregate_grid: [],
   candidate_sites: [],
   contextual_sites: [],
-  start_context: null,
+  start_context: {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [-0.16, 51.48] },
+    properties: { layer: "generalised_start", label: "Generalised SW11 start" },
+  },
+  selected_entrance: {
+    type: "Feature",
+    geometry: { type: "Point", coordinates: [-0.1519, 51.5076] },
+    properties: {
+      layer: "public_entrance",
+      entrance_id: "osm-node-101",
+      site_id: "osm-way-1",
+      label: "Main gate",
+      access_certainty: "explicit_public",
+    },
+  },
+  selected_site_id: "osm-way-1",
+  route_status: "ready",
+  route_geometry_reference: "route-aaaaaaaaaaaaaaaaaaaaaaaa",
   attributions: ["© OpenStreetMap contributors", "GBIF.org", "Open-Meteo"],
   limitations: ["Straight-line distance is not a walking route."],
   grid_note: "Only strong-gate aggregate cells are shown.",
+};
+
+export const routeOptionsFixture: RouteOptionsView = {
+  thread_id: "thread-one",
+  checkpoint_id: "checkpoint-final",
+  branch_id: "branch-original",
+  execution_id: "execution-original",
+  status: "ready",
+  selected_option_id: "route-option-01",
+  provider_status: "fixture-openrouteservice",
+  limitations: [],
+  options: [{
+    option_id: "route-option-01",
+    status: "ready",
+    site_id: "osm-way-1",
+    site_name: "Evidence Garden",
+    entrance: walkingPlanFixture.entrance!,
+    outbound_distance_km: 4.56,
+    return_distance_km: 4.57,
+    total_distance_km: 9.13,
+    walking_duration_minutes: 121.8,
+    feasible: true,
+    provider: "fixture-openrouteservice",
+    cache_status: "miss",
+    route_geometry_reference: "route-aaaaaaaaaaaaaaaaaaaaaaaa",
+    constraint_results: walkingPlanFixture.constraint_results,
+    warnings: [],
+  }],
+};
+
+export const routeGeometryFixture: RouteGeometryView = {
+  thread_id: "thread-one",
+  checkpoint_id: "checkpoint-final",
+  route_geometry_reference: "route-aaaaaaaaaaaaaaaaaaaaaaaa",
+  origin_visibility: "local_private",
+  geojson: {
+    type: "FeatureCollection",
+    features: [
+      { type: "Feature", properties: { direction: "outbound" }, geometry: { type: "LineString", coordinates: [[-0.16, 51.48], [-0.1519, 51.5076]] } },
+      { type: "Feature", properties: { direction: "return" }, geometry: { type: "LineString", coordinates: [[-0.1519, 51.5076], [-0.16, 51.48]] } },
+    ],
+  },
+  limitations: [],
 };
 
 export const stateFixture: StateView = {
@@ -247,7 +367,7 @@ export const stateFixture: StateView = {
   request: { seasonal_window_radius_months: 2, search_radius_km: 6.9 },
   location: { status: "resolved", administrative_district: "Royal Borough of Greenwich" },
   taxon: { status: "resolved", accepted_taxon_key: 2478523, canonical_name: "Picus viridis" },
-  evidence: { safe_map_cell_count: 4, candidate_site_count: 0, contextual_site_count: 8, tool_error_count: 1 },
+  evidence: { safe_map_cell_count: 4, candidate_site_count: 0, contextual_site_count: 8, public_entrance_count: 0, route_option_count: 0, tool_error_count: 1 },
   plan: { recommended_site_count: 0, contextual_site_count: 8, evidence_gate_passed: true, low_confidence_accepted: false, grounding_error_count: 0 },
   hitl: {
     waiting: false,

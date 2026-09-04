@@ -49,6 +49,7 @@ WorkflowStage = Literal[
     "taxonomy",
     "evidence",
     "validation",
+    "routing",
     "planning",
     "outcome",
 ]
@@ -80,6 +81,15 @@ class HealthView(StrictModel):
     default_model_mode: Literal["scripted", "live"]
     allowed_run_modes: list[RunModeView]
     public_demo: bool
+
+
+class MapConfigView(StrictModel):
+    style_url: str | None = None
+    provider: str
+    attributions: list[str]
+    fallback_message: Literal[
+        "Basemap unavailable — evidence overlays remain available"
+    ] = "Basemap unavailable — evidence overlays remain available"
 
 
 class WorkflowNodeView(StrictModel):
@@ -168,12 +178,32 @@ class ActionableTradeoffDecision(StrictModel):
         return self
 
 
+class RouteTradeoffDecision(StrictModel):
+    kind: Literal["route_tradeoff"]
+    option: Literal[
+        "accept_uncertain_entrance",
+        "increase_maximum_walking_distance",
+        "keep_route_constraints_and_end",
+    ]
+    maximum_walking_distance_km: float | None = Field(default=None, gt=0, le=50)
+
+    @model_validator(mode="after")
+    def option_fields(self) -> "RouteTradeoffDecision":
+        if self.option == "increase_maximum_walking_distance":
+            if self.maximum_walking_distance_km is None:
+                raise ValueError("increasing the walking limit requires a value")
+        elif self.maximum_walking_distance_km is not None:
+            raise ValueError("the selected route option accepts no walking value")
+        return self
+
+
 ResumeDecision = Annotated[
     TaxonSelectionDecision
     | BirdCorrectionDecision
     | LocationCorrectionDecision
     | RequestClarificationDecision
-    | ActionableTradeoffDecision,
+    | ActionableTradeoffDecision
+    | RouteTradeoffDecision,
     Field(discriminator="kind"),
 ]
 
@@ -296,6 +326,7 @@ class HitlOptionView(StrictModel):
     year_window: tuple[int, int] | None = None
     current_server_match_count: int | None = Field(default=None, ge=0)
     current_ranking_eligible_count: int | None = Field(default=None, ge=0)
+    minimum_walking_distance_km: float | None = Field(default=None, ge=0)
 
 
 class ParsedRequestDraftView(StrictModel):
@@ -317,6 +348,7 @@ class PendingDecisionView(StrictModel):
         "taxon_selection",
         "actionable_tradeoff",
         "related_taxon_selection",
+        "route_tradeoff",
     ]
     question: str
     checkpoint_id: str
@@ -359,6 +391,100 @@ class ConstraintView(StrictModel):
     message: str
 
 
+class PublicEntranceView(StrictModel):
+    entrance_id: str
+    site_id: str
+    label: str
+    access_certainty: Literal["explicit_public", "unspecified"]
+    longitude: float
+    latitude: float
+    wheelchair: str | None = None
+    opening_hours: str | None = None
+    association_method: Literal["osm_boundary_member"]
+    limitations: list[str] = Field(default_factory=list)
+
+
+class RouteConstraintView(StrictModel):
+    code: str
+    passed: bool
+    actual_value: float | None = None
+    limit_value: float | None = None
+    unit: str | None = None
+    message: str
+
+
+class ElevationSampleView(StrictModel):
+    distance_m: float = Field(ge=0)
+    elevation_m: float
+
+
+class RouteOptionView(StrictModel):
+    option_id: str
+    status: str
+    site_id: str
+    site_name: str
+    entrance: PublicEntranceView
+    outbound_distance_km: float | None = None
+    return_distance_km: float | None = None
+    total_distance_km: float | None = None
+    walking_duration_minutes: float | None = None
+    feasible: bool
+    provider: str | None = None
+    cache_status: str | None = None
+    route_geometry_reference: str | None = None
+    constraint_results: list[RouteConstraintView] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+
+
+class ValidatedWalkingPlanView(StrictModel):
+    status: str
+    selected_site_id: str | None = None
+    selected_site_name: str | None = None
+    entrance: PublicEntranceView | None = None
+    routing_profile: str
+    outbound_distance_km: float | None = None
+    return_distance_km: float | None = None
+    total_distance_km: float | None = None
+    walking_duration_minutes: float | None = None
+    expedition_duration_minutes: float
+    remaining_field_time_minutes: float | None = None
+    ascent_m: float | None = None
+    descent_m: float | None = None
+    elevation_profile: list[ElevationSampleView] = Field(default_factory=list)
+    route_geometry_reference: str | None = None
+    provider: str | None = None
+    provider_version: str | None = None
+    retrieved_at: datetime | None = None
+    licence: str | None = None
+    attribution: str | None = None
+    cache_status: str | None = None
+    constraint_results: list[RouteConstraintView] = Field(default_factory=list)
+    alternative_feasible_routes: list[RouteOptionView] = Field(default_factory=list)
+    warnings: list[str] = Field(default_factory=list)
+    limitations: list[str] = Field(default_factory=list)
+
+
+class RouteOptionsView(StrictModel):
+    thread_id: str
+    checkpoint_id: str
+    branch_id: str
+    execution_id: str
+    status: str
+    selected_option_id: str | None = None
+    options: list[RouteOptionView] = Field(default_factory=list)
+    provider_status: str
+    limitations: list[str] = Field(default_factory=list)
+
+
+class RouteGeometryView(StrictModel):
+    thread_id: str
+    checkpoint_id: str
+    route_geometry_reference: str
+    origin_visibility: Literal["local_private", "planned_public_fixture"]
+    geojson: dict[str, Any]
+    limitations: list[str] = Field(default_factory=list)
+
+
 class FinalPlanView(StrictModel):
     status: str
     target_species: str
@@ -377,6 +503,7 @@ class FinalPlanView(StrictModel):
     evidence_gate_passed: bool
     low_confidence_accepted: bool = False
     low_confidence_notice: str | None = None
+    walking_plan: ValidatedWalkingPlanView | None = None
     explanation: str
     generated_by: str
 
@@ -531,6 +658,10 @@ class MapEvidenceView(StrictModel):
     candidate_sites: list[MapSiteFeature] = Field(default_factory=list)
     contextual_sites: list[MapSiteFeature] = Field(default_factory=list)
     start_context: MapStartContext | None = None
+    selected_entrance: MapStartContext | None = None
+    selected_site_id: str | None = None
+    route_status: str | None = None
+    route_geometry_reference: str | None = None
     attributions: list[str]
     limitations: list[str]
     grid_note: str

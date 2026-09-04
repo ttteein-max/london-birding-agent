@@ -27,6 +27,14 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
     draft?.duration_hours == null ? "" : String(draft.duration_hours),
   );
   const [radius, setRadius] = useState("8");
+  const routeMinimum = Math.max(
+    0,
+    ...(decision.options ?? []).map((option) => option.minimum_walking_distance_km ?? 0),
+  );
+  const routeMinimumInput = Math.ceil(routeMinimum * 10) / 10;
+  const [walkingLimit, setWalkingLimit] = useState(
+    routeMinimumInput ? routeMinimumInput.toFixed(1) : "10",
+  );
 
   const base = { checkpoint_id: decision.checkpoint_id };
 
@@ -137,6 +145,40 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
               }
               return <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: option.option as "consider_related_taxa" | "keep_constraints_accept_low_confidence" | "accept_context_only" | "continue_with_weather_acknowledgement" | "accept_uncertain_access" | "revise_rain_preference" } })}><strong>{humanise(option.option)}</strong><span>{option.option === "keep_constraints_accept_low_confidence" ? "Continue with a non-recommendation result" : "Apply this validated decision"}</span></button>;
             })}
+          </div>
+        )}
+
+        {decision.kind === "route_tradeoff" && (
+          <div className="tradeoff-grid" aria-label="Walking route trade-off choices">
+            {options.map((option) => option.option === "increase_maximum_walking_distance" ? (
+              <form key={option.option} onSubmit={(event) => {
+                event.preventDefault();
+                void onResume({
+                  ...base,
+                  decision: {
+                    kind: "route_tradeoff",
+                    option: "increase_maximum_walking_distance",
+                    maximum_walking_distance_km: Number(walkingLimit),
+                  },
+                });
+              }}>
+                <label htmlFor="route-walking-limit">Maximum full-excursion walking distance (km)</label>
+                <input id="route-walking-limit" type="number" min={Math.ceil((option.minimum_walking_distance_km ?? 0.1) * 10) / 10} max="50" step="0.1" value={walkingLimit} onChange={(event) => setWalkingLimit(event.target.value)} />
+                <small>Minimum computed feasible round trip: {option.minimum_walking_distance_km?.toFixed(2)} km.</small>
+                <button className="primary-action" disabled={busy}>Recalculate routes</button>
+              </form>
+            ) : (
+              <button key={option.option} disabled={busy} onClick={() => onResume({
+                ...base,
+                decision: {
+                  kind: "route_tradeoff",
+                  option: option.option as "accept_uncertain_entrance" | "keep_route_constraints_and_end",
+                },
+              })}>
+                <strong>{humanise(option.option)}</strong>
+                <span>{option.option === "accept_uncertain_entrance" ? "Route to a mapped entrance while keeping access uncertainty explicit" : "Keep the supplied constraints and finish without a fabricated route"}</span>
+              </button>
+            ))}
           </div>
         )}
 

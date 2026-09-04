@@ -155,6 +155,48 @@ _NODE_PRESENTATION: dict[str, tuple[str, str, str, str, int]] = {
         "Recompute evidence invalidated by a changed constraint.",
         4,
     ),
+    "resolve_public_site_entrances": (
+        "Resolve public entrances",
+        "routing",
+        "deterministic",
+        "Associate candidate sites with audited, eligible OSM entrance points.",
+        0,
+    ),
+    "request_walking_routes": (
+        "Request walking routes",
+        "routing",
+        "deterministic",
+        "Request bounded outbound and return routes from the configured provider.",
+        1,
+    ),
+    "validate_route_constraints": (
+        "Validate route constraints",
+        "routing",
+        "deterministic",
+        "Check actual round-trip distance and walking time against the request.",
+        2,
+    ),
+    "rank_route_options": (
+        "Rank route options",
+        "routing",
+        "deterministic",
+        "Select feasible routes with a stable, code-defined ordering.",
+        3,
+    ),
+    "route_tradeoff_interrupt": (
+        "Route trade-off",
+        "routing",
+        "hitl",
+        "Pause only when an entrance or walking-limit choice can change the result.",
+        4,
+    ),
+    "apply_route_tradeoff_choice": (
+        "Apply route choice",
+        "routing",
+        "deterministic",
+        "Apply an allow-listed route decision and invalidate stale route evidence.",
+        5,
+    ),
     "compose_expedition_plan": (
         "Compose expedition plan",
         "planning",
@@ -199,8 +241,9 @@ _STAGE_ORDER = {
     "taxonomy": 3,
     "evidence": 4,
     "validation": 5,
-    "planning": 6,
-    "outcome": 7,
+    "routing": 6,
+    "planning": 7,
+    "outcome": 8,
 }
 
 

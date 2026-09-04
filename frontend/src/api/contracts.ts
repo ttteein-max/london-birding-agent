@@ -1,6 +1,7 @@
 import type { components } from "./schema";
 
 export type HealthView = components["schemas"]["HealthView"];
+export type MapConfigView = components["schemas"]["MapConfigView"];
 export type WorkflowTopologyView = components["schemas"]["WorkflowTopologyView"];
 export type WorkflowNodeView = components["schemas"]["WorkflowNodeView"];
 export type WorkflowEdgeView = components["schemas"]["WorkflowEdgeView"];
@@ -15,6 +16,9 @@ export type CheckpointSummary = components["schemas"]["CheckpointSummary"];
 export type StateView = components["schemas"]["StateView"];
 export type EvidenceView = components["schemas"]["EvidenceView"];
 export type MapEvidenceView = components["schemas"]["MapEvidenceView"];
+export type RouteOptionsView = components["schemas"]["RouteOptionsView"];
+export type RouteGeometryView = components["schemas"]["RouteGeometryView"];
+export type ValidatedWalkingPlanView = components["schemas"]["ValidatedWalkingPlanView"];
 export type PendingDecisionView = components["schemas"]["PendingDecisionView"];
 export type FinalPlanView = components["schemas"]["FinalPlanView"];
 export type PlanComparison = components["schemas"]["PlanComparison"];
@@ -45,6 +49,20 @@ export type AgentRunEventType =
   | "fork_completed"
   | "fork_failed"
   | "comparison_created"
+  | "entrance_resolution_started"
+  | "entrance_resolution_completed"
+  | "entrance_resolution_failed"
+  | "routing_provider_started"
+  | "routing_provider_completed"
+  | "routing_provider_failed"
+  | "provider_attempt"
+  | "provider_failover"
+  | "route_cache_hit"
+  | "route_cache_miss"
+  | "route_validation_completed"
+  | "route_ranking_completed"
+  | "route_hitl_requested"
+  | "route_finalised"
   | "run_completed"
   | "run_failed";
 

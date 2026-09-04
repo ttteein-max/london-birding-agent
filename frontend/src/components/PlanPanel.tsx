@@ -22,6 +22,87 @@ function SiteList({ sites, contextual = false }: { sites: FinalPlanView["recomme
   );
 }
 
+function ElevationProfile({ samples }: { samples: NonNullable<FinalPlanView["walking_plan"]>["elevation_profile"] }) {
+  if (!samples || samples.length < 2) {
+    return <p className="empty-copy">Elevation samples are unavailable or incomplete.</p>;
+  }
+  const width = 560;
+  const height = 130;
+  const maximumDistance = Math.max(...samples.map((sample) => sample.distance_m), 1);
+  const elevations = samples.map((sample) => sample.elevation_m);
+  const minimumElevation = Math.min(...elevations);
+  const maximumElevation = Math.max(...elevations);
+  const elevationRange = Math.max(maximumElevation - minimumElevation, 1);
+  const points = samples.map((sample) => {
+    const x = 12 + (sample.distance_m / maximumDistance) * (width - 24);
+    const y = height - 18 - ((sample.elevation_m - minimumElevation) / elevationRange) * (height - 36);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(" ");
+  return (
+    <figure className="elevation-profile">
+      <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-labelledby="elevation-title elevation-description">
+        <title id="elevation-title">Walking route elevation profile</title>
+        <desc id="elevation-description">Elevation ranges from {minimumElevation.toFixed(0)} to {maximumElevation.toFixed(0)} metres across {(maximumDistance / 1000).toFixed(2)} kilometres.</desc>
+        <polyline points={points} fill="none" stroke="currentColor" strokeWidth="4" strokeLinejoin="round" />
+      </svg>
+      <figcaption>{minimumElevation.toFixed(0)}–{maximumElevation.toFixed(0)} m elevation · {(maximumDistance / 1000).toFixed(2)} km sampled</figcaption>
+    </figure>
+  );
+}
+
+function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_plan"]> }) {
+  const ready = plan.status === "ready";
+  const alternatives = plan.alternative_feasible_routes ?? [];
+  return (
+    <section className={`walking-itinerary route-${plan.status}`} aria-labelledby="walking-title">
+      <div className="list-heading">
+        <div><p className="eyebrow">Deterministic routing</p><h3 id="walking-title">Validated walking itinerary</h3></div>
+        <span>{humanise(plan.status)}</span>
+      </div>
+      {ready ? (
+        <>
+          <p className="route-destination"><strong>{plan.selected_site_name}</strong><span>{plan.entrance?.label} · {humanise(plan.entrance?.access_certainty ?? "unspecified")} access evidence</span></p>
+          <dl className="route-metrics">
+            <div><dt>Outbound</dt><dd>{plan.outbound_distance_km?.toFixed(2)} km</dd></div>
+            <div><dt>Return</dt><dd>{plan.return_distance_km?.toFixed(2)} km</dd></div>
+            <div><dt>Total walking</dt><dd>{plan.total_distance_km?.toFixed(2)} km</dd></div>
+            <div><dt>Walking time</dt><dd>{plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
+            <div><dt>Field time left</dt><dd>{plan.remaining_field_time_minutes?.toFixed(0)} min</dd></div>
+            <div><dt>Ascent / descent</dt><dd>{plan.ascent_m?.toFixed(0) ?? "—"} / {plan.descent_m?.toFixed(0) ?? "—"} m</dd></div>
+          </dl>
+          <div className="route-constraints" aria-label="Walking route constraints">
+            {(plan.constraint_results ?? []).map((constraint) => (
+              <p key={constraint.code} className={constraint.passed ? "constraint-pass" : "constraint-fail"}>
+                <strong>{constraint.passed ? "Pass" : "Fail"} · {humanise(constraint.code)}</strong>
+                <span>{constraint.message}</span>
+              </p>
+            ))}
+          </div>
+          <ElevationProfile samples={plan.elevation_profile} />
+          <p className="route-provider">
+            {plan.provider} · {plan.routing_profile} · retrieved {plan.retrieved_at ? new Date(plan.retrieved_at).toLocaleString("en-GB") : "—"} · cache {humanise(plan.cache_status ?? "bypassed")}
+          </p>
+          {alternatives.length > 0 && (
+            <details>
+              <summary>Alternative feasible routes · {alternatives.length}</summary>
+              <ul>{alternatives.map((option) => <li key={option.option_id}>{option.site_name} via {option.entrance.label} · {option.total_distance_km?.toFixed(2) ?? "—"} km</li>)}</ul>
+            </details>
+          )}
+        </>
+      ) : (
+        <p className="empty-copy">No walking route was fabricated. {humanise(plan.status)}.</p>
+      )}
+      {[...(plan.warnings ?? []), ...(plan.limitations ?? [])].length > 0 && (
+        <details className="route-limitations" open>
+          <summary>Route warnings & field checks</summary>
+          <ul>{[...(plan.warnings ?? []), ...(plan.limitations ?? [])].map((item) => <li key={item}>{item}</li>)}</ul>
+        </details>
+      )}
+      {plan.attribution && <p className="route-attribution">{plan.attribution} · {plan.licence}</p>}
+    </section>
+  );
+}
+
 export function PlanPanel({ plan }: Props) {
   return (
     <section className="plan-panel" aria-labelledby="plan-title">
@@ -52,6 +133,8 @@ export function PlanPanel({ plan }: Props) {
           <SiteList sites={plan.contextual_sites} contextual />
         </div>
       </div>
+      {plan.walking_plan && <WalkingItinerary plan={plan.walking_plan} />}
+      {!plan.walking_plan && <p className="legacy-route-note">This historical plan predates validated walking routes and remains readable without a walking plan.</p>}
       <details className="limitations" open>
         <summary>Limitations & field checks</summary>
         <ul>{(plan.unresolved_limitations ?? []).map((item) => <li key={item}>{item}</li>)}</ul>

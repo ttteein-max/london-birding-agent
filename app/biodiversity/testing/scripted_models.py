@@ -5,11 +5,19 @@ from __future__ import annotations
 import copy
 import json
 import re
+from collections.abc import Iterator
+from contextlib import contextmanager
 from datetime import datetime
 from typing import Any, Sequence
 
 from langchain.messages import AIMessage, HumanMessage
 from langchain_core.language_models.fake_chat_models import FakeMessagesListChatModel
+from langchain_core.outputs import LLMResult
+from langchain_core.runnables.config import (
+    ensure_config,
+    get_callback_manager_for_config,
+    var_child_runnable_config,
+)
 from langchain_core.tools import BaseTool
 from pydantic import Field
 
@@ -32,6 +40,26 @@ NUMBER_WORDS = {
     "seven": 7.0,
     "eight": 8.0,
 }
+
+
+@contextmanager
+def _scripted_model_span(model_name: str, messages: Any) -> Iterator[None]:
+    """Emit the same safe model lifecycle as a Runnable-backed live adapter."""
+
+    config = ensure_config(var_child_runnable_config.get())
+    managers = get_callback_manager_for_config(config).on_chat_model_start(
+        {"name": model_name},
+        [messages],
+        invocation_params={"model_name": model_name},
+    )
+    manager = managers[0]
+    try:
+        yield
+    except Exception as exc:
+        manager.on_llm_error(exc)
+        raise
+    else:
+        manager.on_llm_end(LLMResult(generations=[]))
 
 
 def _request_text(messages: Any) -> str:
@@ -108,11 +136,12 @@ class ScriptedRequestParserModel:
         return self
 
     def invoke(self, messages: Any) -> ExpeditionRequestDraft:
-        self.invocations += 1
-        self.last_messages = messages
-        if self.response is None:
-            return parse_scripted_request(_request_text(messages))
-        return ExpeditionRequestDraft.model_validate(copy.deepcopy(self.response))
+        with _scripted_model_span(type(self).__name__, messages):
+            self.invocations += 1
+            self.last_messages = messages
+            if self.response is None:
+                return parse_scripted_request(_request_text(messages))
+            return ExpeditionRequestDraft.model_validate(copy.deepcopy(self.response))
 
 
 class ScriptedEvidenceModel(FakeMessagesListChatModel):
@@ -173,6 +202,7 @@ def plan_from_compact_payload(payload: dict[str, Any], *, revision: bool = False
         evidence_gate_passed=payload["evidence_gate_passed"],
         low_confidence_accepted=payload["low_confidence_accepted"],
         low_confidence_notice=payload["low_confidence_notice"],
+        walking_plan=None,
         explanation=(
             f"{payload['phase1_evidence_explanation']} Candidate distances are approximate straight-line projected distances, not walking distances. "
             "Contextual sites are not recommendations, and access and opening must be checked independently."
@@ -196,17 +226,18 @@ class ScriptedPlanComposerModel:
         return self
 
     def invoke(self, messages: Any) -> Any:
-        self.invocations += 1
-        self.last_messages = messages
-        payload, revision = _payload_from_messages(messages)
-        if self.responses:
-            response = self.responses.pop(0)
-            if isinstance(response, Exception):
-                raise response
-            if callable(response):
-                return response(payload)
-            return copy.deepcopy(response)
-        return plan_from_compact_payload(payload, revision=revision)
+        with _scripted_model_span(type(self).__name__, messages):
+            self.invocations += 1
+            self.last_messages = messages
+            payload, revision = _payload_from_messages(messages)
+            if self.responses:
+                response = self.responses.pop(0)
+                if isinstance(response, Exception):
+                    raise response
+                if callable(response):
+                    return response(payload)
+                return copy.deepcopy(response)
+            return plan_from_compact_payload(payload, revision=revision)
 
 
 def make_scripted_biodiversity_models() -> tuple[

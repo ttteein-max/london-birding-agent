@@ -18,6 +18,7 @@ from app.biodiversity.models import (
     ExpeditionPlan,
     ExpeditionPlanStatus,
 )
+from app.biodiversity.routing_models import ValidatedWalkingPlan
 
 
 LOW_CONFIDENCE_NOTICE = (
@@ -103,6 +104,7 @@ def compact_plan_payload(
     phase1_plan: ExpeditionPlan,
     *,
     low_confidence_accepted: bool = False,
+    walking_plan: ValidatedWalkingPlan | None = None,
 ) -> dict[str, Any]:
     """Return only validated coordinate-free facts needed by the composer."""
 
@@ -133,6 +135,44 @@ def compact_plan_payload(
             LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
         ),
         "phase1_evidence_explanation": phase1_plan.evidence_explanation,
+        "route_context": (
+            {
+                "status": walking_plan.status.value,
+                "selected_site_id": walking_plan.selected_site_id,
+                "selected_site_name": walking_plan.selected_site_name,
+                "entrance_id": (
+                    walking_plan.entrance.entrance_id
+                    if walking_plan.entrance
+                    else None
+                ),
+                "entrance_label": (
+                    walking_plan.entrance.label if walking_plan.entrance else None
+                ),
+                "entrance_access_certainty": (
+                    walking_plan.entrance.access_certainty.value
+                    if walking_plan.entrance
+                    else None
+                ),
+                "routing_profile": walking_plan.routing_profile,
+                "outbound_distance_km": walking_plan.outbound_distance_km,
+                "return_distance_km": walking_plan.return_distance_km,
+                "total_distance_km": walking_plan.total_distance_km,
+                "walking_duration_minutes": walking_plan.walking_duration_minutes,
+                "remaining_field_time_minutes": walking_plan.remaining_field_time_minutes,
+                "ascent_m": walking_plan.ascent_m,
+                "descent_m": walking_plan.descent_m,
+                "provider": walking_plan.provider,
+                "attribution": walking_plan.attribution,
+                "constraint_results": [
+                    item.model_dump(mode="json")
+                    for item in walking_plan.constraint_results
+                ],
+                "warnings": walking_plan.warnings,
+                "limitations": walking_plan.limitations,
+            }
+            if walking_plan
+            else None
+        ),
     }
 
 
@@ -183,6 +223,7 @@ def validate_grounded_plan(
     draft: BiodiversityExpeditionPlan,
     *,
     low_confidence_accepted: bool = False,
+    walking_plan: ValidatedWalkingPlan | None = None,
 ) -> list[str]:
     """Reject any LLM output that disagrees with deterministic evidence."""
 
@@ -256,6 +297,16 @@ def validate_grounded_plan(
         errors.append("Required evidence attribution was omitted, reordered, or invented.")
     if draft.evidence_citations != required_evidence_citations(bundle):
         errors.append("Evidence citations refer to missing evidence or omit required evidence.")
+    expected_walking = (
+        walking_plan.model_dump(mode="json") if walking_plan is not None else None
+    )
+    actual_walking = (
+        draft.walking_plan.model_dump(mode="json")
+        if draft.walking_plan is not None
+        else None
+    )
+    if actual_walking != expected_walking:
+        errors.append("Validated walking-route facts were omitted or altered.")
 
     # Every structured field above is compared exactly with trusted deterministic
     # input. The explanation is the only free-form model output and therefore the
@@ -286,6 +337,7 @@ def deterministic_safe_plan(
     phase1_plan: ExpeditionPlan,
     *,
     low_confidence_accepted: bool = False,
+    walking_plan: ValidatedWalkingPlan | None = None,
 ) -> BiodiversityExpeditionPlan:
     """Assemble a model-independent plan that is safe by construction."""
 
@@ -322,6 +374,7 @@ def deterministic_safe_plan(
         low_confidence_notice=(
             LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
         ),
+        walking_plan=walking_plan,
         explanation=(
             f"{status_explanation} Candidate distances are approximate straight-line "
             "projected distances, not walking distances. Access and opening must be checked independently."
