@@ -27,6 +27,27 @@
         }
       }
     },
+    "/api/v1/workflow/topology": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Workflow Topology",
+        "operationId": "workflow_topology_api_v1_workflow_topology_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowTopologyView"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/runs": {
       "get": {
         "tags": [
@@ -279,6 +300,65 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/EvidenceView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/plan": {
+      "get": {
+        "tags": [
+          "runs"
+        ],
+        "summary": "Get Checkpoint Plan",
+        "operationId": "get_checkpoint_plan_api_v1_runs__thread_id__checkpoints__checkpoint_id__plan_get",
+        "parameters": [
+          {
+            "name": "thread_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Thread Id"
+            }
+          },
+          {
+            "name": "checkpoint_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Checkpoint Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/FinalPlanView"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ],
+                  "title": "Response Get Checkpoint Plan Api V1 Runs  Thread Id  Checkpoints  Checkpoint Id  Plan Get"
                 }
               }
             }
@@ -1090,12 +1170,82 @@
         "type": "object",
         "title": "EvidenceCountsView"
       },
+      "EvidenceGateCriterionView": {
+        "properties": {
+          "key": {
+            "type": "string",
+            "enum": [
+              "ranking_eligible_records",
+              "spatial_cells_1km",
+              "ranking_datasets"
+            ],
+            "title": "Key"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "value": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Value"
+          },
+          "minimum": {
+            "type": "integer",
+            "exclusiveMinimum": 0.0,
+            "title": "Minimum"
+          },
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "key",
+          "label",
+          "value",
+          "minimum",
+          "passed"
+        ],
+        "title": "EvidenceGateCriterionView"
+      },
+      "EvidenceGateView": {
+        "properties": {
+          "passed": {
+            "type": "boolean",
+            "title": "Passed"
+          },
+          "criteria": {
+            "items": {
+              "$ref": "#/components/schemas/EvidenceGateCriterionView"
+            },
+            "type": "array",
+            "title": "Criteria"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "passed",
+          "criteria"
+        ],
+        "title": "EvidenceGateView"
+      },
       "EvidenceQualityView": {
         "properties": {
           "spatial_cell_count": {
             "type": "integer",
             "minimum": 0.0,
             "title": "Spatial Cell Count",
+            "default": 0
+          },
+          "safe_map_cell_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Safe Map Cell Count",
             "default": 0
           },
           "retained_dataset_count": {
@@ -1214,6 +1364,9 @@
           "quality": {
             "$ref": "#/components/schemas/EvidenceQualityView"
           },
+          "gate": {
+            "$ref": "#/components/schemas/EvidenceGateView"
+          },
           "seasonal_target_month": {
             "anyOf": [
               {
@@ -1321,7 +1474,8 @@
           "execution_id",
           "status",
           "counts",
-          "quality"
+          "quality",
+          "gate"
         ],
         "title": "EvidenceView"
       },
@@ -1858,6 +2012,65 @@
             },
             "type": "array",
             "title": "Relation Levels"
+          },
+          "current_seasonal_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Current Seasonal Months"
+          },
+          "next_seasonal_months": {
+            "items": {
+              "type": "integer"
+            },
+            "type": "array",
+            "title": "Next Seasonal Months"
+          },
+          "year_window": {
+            "anyOf": [
+              {
+                "prefixItems": [
+                  {
+                    "type": "integer"
+                  },
+                  {
+                    "type": "integer"
+                  }
+                ],
+                "type": "array",
+                "maxItems": 2,
+                "minItems": 2
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Year Window"
+          },
+          "current_server_match_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Server Match Count"
+          },
+          "current_ranking_eligible_count": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Current Ranking Eligible Count"
           }
         },
         "additionalProperties": false,
@@ -2428,6 +2641,77 @@
         ],
         "title": "OperationView"
       },
+      "ParsedRequestDraftView": {
+        "properties": {
+          "bird_input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bird Input"
+          },
+          "postcode": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Postcode"
+          },
+          "location_query": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Location Query"
+          },
+          "has_explicit_start_point": {
+            "type": "boolean",
+            "title": "Has Explicit Start Point",
+            "default": false
+          },
+          "target_local_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Local Date"
+          },
+          "duration_hours": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 24.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration Hours"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "title": "ParsedRequestDraftView",
+        "description": "Safe, editable request fields already extracted before clarification."
+      },
       "PendingDecisionView": {
         "properties": {
           "kind": {
@@ -2507,6 +2791,16 @@
             },
             "type": "array",
             "title": "Options"
+          },
+          "parsed_draft": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ParsedRequestDraftView"
+              },
+              {
+                "type": "null"
+              }
+            ]
           }
         },
         "additionalProperties": false,
@@ -3213,6 +3507,95 @@
               }
             ],
             "title": "Option"
+          },
+          "accepted_taxon_key": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Accepted Taxon Key"
+          },
+          "selected_taxon_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selected Taxon Name"
+          },
+          "bird_input": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Bird Input"
+          },
+          "relation_level": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Relation Level"
+          },
+          "rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Rationale"
+          },
+          "search_radius_km": {
+            "anyOf": [
+              {
+                "type": "number",
+                "maximum": 25.0,
+                "exclusiveMinimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Search Radius Km"
+          },
+          "seasonal_window_radius_months": {
+            "anyOf": [
+              {
+                "type": "integer",
+                "maximum": 3.0,
+                "minimum": 1.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Seasonal Window Radius Months"
+          },
+          "changed_fields": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Changed Fields"
           }
         },
         "additionalProperties": false,
@@ -4196,6 +4579,136 @@
           "explanation"
         ],
         "title": "WeatherDayView"
+      },
+      "WorkflowEdgeView": {
+        "properties": {
+          "source": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Source"
+          },
+          "target": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Target"
+          },
+          "conditional": {
+            "type": "boolean",
+            "title": "Conditional",
+            "default": false
+          },
+          "route_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Route Label"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "source",
+          "target"
+        ],
+        "title": "WorkflowEdgeView"
+      },
+      "WorkflowNodeView": {
+        "properties": {
+          "node_id": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Node Id"
+          },
+          "label": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Label"
+          },
+          "stage": {
+            "type": "string",
+            "enum": [
+              "entry",
+              "intake",
+              "location",
+              "taxonomy",
+              "evidence",
+              "validation",
+              "planning",
+              "outcome"
+            ],
+            "title": "Stage"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "start",
+              "end",
+              "model",
+              "deterministic",
+              "tool",
+              "hitl",
+              "terminal"
+            ],
+            "title": "Kind"
+          },
+          "summary": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Summary"
+          },
+          "order": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Order"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "node_id",
+          "label",
+          "stage",
+          "kind",
+          "summary",
+          "order"
+        ],
+        "title": "WorkflowNodeView"
+      },
+      "WorkflowTopologyView": {
+        "properties": {
+          "workflow_version": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Workflow Version"
+          },
+          "nodes": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowNodeView"
+            },
+            "type": "array",
+            "title": "Nodes"
+          },
+          "edges": {
+            "items": {
+              "$ref": "#/components/schemas/WorkflowEdgeView"
+            },
+            "type": "array",
+            "title": "Edges"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "workflow_version",
+          "nodes",
+          "edges"
+        ],
+        "title": "WorkflowTopologyView"
       }
     }
   }

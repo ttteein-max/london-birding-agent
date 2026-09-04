@@ -27,8 +27,10 @@ from app.biodiversity.api.schemas import (
     RunDetail,
     RunSummary,
     SubmittedRequestView,
+    WorkflowTopologyView,
 )
 from app.biodiversity.api.services.public_demo import DemoRetention, PublicDemoGuard
+from app.biodiversity.api.services.topology import build_workflow_topology
 from app.biodiversity.api.services.views import SafeCheckpointViews
 from app.biodiversity.graph import build_biodiversity_graph
 from app.biodiversity.observability import (
@@ -122,6 +124,9 @@ class GraphRuntime:
 
     def reader(self) -> BiodiversityRunManager:
         return BiodiversityRunManager(self._reader_graph)
+
+    def topology(self) -> WorkflowTopologyView:
+        return build_workflow_topology(self._reader_graph)
 
     def manager(
         self,
@@ -437,7 +442,10 @@ class Phase4Application:
         self.catalog = catalog
         self.broker = InMemoryAgentEventBroker()
         self.runtime = GraphRuntime(checkpointer)
-        self.views = SafeCheckpointViews(settings.osm_directory)
+        self.views = SafeCheckpointViews(
+            settings.osm_directory,
+            expose_request_details=not settings.public_demo,
+        )
         self.engine = OperationEngine(
             runtime=self.runtime,
             catalog=catalog,
@@ -548,6 +556,9 @@ class Phase4Application:
             )
             for operations in grouped.values()
         ]
+
+    def workflow_topology(self) -> WorkflowTopologyView:
+        return self.runtime.topology()
 
     @staticmethod
     def _run_summary(operation: OperationView) -> RunSummary:

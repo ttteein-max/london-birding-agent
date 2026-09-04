@@ -21,6 +21,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workflow/topology": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Workflow Topology */
+        get: operations["workflow_topology_api_v1_workflow_topology_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/runs": {
         parameters: {
             query?: never;
@@ -99,6 +116,23 @@ export interface paths {
         };
         /** Get Checkpoint Evidence */
         get: operations["get_checkpoint_evidence_api_v1_runs__thread_id__checkpoints__checkpoint_id__evidence_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Checkpoint Plan */
+        get: operations["get_checkpoint_plan_api_v1_runs__thread_id__checkpoints__checkpoint_id__plan_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -387,6 +421,29 @@ export interface components {
              */
             ranking_eligible_count: number;
         };
+        /** EvidenceGateCriterionView */
+        EvidenceGateCriterionView: {
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "ranking_eligible_records" | "spatial_cells_1km" | "ranking_datasets";
+            /** Label */
+            label: string;
+            /** Value */
+            value: number;
+            /** Minimum */
+            minimum: number;
+            /** Passed */
+            passed: boolean;
+        };
+        /** EvidenceGateView */
+        EvidenceGateView: {
+            /** Passed */
+            passed: boolean;
+            /** Criteria */
+            criteria: components["schemas"]["EvidenceGateCriterionView"][];
+        };
         /** EvidenceQualityView */
         EvidenceQualityView: {
             /**
@@ -394,6 +451,11 @@ export interface components {
              * @default 0
              */
             spatial_cell_count: number;
+            /**
+             * Safe Map Cell Count
+             * @default 0
+             */
+            safe_map_cell_count: number;
             /**
              * Retained Dataset Count
              * @default 0
@@ -450,6 +512,7 @@ export interface components {
             reason?: string | null;
             counts: components["schemas"]["EvidenceCountsView"];
             quality: components["schemas"]["EvidenceQualityView"];
+            gate: components["schemas"]["EvidenceGateView"];
             /** Seasonal Target Month */
             seasonal_target_month?: number | null;
             /** Seasonal Months */
@@ -646,6 +709,19 @@ export interface components {
             candidate_count?: number | null;
             /** Relation Levels */
             relation_levels?: string[];
+            /** Current Seasonal Months */
+            current_seasonal_months?: number[];
+            /** Next Seasonal Months */
+            next_seasonal_months?: number[];
+            /** Year Window */
+            year_window?: [
+                number,
+                number
+            ] | null;
+            /** Current Server Match Count */
+            current_server_match_count?: number | null;
+            /** Current Ranking Eligible Count */
+            current_ranking_eligible_count?: number | null;
         };
         /** LocationCorrectionDecision */
         LocationCorrectionDecision: {
@@ -843,6 +919,27 @@ export interface components {
             /** Error Code */
             error_code?: string | null;
         };
+        /**
+         * ParsedRequestDraftView
+         * @description Safe, editable request fields already extracted before clarification.
+         */
+        ParsedRequestDraftView: {
+            /** Bird Input */
+            bird_input?: string | null;
+            /** Postcode */
+            postcode?: string | null;
+            /** Location Query */
+            location_query?: string | null;
+            /**
+             * Has Explicit Start Point
+             * @default false
+             */
+            has_explicit_start_point: boolean;
+            /** Target Local Date */
+            target_local_date?: string | null;
+            /** Duration Hours */
+            duration_hours?: number | null;
+        };
         /** PendingDecisionView */
         PendingDecisionView: {
             /**
@@ -870,6 +967,7 @@ export interface components {
             location_candidates?: components["schemas"]["GeocodedLocationCandidateView"][];
             /** Options */
             options?: components["schemas"]["HitlOptionView"][];
+            parsed_draft?: components["schemas"]["ParsedRequestDraftView"] | null;
         };
         /** PlanComparison */
         PlanComparison: {
@@ -1099,6 +1197,22 @@ export interface components {
             kind: string;
             /** Option */
             option?: string | null;
+            /** Accepted Taxon Key */
+            accepted_taxon_key?: number | null;
+            /** Selected Taxon Name */
+            selected_taxon_name?: string | null;
+            /** Bird Input */
+            bird_input?: string | null;
+            /** Relation Level */
+            relation_level?: string | null;
+            /** Rationale */
+            rationale?: string | null;
+            /** Search Radius Km */
+            search_radius_km?: number | null;
+            /** Seasonal Window Radius Months */
+            seasonal_window_radius_months?: number | null;
+            /** Changed Fields */
+            changed_fields?: string[];
         };
         /** StateEvidenceView */
         StateEvidenceView: {
@@ -1390,6 +1504,50 @@ export interface components {
             /** Explanation */
             explanation: string;
         };
+        /** WorkflowEdgeView */
+        WorkflowEdgeView: {
+            /** Source */
+            source: string;
+            /** Target */
+            target: string;
+            /**
+             * Conditional
+             * @default false
+             */
+            conditional: boolean;
+            /** Route Label */
+            route_label?: string | null;
+        };
+        /** WorkflowNodeView */
+        WorkflowNodeView: {
+            /** Node Id */
+            node_id: string;
+            /** Label */
+            label: string;
+            /**
+             * Stage
+             * @enum {string}
+             */
+            stage: "entry" | "intake" | "location" | "taxonomy" | "evidence" | "validation" | "planning" | "outcome";
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "start" | "end" | "model" | "deterministic" | "tool" | "hitl" | "terminal";
+            /** Summary */
+            summary: string;
+            /** Order */
+            order: number;
+        };
+        /** WorkflowTopologyView */
+        WorkflowTopologyView: {
+            /** Workflow Version */
+            workflow_version: string;
+            /** Nodes */
+            nodes: components["schemas"]["WorkflowNodeView"][];
+            /** Edges */
+            edges: components["schemas"]["WorkflowEdgeView"][];
+        };
     };
     responses: never;
     parameters: never;
@@ -1415,6 +1573,26 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["HealthView"];
+                };
+            };
+        };
+    };
+    workflow_topology_api_v1_workflow_topology_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WorkflowTopologyView"];
                 };
             };
         };
@@ -1588,6 +1766,38 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["EvidenceView"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_checkpoint_plan_api_v1_runs__thread_id__checkpoints__checkpoint_id__plan_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                thread_id: string;
+                checkpoint_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FinalPlanView"] | null;
                 };
             };
             /** @description Validation Error */

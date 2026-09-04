@@ -14,7 +14,7 @@ from app.biodiversity.graph import (
     build_biodiversity_graph,
     create_biodiversity_checkpointer,
 )
-from app.biodiversity.runs import BiodiversityRunManager
+from app.biodiversity.runs import BiodiversityRunManager, _validate_resume_payload
 from app.biodiversity.testing import (
     ScriptedEvidenceModel,
     ScriptedPlanComposerModel,
@@ -120,6 +120,48 @@ def test_missing_request_fields_interrupt_and_invalid_resume_is_rejected() -> No
         graph.invoke(Command(resume={"target_local_date": "2026-06-15"}), config)
 
 
+def test_request_clarification_preserves_named_place_bird_and_duration() -> None:
+    memory = create_biodiversity_checkpointer()
+    graph = graph_for(
+        ExpeditionRequestDraft(
+            bird_input="Yellow-browed Warbler",
+            location_query="Kensal Road",
+            duration_hours=3,
+        ),
+        checkpointer=memory,
+    )
+    config = {"configurable": {"thread_id": "partial-named-place"}}
+    interrupted = graph.invoke(
+        {"original_request_text": "A named-place request with a relative date."},
+        config,
+    )
+    first_payload = interrupt_payload(interrupted)
+    assert first_payload["kind"] == "request_clarification"
+    assert first_payload["parsed_draft"] == {
+        "bird_input": "Yellow-browed Warbler",
+        "postcode": None,
+        "start_point": None,
+        "location_query": "Kensal Road",
+        "target_local_date": None,
+        "duration_hours": 3.0,
+        "maximum_walking_distance_km": None,
+        "rain_preference": None,
+        "target_month_override": None,
+        "seasonal_window_radius_months": None,
+        "search_radius_km": None,
+    }
+
+    resumed = graph.invoke(
+        Command(resume={"updates": {"target_local_date": "2026-09-12"}}),
+        config,
+    )
+    second_payload = interrupt_payload(resumed)
+    assert second_payload["kind"] == "location_correction"
+    assert resumed["parsed_request_draft"]["location_query"] == "Kensal Road"
+    assert resumed["parsed_request_draft"]["bird_input"] == "Yellow-browed Warbler"
+    assert resumed["parsed_request_draft"]["duration_hours"] == 3.0
+
+
 def test_named_london_place_is_geocoded_then_selected_by_human() -> None:
     memory = create_biodiversity_checkpointer()
     graph = graph_for(
@@ -216,6 +258,164 @@ def test_invalid_live_structured_parse_becomes_typed_clarification() -> None:
         "The model response did not match the structured request contract."
     )
     assert "unsafe provider detail" not in json.dumps(payload)
+
+
+def test_invalid_live_date_keeps_other_valid_structured_fields() -> None:
+    class PartiallyInvalidStructuredParser:
+        def with_structured_output(self, schema, **kwargs):
+            assert schema is ExpeditionRequestDraft
+            assert kwargs["include_raw"] is True
+            return self
+
+        def invoke(self, messages):
+            del messages
+            return {
+                "raw": AIMessage(
+                    content="",
+                    tool_calls=[
+                        {
+                            "name": "ExpeditionRequestDraft",
+                            "args": {
+                                "bird_input": "Yellow-browed Warbler",
+                                "location_query": "Rainham Marshes",
+                                "target_local_date": "next Saturday",
+                                "duration_hours": 3,
+                            },
+                            "id": "request-parse",
+                            "type": "tool_call",
+                        }
+                    ],
+                ),
+                "parsed": None,
+                "parsing_error": ValueError("unsafe provider detail"),
+            }
+
+    memory = create_biodiversity_checkpointer()
+    graph = build_biodiversity_graph(
+        parser_model=PartiallyInvalidStructuredParser(),
+        evidence_model=evidence_model("search_occurrences"),
+        composer_model=ScriptedPlanComposerModel(),
+        checkpointer=memory,
+    )
+    result = graph.invoke(
+        {"original_request_text": "A request containing a relative date"},
+        {"configurable": {"thread_id": "partially-invalid-structured-parser"}},
+    )
+    payload = interrupt_payload(result)
+    assert payload["kind"] == "request_clarification"
+    assert payload["parsed_draft"]["bird_input"] == "Yellow-browed Warbler"
+    assert payload["parsed_draft"]["location_query"] == "Rainham Marshes"
+    assert payload["parsed_draft"]["duration_hours"] == 3.0
+    assert payload["parsed_draft"]["target_local_date"] is None
+    assert payload["validation_errors"] == [
+        "Could not safely use the model value for target_local_date; please correct it.",
+        "Missing or contradictory field: target_local_date.",
+    ]
+    assert "unsafe provider detail" not in json.dumps(payload)
+
+
+def test_unusable_live_structure_recovers_explicit_request_text_fields() -> None:
+    class UnusableStructuredParser:
+        def with_structured_output(self, schema, **kwargs):
+            assert schema is ExpeditionRequestDraft
+            assert kwargs["include_raw"] is True
+            return self
+
+        def invoke(self, messages):
+            del messages
+            return {
+                "raw": AIMessage(content="No usable structured arguments."),
+                "parsed": None,
+                "parsing_error": ValueError("unsafe provider detail"),
+            }
+
+    memory = create_biodiversity_checkpointer()
+    graph = build_biodiversity_graph(
+        parser_model=UnusableStructuredParser(),
+        evidence_model=evidence_model("search_occurrences"),
+        composer_model=ScriptedPlanComposerModel(),
+        checkpointer=memory,
+    )
+    result = graph.invoke(
+        {
+            "original_request_text": (
+                "Where should I go for a 3-hour hunt near Rainham Marshes "
+                "next Saturday to spot a vagrant Yellow-browed Warbler?"
+            )
+        },
+        {"configurable": {"thread_id": "unusable-live-structure"}},
+    )
+    payload = interrupt_payload(result)
+    assert payload["kind"] == "request_clarification"
+    assert payload["parsed_draft"]["bird_input"] == "Yellow-browed Warbler"
+    assert payload["parsed_draft"]["location_query"] == "Rainham Marshes"
+    assert payload["parsed_draft"]["duration_hours"] == 3.0
+    assert payload["parsed_draft"]["target_local_date"] is None
+    assert payload["validation_errors"] == [
+        "Missing or contradictory field: target_local_date."
+    ]
+    assert "unsafe provider detail" not in json.dumps(payload)
+
+
+def test_structured_parser_exception_recovers_explicit_request_text_fields() -> None:
+    class RaisingStructuredParser:
+        def with_structured_output(self, schema, **kwargs):
+            assert schema is ExpeditionRequestDraft
+            assert kwargs["include_raw"] is True
+            return self
+
+        def invoke(self, messages):
+            del messages
+            return ExpeditionRequestDraft.model_validate(
+                {"duration_hours": "not-a-number"}
+            )
+
+    graph = build_biodiversity_graph(
+        parser_model=RaisingStructuredParser(),
+        evidence_model=evidence_model("search_occurrences"),
+        composer_model=ScriptedPlanComposerModel(),
+        checkpointer=create_biodiversity_checkpointer(),
+    )
+    result = graph.invoke(
+        {
+            "original_request_text": (
+                "Where should I go for a 3-hour hunt near Rainham Marshes "
+                "next Saturday to spot a vagrant Yellow-browed Warbler?"
+            )
+        },
+        {"configurable": {"thread_id": "raising-structured-parser"}},
+    )
+    payload = interrupt_payload(result)
+    assert payload["parsed_draft"] == {
+        "bird_input": "Yellow-browed Warbler",
+        "postcode": None,
+        "start_point": None,
+        "location_query": "Rainham Marshes",
+        "target_local_date": None,
+        "duration_hours": 3.0,
+        "maximum_walking_distance_km": None,
+        "rain_preference": None,
+        "target_month_override": None,
+        "seasonal_window_radius_months": None,
+        "search_radius_km": None,
+    }
+    assert payload["validation_errors"] == [
+        "Missing or contradictory field: target_local_date."
+    ]
+
+
+def test_old_empty_draft_accepts_a_date_only_clarification_resume() -> None:
+    _validate_resume_payload(
+        {"kind": "request_clarification"},
+        {"updates": {"target_local_date": "2026-09-12"}},
+        state={
+            "parsed_request_draft": {},
+            "original_request_text": (
+                "Where should I go for a 3-hour hunt near Rainham Marshes "
+                "next Saturday to spot a vagrant Yellow-browed Warbler?"
+            ),
+        },
+    )
 
 
 def test_robin_ambiguity_interrupt_and_validated_resume() -> None:

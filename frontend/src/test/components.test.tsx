@@ -9,9 +9,10 @@ import { PlanPanel } from "../components/PlanPanel";
 import { RequestComposer } from "../components/RequestComposer";
 import { RunSidebar } from "../components/RunSidebar";
 import { SelectedRunRequest } from "../components/SelectedRunRequest";
+import { StateInspector } from "../components/StateInspector";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
 import type { FinalPlanView, PendingDecisionView, RunDetail } from "../api/contracts";
-import { comparisonFixture, evidenceFixture, historyFixture, planFixture } from "./fixtures";
+import { comparisonFixture, evidenceFixture, historyFixture, planFixture, stateFixture, workflowTopologyFixture } from "./fixtures";
 
 describe("field notebook cards", () => {
   it("renders plan, evidence, constraints, provenance, and exact-date weather", () => {
@@ -20,6 +21,9 @@ describe("field notebook cards", () => {
     expect(screen.getByText("Evidence Garden")).toBeInTheDocument();
     expect(screen.getByText(/Context only — not a recommendation/)).toBeInTheDocument();
     expect(screen.getByText("24,804")).toBeInTheDocument();
+    expect(screen.getByText("GBIF data funnel")).toBeInTheDocument();
+    expect(screen.getByLabelText("Strong evidence gate checklist")).toHaveTextContent("227 / 50 min");
+    expect(screen.getByText(/12 cells with at least 3 eligible records/)).toBeInTheDocument();
     expect(screen.getByText("Server match count is not abundance or a population estimate.")).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Constraint ledger" })).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Daily weather context" })).toBeInTheDocument();
@@ -108,7 +112,7 @@ describe("typed human decisions", () => {
     });
   });
 
-  it("submits only user-entered request clarification fields", async () => {
+  it("shows the safe partial parse and submits only the missing field", async () => {
     const onResume = vi.fn().mockResolvedValue(undefined);
     const decision: PendingDecisionView = {
       kind: "request_clarification",
@@ -118,14 +122,26 @@ describe("typed human decisions", () => {
       execution_id: "execution-one",
       options: [],
       candidates: [],
-      validation_errors: ["Missing or contradictory field: postcode_or_start_point."],
+      validation_errors: ["Missing or contradictory field: target_local_date."],
+      parsed_draft: {
+        bird_input: "Yellow-browed Warbler",
+        postcode: null,
+        location_query: "Rainham Marshes",
+        has_explicit_start_point: false,
+        target_local_date: null,
+        duration_hours: 3,
+      },
     };
     render(<HitlPanel decision={decision} busy={false} onResume={onResume} />);
-    await userEvent.type(screen.getByLabelText("London postcode"), "W10 5BN");
+    expect(screen.getByLabelText("Recognised request details")).toHaveTextContent("Rainham Marshes");
+    expect(screen.getByLabelText(/Named London place/)).toHaveValue("Rainham Marshes");
+    expect(screen.getByLabelText("Bird name")).toHaveValue("Yellow-browed Warbler");
+    expect(screen.getByLabelText("Duration hours")).toHaveValue(3);
+    await userEvent.type(screen.getByLabelText("Target date"), "2026-09-12");
     await userEvent.click(screen.getByRole("button", { name: "Apply corrections" }));
     expect(onResume).toHaveBeenCalledWith({
       checkpoint_id: "checkpoint-clarification",
-      decision: { kind: "request_clarification", updates: { postcode: "W10 5BN" } },
+      decision: { kind: "request_clarification", updates: { target_local_date: "2026-09-12" } },
     });
   });
 
@@ -166,13 +182,71 @@ describe("typed human decisions", () => {
 
 describe("trace and time travel", () => {
   it("renders nested span duration without adding it to the node", () => {
-    render(<AgentTrace connection="connected" onCheckpoint={vi.fn()} events={[
+    render(<AgentTrace topology={workflowTopologyFixture} history={historyFixture} activeExecutionId="execution-original" selectedExecutionId="execution-original" connection="connected" onCheckpoint={vi.fn()} onInspectCheckpoint={vi.fn()} onExecutionChange={vi.fn()} events={[
       { run_id: "op", sequence: 1, event_type: "node_completed", node_id: "evidence_agent", timestamp: "2026-09-02T00:00:00Z", duration_ms: 1200, payload: {} },
       { run_id: "op", sequence: 2, event_type: "model_completed", node_id: "evidence_agent", parent_span_id: "node", timestamp: "2026-09-02T00:00:01Z", duration_ms: 450, payload: { model: "scripted" } },
     ]} />);
     expect(screen.getByText("1.20 s")).toBeInTheDocument();
     expect(screen.getByText("450 ms")).toBeInTheDocument();
     expect(screen.getByText(/nested inside node wall time/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Complete LangGraph topology with execution state")).toBeInTheDocument();
+  });
+
+  it("marks a waiting HITL node amber and exposes a failed node reason", () => {
+    const waitingHistory = {
+      ...historyFixture,
+      checkpoints: [
+        ...historyFixture.checkpoints,
+        {
+          ...historyFixture.checkpoints[1],
+          checkpoint_id: "checkpoint-waiting",
+          next_nodes: ["actionable_tradeoff_interrupt"],
+          interrupt_kind: "actionable_tradeoff",
+        },
+      ],
+      executions: historyFixture.executions.map((execution) => ({
+        ...execution,
+        head_checkpoint_id: "checkpoint-waiting",
+        terminal_status: undefined,
+        interrupt_kind: "actionable_tradeoff",
+      })),
+    };
+    const { rerender } = render(
+      <AgentTrace
+        topology={workflowTopologyFixture}
+        history={waitingHistory}
+        activeExecutionId="execution-original"
+        selectedExecutionId="execution-original"
+        connection="closed"
+        onCheckpoint={vi.fn()}
+        onInspectCheckpoint={vi.fn()}
+        onExecutionChange={vi.fn()}
+        events={[]}
+      />,
+    );
+    expect(screen.getByLabelText("Actionable trade-off: Waiting")).toHaveClass("node-status-waiting");
+
+    rerender(
+      <AgentTrace
+        topology={workflowTopologyFixture}
+        history={null}
+        activeExecutionId={null}
+        selectedExecutionId={null}
+        connection="closed"
+        onCheckpoint={vi.fn()}
+        onInspectCheckpoint={vi.fn()}
+        onExecutionChange={vi.fn()}
+        events={[{
+          run_id: "failed-op",
+          sequence: 1,
+          event_type: "node_failed",
+          node_id: "evidence_agent",
+          timestamp: "2026-09-02T00:00:00Z",
+          payload: { error_type: "RuntimeError" },
+        }]}
+      />,
+    );
+    expect(screen.getByLabelText("Evidence agent: Failed")).toHaveTextContent("Stopped: RuntimeError");
   });
 
   it("labels identities, disables terminal replay/no-op fork, and highlights deterministic changes", async () => {
@@ -227,11 +301,20 @@ describe("loading, empty, error, and accessibility states", () => {
       pending_decisions: [],
       final_plan: null,
     };
-    render(<SelectedRunRequest detail={detail} />);
+    render(<SelectedRunRequest detail={detail} state={stateFixture} />);
     expect(screen.getByRole("heading", { name: "Natural-language request" })).toBeInTheDocument();
     expect(screen.getByText(/Plan a two-hour expedition from Kensal Road/)).toBeInTheDocument();
     expect(screen.getByLabelText("Selected run request metadata")).toHaveTextContent("expedition-history");
     expect(screen.getByText("fixture/scripted")).toBeInTheDocument();
+    expect(screen.getByLabelText("HITL decisions for selected execution")).toHaveTextContent("Widened seasonal window to ±2 months");
+    expect(screen.getByLabelText("HITL decisions for selected execution")).toHaveTextContent("Expanded site search to 6.9 km");
+  });
+
+  it("explains checkpoints and shows decisions accumulated by the selected state", () => {
+    render(<StateInspector state={stateFixture} loading={false} onClose={vi.fn()} />);
+    expect(screen.getByText(/CP means checkpoint/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "HITL decisions at this checkpoint" })).toBeInTheDocument();
+    expect(screen.getByLabelText("Applied HITL decision history")).toHaveTextContent("Widened seasonal window to ±2 months");
   });
 
   it("renders explicit async states", () => {

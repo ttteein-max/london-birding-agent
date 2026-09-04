@@ -8,22 +8,54 @@ interface Props {
   onResume: (request: ResumeRunRequest) => Promise<void>;
 }
 
+const MONTH_NAMES = [
+  "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
+];
+
+function monthNames(months: number[] | undefined): string {
+  return (months ?? []).map((month) => MONTH_NAMES[month - 1]).filter(Boolean).join(", ");
+}
+
 export function HitlPanel({ decision, busy, onResume }: Props) {
-  const [postcode, setPostcode] = useState("");
-  const [bird, setBird] = useState("");
-  const [date, setDate] = useState("");
-  const [duration, setDuration] = useState("");
+  const draft = decision.parsed_draft;
+  const [postcode, setPostcode] = useState(draft?.postcode ?? "");
+  const [locationQuery, setLocationQuery] = useState(draft?.location_query ?? "");
+  const [bird, setBird] = useState(draft?.bird_input ?? "");
+  const [date, setDate] = useState(draft?.target_local_date ?? "");
+  const [duration, setDuration] = useState(
+    draft?.duration_hours == null ? "" : String(draft.duration_hours),
+  );
   const [radius, setRadius] = useState("8");
 
   const base = { checkpoint_id: decision.checkpoint_id };
 
   const clarification = async (event: FormEvent) => {
     event.preventDefault();
-    const updates: Record<string, string | number> = {};
-    if (postcode.trim()) updates.postcode = postcode.trim();
-    if (bird.trim()) updates.bird_input = bird.trim();
-    if (date) updates.target_local_date = date;
-    if (duration) updates.duration_hours = Number(duration);
+    const updates: Record<string, string | number | null> = {};
+    const nextPostcode = postcode.trim();
+    const nextLocationQuery = locationQuery.trim();
+    const nextBird = bird.trim();
+
+    if (nextPostcode) {
+      if (nextPostcode !== (draft?.postcode ?? "")) updates.postcode = nextPostcode;
+      if (draft?.location_query) updates.location_query = null;
+    } else if (nextLocationQuery) {
+      if (nextLocationQuery !== (draft?.location_query ?? "")) {
+        updates.location_query = nextLocationQuery;
+      }
+      if (draft?.postcode) updates.postcode = null;
+    }
+    if (nextBird && nextBird !== (draft?.bird_input ?? "")) {
+      updates.bird_input = nextBird;
+    }
+    if (date && date !== (draft?.target_local_date ?? "")) {
+      updates.target_local_date = date;
+    }
+    const initialDuration = draft?.duration_hours;
+    if (duration && Number(duration) !== initialDuration) {
+      updates.duration_hours = Number(duration);
+    }
     await onResume({
       ...base,
       decision: { kind: "request_clarification", updates },
@@ -91,7 +123,17 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
               }
               if (option.option === "widen_seasonal_window") {
                 const next = Math.min(option.maximum_radius_months ?? 3, (option.current_radius_months ?? 1) + 1);
-                return <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: "widen_seasonal_window", seasonal_window_radius_months: next } })}><strong>Widen seasonal window</strong><span>Re-run bounded occurrence evidence at ±{next} months</span></button>;
+                const years = option.year_window?.join("–") ?? "the same multi-year window";
+                const currentMonths = monthNames(option.current_seasonal_months);
+                const nextMonths = monthNames(option.next_seasonal_months);
+                return (
+                  <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: "widen_seasonal_window", seasonal_window_radius_months: next } })}>
+                    <strong>Widen seasonal window</strong>
+                    <span>Months: {currentMonths || "current window"} → {nextMonths || "adjacent calendar months"}</span>
+                    <span>Re-run at ±{next} months across historical years {years}</span>
+                    <small>Current query: {(option.current_server_match_count ?? 0).toLocaleString("en-GB")} server matches · {(option.current_ranking_eligible_count ?? 0).toLocaleString("en-GB")} ranking eligible. Server matches are not abundance.</small>
+                  </button>
+                );
               }
               return <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: option.option as "consider_related_taxa" | "keep_constraints_accept_low_confidence" | "accept_context_only" | "continue_with_weather_acknowledgement" | "accept_uncertain_access" | "revise_rain_preference" } })}><strong>{humanise(option.option)}</strong><span>{option.option === "keep_constraints_accept_low_confidence" ? "Continue with a non-recommendation result" : "Apply this validated decision"}</span></button>;
             })}
@@ -143,13 +185,29 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
         )}
 
         {decision.kind === "request_clarification" && (
-          <form className="hitl-form clarification-grid" onSubmit={clarification}>
-            <label htmlFor="clarify-postcode">London postcode<input id="clarify-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} /></label>
-            <label htmlFor="clarify-bird">Bird name<input id="clarify-bird" value={bird} onChange={(event) => setBird(event.target.value)} /></label>
-            <label htmlFor="clarify-date">Target date<input id="clarify-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-            <label htmlFor="clarify-duration">Duration hours<input id="clarify-duration" type="number" min="0.5" max="24" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
-            <button className="primary-action" disabled={busy}>Apply corrections</button>
-          </form>
+          <>
+            {draft && (
+              <div className="recognised-request" aria-label="Recognised request details">
+                <span><strong>Start</strong>{draft.location_query ?? draft.postcode ?? (draft.has_explicit_start_point ? "Explicit map point" : "Needs input")}</span>
+                <span><strong>Bird</strong>{draft.bird_input ?? "Needs input"}</span>
+                <span><strong>Date</strong>{draft.target_local_date ?? "Needs input"}</span>
+                <span><strong>Duration</strong>{draft.duration_hours == null ? "Needs input" : `${draft.duration_hours} hours`}</span>
+              </div>
+            )}
+            <form className="hitl-form clarification-grid" autoComplete="off" onSubmit={clarification}>
+              <label htmlFor="clarify-place">Named London place
+                <input id="clarify-place" value={locationQuery} onChange={(event) => setLocationQuery(event.target.value)} placeholder={draft?.has_explicit_start_point ? "Explicit map point already retained" : "e.g. Rainham Marshes"} />
+                <small>Kept and verified after this decision.</small>
+              </label>
+              <label htmlFor="clarify-postcode">Postcode override · optional
+                <input id="clarify-postcode" value={postcode} onChange={(event) => setPostcode(event.target.value)} placeholder="Only if you prefer a postcode" />
+              </label>
+              <label htmlFor="clarify-bird">Bird name<input id="clarify-bird" value={bird} onChange={(event) => setBird(event.target.value)} /></label>
+              <label htmlFor="clarify-date">Target date<input id="clarify-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
+              <label htmlFor="clarify-duration">Duration hours<input id="clarify-duration" type="number" min="0.5" max="24" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
+              <button className="primary-action" disabled={busy}>Apply corrections</button>
+            </form>
+          </>
         )}
       </div>
     </section>

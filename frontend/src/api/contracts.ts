@@ -1,6 +1,9 @@
 import type { components } from "./schema";
 
 export type HealthView = components["schemas"]["HealthView"];
+export type WorkflowTopologyView = components["schemas"]["WorkflowTopologyView"];
+export type WorkflowNodeView = components["schemas"]["WorkflowNodeView"];
+export type WorkflowEdgeView = components["schemas"]["WorkflowEdgeView"];
 export type RunModeView = components["schemas"]["RunModeView"];
 export type CreateRunRequest = components["schemas"]["CreateRunRequest"];
 export type OperationAccepted = components["schemas"]["OperationAccepted"];

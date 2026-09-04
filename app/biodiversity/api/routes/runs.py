@@ -21,6 +21,7 @@ from app.biodiversity.api.schemas import (
     ComparisonView,
     CreateRunRequest,
     EvidenceView,
+    FinalPlanView,
     ForkRunRequest,
     HistoryView,
     MapEvidenceView,
@@ -177,6 +178,26 @@ async def get_checkpoint_evidence(
     try:
         return await asyncio.to_thread(
             service.views.evidence,
+            service.runtime.reader(),
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+        )
+    except ValueError as exc:
+        raise _read_error(exc) from None
+
+
+@router.get(
+    "/runs/{thread_id}/checkpoints/{checkpoint_id}/plan",
+    response_model=FinalPlanView | None,
+)
+async def get_checkpoint_plan(
+    thread_id: str,
+    checkpoint_id: str,
+    service: Phase4Application = Depends(application),
+) -> FinalPlanView | None:
+    try:
+        return await asyncio.to_thread(
+            service.views.checkpoint_plan,
             service.runtime.reader(),
             thread_id=thread_id,
             checkpoint_id=checkpoint_id,

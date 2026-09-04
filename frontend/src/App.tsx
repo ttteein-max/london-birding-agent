@@ -5,6 +5,7 @@ import type {
   AgentRunEvent,
   CheckpointSummary,
   EvidenceView,
+  FinalPlanView,
   ForkRunRequest,
   HealthView,
   HistoryView,
@@ -16,6 +17,7 @@ import type {
   RunModeView,
   RunSummary,
   StateView,
+  WorkflowTopologyView,
 } from "./api/contracts";
 import { AgentTrace } from "./components/AgentTrace";
 import { AsyncState } from "./components/AsyncState";
@@ -57,12 +59,16 @@ function failedRunDetail(detail: RunDetail, events: AgentRunEvent[]): string {
 
 export default function App() {
   const [health, setHealth] = useState<HealthView | null>(null);
+  const [topology, setTopology] = useState<WorkflowTopologyView | null>(null);
   const [runs, setRuns] = useState<RunSummary[]>([]);
   const [selectedThread, setSelectedThread] = useState<string | null>(null);
   const [detail, setDetail] = useState<RunDetail | null>(null);
   const [history, setHistory] = useState<HistoryView | null>(null);
   const [evidence, setEvidence] = useState<EvidenceView | null>(null);
   const [mapData, setMapData] = useState<MapEvidenceView | null>(null);
+  const [plan, setPlan] = useState<FinalPlanView | null>(null);
+  const [executionState, setExecutionState] = useState<StateView | null>(null);
+  const [selectedExecutionId, setSelectedExecutionId] = useState<string | null>(null);
   const [events, setEvents] = useState<AgentRunEvent[]>([]);
   const [inspectedState, setInspectedState] = useState<StateView | null>(null);
   const [comparison, setComparison] = useState<PlanComparison | null>(null);
@@ -75,29 +81,49 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const stopStream = useRef<(() => void) | null>(null);
   const selectionEpoch = useRef(0);
+  const checkpointViewEpoch = useRef(0);
 
   const loadCheckpoint = useCallback(async (
     threadId: string,
     checkpointId: string,
     epoch = selectionEpoch.current,
+    fallbackPlan: FinalPlanView | null = null,
+    checkpoint: CheckpointSummary | null = null,
   ) => {
     if (selectionEpoch.current !== epoch) return;
+    const viewEpoch = ++checkpointViewEpoch.current;
     setLoadingMap(true);
+    setExecutionState(null);
     try {
-      const [nextEvidence, nextMap] = await Promise.all([
+      const [nextEvidence, nextMap, nextState] = await Promise.all([
         api.evidence(threadId, checkpointId),
         api.map(threadId, checkpointId),
+        checkpoint && Number.isInteger(checkpoint.graph_step)
+          ? api.state(threadId, checkpointId, checkpoint.node_id, checkpoint.graph_step ?? -1)
+          : Promise.resolve(null),
       ]);
-      if (selectionEpoch.current !== epoch) return;
+      let nextPlan = fallbackPlan;
+      try {
+        nextPlan = await api.plan(threadId, checkpointId);
+      } catch (caught) {
+        // Keep evidence and map usable during a rolling deployment where the
+        // browser updates before the checkpoint-plan endpoint is available.
+        if (!(caught instanceof ApiError && caught.status === 404)) throw caught;
+      }
+      if (selectionEpoch.current !== epoch || checkpointViewEpoch.current !== viewEpoch) return;
       setEvidence(nextEvidence);
       setMapData(nextMap);
+      setPlan(nextPlan);
+      setExecutionState(nextState);
     } catch (caught) {
-      if (selectionEpoch.current !== epoch) return;
+      if (selectionEpoch.current !== epoch || checkpointViewEpoch.current !== viewEpoch) return;
       setError(message(caught));
       setEvidence(null);
       setMapData(null);
+      setPlan(null);
+      setExecutionState(null);
     } finally {
-      if (selectionEpoch.current === epoch) setLoadingMap(false);
+      if (selectionEpoch.current === epoch && checkpointViewEpoch.current === viewEpoch) setLoadingMap(false);
     }
   }, []);
 
@@ -119,8 +145,28 @@ export default function App() {
       setDetail(nextDetail);
       setHistory(nextHistory);
       setRuns(nextRuns);
-      const checkpointId = nextDetail.run.current_checkpoint_id;
-      if (checkpointId) await loadCheckpoint(threadId, checkpointId, epoch);
+      const selectedExecution = nextHistory.executions.find(
+        (item) => item.execution_id === nextDetail.run.execution_id,
+      ) ?? nextHistory.executions[0];
+      setSelectedExecutionId(selectedExecution?.execution_id ?? null);
+      const checkpointId = selectedExecution?.final_checkpoint_id
+        ?? selectedExecution?.head_checkpoint_id
+        ?? nextDetail.run.current_checkpoint_id;
+      if (checkpointId) {
+        const selectedCheckpoint = nextHistory.checkpoints.find(
+          (item) => item.checkpoint_id === checkpointId,
+        ) ?? null;
+        const fallbackPlan = selectedExecution?.execution_id === nextDetail.run.execution_id
+          ? nextDetail.final_plan
+          : null;
+        await loadCheckpoint(threadId, checkpointId, epoch, fallbackPlan, selectedCheckpoint);
+      } else {
+        checkpointViewEpoch.current += 1;
+        setEvidence(null);
+        setMapData(null);
+        setPlan(null);
+        setExecutionState(null);
+      }
     } catch (caught) {
       if (selectionEpoch.current !== epoch) return;
       setError(message(caught));
@@ -173,8 +219,13 @@ export default function App() {
     void (async () => {
       const epoch = selectionEpoch.current;
       try {
-        const [nextHealth, nextRuns] = await Promise.all([api.health(), api.listRuns()]);
+        const [nextHealth, nextTopology, nextRuns] = await Promise.all([
+          api.health(),
+          api.topology(),
+          api.listRuns(),
+        ]);
         setHealth(nextHealth);
+        setTopology(nextTopology);
         if (selectionEpoch.current !== epoch) return;
         setRuns(nextRuns);
         if (nextRuns[0]) {
@@ -203,14 +254,16 @@ export default function App() {
     try {
       const accepted = await create();
       if (selectionEpoch.current !== epoch) return;
-      if (accepted.thread_id !== selectedThread) {
-        setDetail(null);
-        setHistory(null);
-        setEvidence(null);
-        setMapData(null);
-      }
+      setDetail(null);
+      setHistory(null);
+      setEvidence(null);
+      setMapData(null);
+      setPlan(null);
+      setExecutionState(null);
       setSelectedThread(accepted.thread_id);
       setEvents([]);
+      setSelectedExecutionId(null);
+      checkpointViewEpoch.current += 1;
       setInspectedState(null);
       setComparison(null);
       const nextRuns = await api.listRuns();
@@ -230,6 +283,8 @@ export default function App() {
     setHistory(null);
     setEvidence(null);
     setMapData(null);
+    setPlan(null);
+    setExecutionState(null);
     await begin(() => api.createRun({ request, ...mode }));
   };
 
@@ -270,6 +325,21 @@ export default function App() {
     } finally {
       setBusy(false);
     }
+  };
+
+  const selectExecution = async (executionId: string) => {
+    const execution = history?.executions.find((item) => item.execution_id === executionId);
+    const checkpointId = execution?.final_checkpoint_id ?? execution?.head_checkpoint_id;
+    if (!selectedThread || !execution || !checkpointId) return;
+    setSelectedExecutionId(executionId);
+    setError(null);
+    const fallbackPlan = execution.execution_id === detail?.run.execution_id
+      ? detail.final_plan
+      : null;
+    const checkpoint = history?.checkpoints.find(
+      (item) => item.checkpoint_id === checkpointId,
+    ) ?? null;
+    await loadCheckpoint(selectedThread, checkpointId, selectionEpoch.current, fallbackPlan, checkpoint);
   };
 
   const inspectCheckpoint = async (checkpoint: CheckpointSummary) => {
@@ -330,20 +400,30 @@ export default function App() {
           onSubmit={start}
         />
         {error && <div className="api-error" role="alert"><strong>Application notice</strong><span>{error}</span><button onClick={() => setError(null)} aria-label="Dismiss error">×</button></div>}
-        <SelectedRunRequest detail={detail} />
-        {decision && <HitlPanel decision={decision} busy={busy} onResume={resume} />}
+        <SelectedRunRequest detail={detail} state={executionState} />
+        {decision && <HitlPanel key={decision.checkpoint_id} decision={decision} busy={busy} onResume={resume} />}
         <div className="workspace-grid">
           <RunSidebar runs={runs} selectedThread={selectedThread} detail={detail} onSelect={(id) => void selectRun(id)} />
           <EvidenceMap data={mapData} loading={loadingMap} error={error} />
           <aside className="evidence-rail" aria-label="Plan and evidence notebook">
-            {loadingRun && <AsyncState kind="loading" title="Opening run" detail="Reading durable checkpoint history…" />}
-            {!loadingRun && detail?.final_plan && <PlanPanel plan={detail.final_plan} />}
-            {!loadingRun && evidence && <EvidencePanel evidence={evidence} />}
+            {(loadingRun || loadingMap) && <AsyncState kind="loading" title="Opening execution" detail="Reading its durable final checkpoint…" />}
+            {!loadingRun && !loadingMap && plan && <PlanPanel plan={plan} />}
+            {!loadingRun && !loadingMap && evidence && <EvidencePanel evidence={evidence} />}
             {!loadingRun && !detail && <AsyncState kind="empty" title="No expedition selected" detail="Start a fixture example or choose a recent run." />}
-            {!loadingRun && detail && !detail.final_plan && !decision && <AsyncState kind={detail.run.status === "failed" ? "error" : "loading"} title={detail.run.status === "failed" ? "Execution failed safely" : "Plan not ready"} detail={detail.run.status === "failed" ? failedRunDetail(detail, events) : "Evidence collection is still in progress."} />}
+            {!loadingRun && !loadingMap && detail && !plan && !decision && <AsyncState kind={detail.run.status === "failed" ? "error" : "loading"} title={detail.run.status === "failed" ? "Execution failed safely" : "Plan not ready"} detail={detail.run.status === "failed" ? failedRunDetail(detail, events) : "Evidence collection is still in progress."} />}
           </aside>
         </div>
-        <AgentTrace events={events} connection={connection} onCheckpoint={(event) => void inspectEvent(event)} />
+        <AgentTrace
+          topology={topology}
+          history={history}
+          activeExecutionId={detail?.run.execution_id ?? null}
+          selectedExecutionId={selectedExecutionId}
+          events={events}
+          connection={connection}
+          onCheckpoint={(event) => void inspectEvent(event)}
+          onInspectCheckpoint={(checkpoint) => void inspectCheckpoint(checkpoint)}
+          onExecutionChange={(executionId) => void selectExecution(executionId)}
+        />
         {history && <TimeTravelPanel history={history} comparison={comparison} busy={busy} onInspect={(checkpoint) => void inspectCheckpoint(checkpoint)} onLoadState={loadSafeState} onReplay={replay} onFork={fork} onCompare={compare} />}
       </main>
       <footer>

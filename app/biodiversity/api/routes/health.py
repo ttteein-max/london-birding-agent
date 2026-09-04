@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Depends
 
 from app.biodiversity.api.dependencies import application
-from app.biodiversity.api.schemas import HealthView, RunModeView
+from app.biodiversity.api.schemas import HealthView, RunModeView, WorkflowTopologyView
 from app.biodiversity.api.services.operations import Phase4Application
 from app.biodiversity.run_models import WORKFLOW_VERSION
 
@@ -25,3 +25,10 @@ async def health(
         ],
         public_demo=service.settings.public_demo,
     )
+
+
+@router.get("/workflow/topology", response_model=WorkflowTopologyView)
+async def workflow_topology(
+    service: Phase4Application = Depends(application),
+) -> WorkflowTopologyView:
+    return service.workflow_topology()

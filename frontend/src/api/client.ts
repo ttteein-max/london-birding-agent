@@ -2,6 +2,7 @@ import type {
   ApiErrorBody,
   CreateRunRequest,
   EvidenceView,
+  FinalPlanView,
   ForkRunRequest,
   HealthView,
   HistoryView,
@@ -14,6 +15,7 @@ import type {
   RunDetail,
   RunSummary,
   StateView,
+  WorkflowTopologyView,
 } from "./contracts";
 
 const API_BASE = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
@@ -23,12 +25,26 @@ export class ApiError extends Error {
   readonly code: string;
   readonly fields: string[];
 
-  constructor(status: number, body: ApiErrorBody) {
-    super(body.error.message);
+  constructor(status: number, body: ApiErrorBody | unknown) {
+    const payload = body && typeof body === "object" ? body as Record<string, unknown> : {};
+    const nested = payload.error && typeof payload.error === "object"
+      ? payload.error as Record<string, unknown>
+      : {};
+    const detail = typeof payload.detail === "string" ? payload.detail : null;
+    const errorMessage = typeof nested.message === "string"
+      ? nested.message
+      : detail ?? `Request failed with HTTP ${status}`;
+    const errorCode = typeof nested.code === "string"
+      ? nested.code
+      : `http_${status}`;
+    const errorFields = Array.isArray(nested.fields)
+      ? nested.fields.filter((field): field is string => typeof field === "string")
+      : [];
+    super(errorMessage);
     this.name = "ApiError";
     this.status = status;
-    this.code = body.error.code;
-    this.fields = body.error.fields ?? [];
+    this.code = errorCode;
+    this.fields = errorFields;
   }
 }
 
@@ -40,9 +56,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       ...init?.headers,
     },
   });
-  const body = (await response.json()) as T | ApiErrorBody;
+  const body = (await response.json()) as T | ApiErrorBody | unknown;
   if (!response.ok) {
-    throw new ApiError(response.status, body as ApiErrorBody);
+    throw new ApiError(response.status, body);
   }
   return body as T;
 }
@@ -53,6 +69,7 @@ function encoded(value: string): string {
 
 export const api = {
   health: () => request<HealthView>("/api/v1/health"),
+  topology: () => request<WorkflowTopologyView>("/api/v1/workflow/topology"),
   listRuns: () => request<RunSummary[]>("/api/v1/runs"),
   createRun: (body: CreateRunRequest) =>
     request<OperationAccepted>("/api/v1/runs", {
@@ -82,6 +99,10 @@ export const api = {
   evidence: (threadId: string, checkpointId: string) =>
     request<EvidenceView>(
       `/api/v1/runs/${encoded(threadId)}/checkpoints/${encoded(checkpointId)}/evidence`,
+    ),
+  plan: (threadId: string, checkpointId: string) =>
+    request<FinalPlanView | null>(
+      `/api/v1/runs/${encoded(threadId)}/checkpoints/${encoded(checkpointId)}/plan`,
     ),
   map: (threadId: string, checkpointId: string) =>
     request<MapEvidenceView>(

@@ -34,6 +34,7 @@ All routes are under `/api/v1`:
 | Method | Route | Purpose |
 | --- | --- | --- |
 | GET | `/health` | Product, workflow and default mode status |
+| GET | `/workflow/topology` | Read the safe node/edge presentation of the actual compiled LangGraph |
 | POST | `/runs` | Queue a new expedition |
 | GET | `/runs` | List durable run summaries |
 | GET | `/runs/{thread_id}` | Read a run, operations, branches, executions, decisions, current safe plan and the local-only submitted-request record |
@@ -99,7 +100,9 @@ The local `RunDetail` DTO has one deliberate display-only exception to the gener
 
 `StateView` is the allow-listed Phase 3 view. A state request must supply an exact five-part identity: thread, branch and execution are verified from the selected checkpoint, while `checkpoint_id`, `node_id` and `graph_step` must match exactly. Timestamp proximity is never used.
 
-`EvidenceView` contains bounded counts, deterministic outcome, diversity/quality summaries, warnings, seasonal/year windows, safe plan-site metadata, deterministic constraints, exact-date daily weather and provenance. It never returns `ExpeditionEvidenceBundle` directly.
+`EvidenceView` contains the ordered GBIF data-funnel counts, server-owned strong-gate thresholds/results, deterministic outcome, diversity/quality summaries, warnings, seasonal/year windows, safe plan-site metadata, deterministic constraints, exact-date daily weather and provenance. It never returns `ExpeditionEvidenceBundle` directly.
+
+`WorkflowTopologyView` is assembled from `compiled_graph.get_graph()` and validated against server-side presentation metadata. The frontend overlays durable checkpoints and live events on that single topology; it does not maintain a second hand-written graph.
 
 `MapEvidenceView` applies an additional boundary:
 

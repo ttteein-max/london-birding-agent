@@ -25,8 +25,139 @@ function extendBounds(bounds: maplibregl.LngLatBounds, value: unknown): void {
   value.forEach((item) => extendBounds(bounds, item));
 }
 
+type Position = [number, number];
+type PolygonCoordinates = Position[][];
+
+function asPosition(value: unknown): Position | null {
+  if (
+    !Array.isArray(value)
+    || value.length < 2
+    || typeof value[0] !== "number"
+    || typeof value[1] !== "number"
+  ) return null;
+  return [value[0], value[1]];
+}
+
+function asRing(value: unknown): Position[] {
+  if (!Array.isArray(value)) return [];
+  return value.map(asPosition).filter((point): point is Position => point !== null);
+}
+
+function asPolygon(value: unknown): PolygonCoordinates {
+  if (!Array.isArray(value)) return [];
+  return value.map(asRing).filter((ring) => ring.length >= 4);
+}
+
+function sitePolygons(type: string, value: unknown): PolygonCoordinates[] {
+  if (type === "Polygon") {
+    const polygon = asPolygon(value);
+    return polygon.length > 0 ? [polygon] : [];
+  }
+  if (type !== "MultiPolygon" || !Array.isArray(value)) return [];
+  return value.map(asPolygon).filter((polygon) => polygon.length > 0);
+}
+
+function ringArea(ring: Position[]): number {
+  return Math.abs(ring.reduce((total, [x1, y1], index) => {
+    const [x2, y2] = ring[(index + 1) % ring.length];
+    return total + x1 * y2 - x2 * y1;
+  }, 0) / 2);
+}
+
+function pointInRing([x, y]: Position, ring: Position[]): boolean {
+  let inside = false;
+  for (let index = 0, previous = ring.length - 1; index < ring.length; previous = index++) {
+    const [x1, y1] = ring[index];
+    const [x2, y2] = ring[previous];
+    if ((y1 > y) !== (y2 > y) && x < ((x2 - x1) * (y - y1)) / (y2 - y1) + x1) {
+      inside = !inside;
+    }
+  }
+  return inside;
+}
+
+function pointInPolygon(point: Position, polygon: PolygonCoordinates): boolean {
+  return pointInRing(point, polygon[0])
+    && !polygon.slice(1).some((hole) => pointInRing(point, hole));
+}
+
+function distanceToSegmentSquared(
+  [x, y]: Position,
+  [x1, y1]: Position,
+  [x2, y2]: Position,
+): number {
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+  if (dx === 0 && dy === 0) return (x - x1) ** 2 + (y - y1) ** 2;
+  const ratio = Math.max(0, Math.min(1, ((x - x1) * dx + (y - y1) * dy) / (dx ** 2 + dy ** 2)));
+  return (x - (x1 + ratio * dx)) ** 2 + (y - (y1 + ratio * dy)) ** 2;
+}
+
+function distanceToPolygonSquared(point: Position, polygon: PolygonCoordinates): number {
+  return Math.min(...polygon.flatMap((ring) => ring.map((vertex, index) => (
+    distanceToSegmentSquared(point, vertex, ring[(index + 1) % ring.length])
+  ))));
+}
+
+function interiorPoint(polygon: PolygonCoordinates): Position | null {
+  const outer = polygon[0];
+  if (!outer) return null;
+  const longitudes = outer.map(([longitude]) => longitude);
+  const latitudes = outer.map(([, latitude]) => latitude);
+  const west = Math.min(...longitudes);
+  const east = Math.max(...longitudes);
+  const south = Math.min(...latitudes);
+  const north = Math.max(...latitudes);
+  let best: Position | null = null;
+  let bestDistance = -1;
+  const divisions = 20;
+  for (let xIndex = 0; xIndex <= divisions; xIndex += 1) {
+    for (let yIndex = 0; yIndex <= divisions; yIndex += 1) {
+      const point: Position = [
+        west + ((east - west) * (xIndex + 0.5)) / (divisions + 1),
+        south + ((north - south) * (yIndex + 0.5)) / (divisions + 1),
+      ];
+      if (!pointInPolygon(point, polygon)) continue;
+      const distance = distanceToPolygonSquared(point, polygon);
+      if (distance > bestDistance) {
+        best = point;
+        bestDistance = distance;
+      }
+    }
+  }
+  return best;
+}
+
+function markerFitsPolygon(
+  map: maplibregl.Map,
+  polygon: PolygonCoordinates,
+  anchor: Position,
+): boolean {
+  const projected = polygon.map((ring) => ring.map((point) => {
+    const pixel = map.project(point);
+    return [pixel.x, pixel.y] as Position;
+  }));
+  const pixelAnchor = map.project(anchor);
+  const markerEnvelope: Position[] = [
+    [pixelAnchor.x - 13, pixelAnchor.y - 4],
+    [pixelAnchor.x + 13, pixelAnchor.y - 4],
+    [pixelAnchor.x - 13, pixelAnchor.y - 27],
+    [pixelAnchor.x + 13, pixelAnchor.y - 27],
+  ];
+  return markerEnvelope.every((point) => pointInPolygon(point, projected));
+}
+
 export function EvidenceMap({ data, loading, error }: Props) {
   const container = useRef<HTMLDivElement>(null);
+  const mapInstance = useRef<maplibregl.Map | null>(null);
+
+  const focusFeature = (coordinates: unknown) => {
+    const map = mapInstance.current;
+    if (!map) return;
+    const bounds = new maplibregl.LngLatBounds();
+    extendBounds(bounds, coordinates);
+    if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 90, maxZoom: 14, duration: 450 });
+  };
 
   useEffect(() => {
     if (!container.current || !data) return;
@@ -38,17 +169,19 @@ export function EvidenceMap({ data, loading, error }: Props) {
       zoom: 10.2,
       attributionControl: false,
     });
+    mapInstance.current = map;
+    let activePopup: maplibregl.Popup | null = null;
     map.addControl(new maplibregl.NavigationControl({ showCompass: false }), "top-right");
     map.on("load", () => {
       map.addSource("aggregate-grid", { type: "geojson", data: collection(data.aggregate_grid ?? []) });
       map.addLayer({ id: "aggregate-fill", type: "fill", source: "aggregate-grid", paint: { "fill-color": ["match", ["get", "density_band"], "higher", "#d6573e", "medium", "#dc9b45", "#e5cf84"], "fill-opacity": 0.58 } });
       map.addLayer({ id: "aggregate-outline", type: "line", source: "aggregate-grid", paint: { "line-color": "#63382e", "line-width": 1.2, "line-dasharray": [2, 1] } });
+      map.addSource("contextual-sites", { type: "geojson", data: collection(data.contextual_sites ?? []) });
+      map.addLayer({ id: "contextual-fill", type: "fill", source: "contextual-sites", paint: { "fill-color": "#809588", "fill-opacity": 0.28 } });
+      map.addLayer({ id: "contextual-line", type: "line", source: "contextual-sites", paint: { "line-color": "#52675c", "line-width": 2, "line-dasharray": [3, 2] } });
       map.addSource("candidate-sites", { type: "geojson", data: collection(data.candidate_sites ?? []) });
       map.addLayer({ id: "candidate-fill", type: "fill", source: "candidate-sites", paint: { "fill-color": "#174f43", "fill-opacity": 0.58 } });
       map.addLayer({ id: "candidate-line", type: "line", source: "candidate-sites", paint: { "line-color": "#0b382f", "line-width": 2.2 } });
-      map.addSource("contextual-sites", { type: "geojson", data: collection(data.contextual_sites ?? []) });
-      map.addLayer({ id: "contextual-fill", type: "fill", source: "contextual-sites", paint: { "fill-color": "#809588", "fill-opacity": 0.16 } });
-      map.addLayer({ id: "contextual-line", type: "line", source: "contextual-sites", paint: { "line-color": "#64776d", "line-width": 1.5, "line-dasharray": [3, 2] } });
       if (data.start_context) {
         map.addSource("start-context", { type: "geojson", data: collection([data.start_context]) });
         map.addLayer({ id: "start-point", type: "circle", source: "start-context", paint: { "circle-radius": 7, "circle-color": "#f7f1df", "circle-stroke-color": "#1c2d29", "circle-stroke-width": 3 } });
@@ -56,8 +189,88 @@ export function EvidenceMap({ data, loading, error }: Props) {
       const bounds = new maplibregl.LngLatBounds();
       [...(data.aggregate_grid ?? []), ...(data.candidate_sites ?? []), ...(data.contextual_sites ?? []), ...(data.start_context ? [data.start_context] : [])].forEach((feature) => extendBounds(bounds, feature.geometry.coordinates));
       if (!bounds.isEmpty()) map.fitBounds(bounds, { padding: 48, maxZoom: 13, duration: 0 });
+
+      const showPopup = (
+        coordinates: maplibregl.LngLatLike,
+        titleText: string,
+        detailText: string,
+      ) => {
+        const popup = document.createElement("div");
+        popup.className = "map-popup-copy";
+        const title = document.createElement("strong");
+        title.textContent = titleText;
+        const detail = document.createElement("span");
+        detail.textContent = detailText;
+        popup.append(title, detail);
+        activePopup?.remove();
+        activePopup = new maplibregl.Popup({ closeButton: false, offset: 8 })
+          .setLngLat(coordinates)
+          .setDOMContent(popup)
+          .addTo(map);
+      };
+      const popupFor = (event: maplibregl.MapLayerMouseEvent) => {
+        const properties = event.features?.[0]?.properties ?? {};
+        let detail = "Contextual site · not a recommendation";
+        if (properties.layer === "aggregate_evidence") {
+          detail = `${humanise(String(properties.density_band))} density · aggregate historical records`;
+        } else if (properties.layer === "candidate") {
+          detail = "Evidence-grounded candidate site";
+        }
+        showPopup(
+          event.lngLat,
+          String(properties.name ?? properties.label ?? "Mapped evidence"),
+          detail,
+        );
+      };
+      ["aggregate-fill", "candidate-fill", "contextual-fill"].forEach((layerId) => {
+        map.on("click", layerId, popupFor);
+        map.on("mouseenter", layerId, () => { map.getCanvas().style.cursor = "pointer"; });
+        map.on("mouseleave", layerId, () => { map.getCanvas().style.cursor = ""; });
+      });
+
+      const addSiteMarker = (
+        site: NonNullable<MapEvidenceView["candidate_sites"]>[number],
+        layer: "candidate" | "contextual",
+      ) => {
+        const polygon = sitePolygons(site.geometry.type, site.geometry.coordinates)
+          .sort((left, right) => ringArea(right[0]) - ringArea(left[0]))[0];
+        const coordinates = polygon ? interiorPoint(polygon) : null;
+        if (!coordinates) return;
+        const markerElement = document.createElement("button");
+        markerElement.type = "button";
+        markerElement.className = `map-site-marker marker-${layer}`;
+        markerElement.title = site.properties.name;
+        markerElement.setAttribute(
+          "aria-label",
+          `Open ${layer} site · ${site.properties.name}`,
+        );
+        markerElement.addEventListener("click", (event) => {
+          event.stopPropagation();
+          showPopup(
+            coordinates,
+            site.properties.name,
+            layer === "candidate"
+              ? "Evidence-grounded candidate site"
+              : "Contextual site · not a recommendation",
+          );
+        });
+        new maplibregl.Marker({ element: markerElement, anchor: "bottom" })
+          .setLngLat(coordinates)
+          .addTo(map);
+        const updateVisibility = () => {
+          markerElement.hidden = !markerFitsPolygon(map, polygon, coordinates);
+        };
+        updateVisibility();
+        map.on("moveend", updateVisibility);
+      };
+      (data.contextual_sites ?? []).forEach((site) => addSiteMarker(site, "contextual"));
+      (data.candidate_sites ?? []).forEach((site) => addSiteMarker(site, "candidate"));
     });
-    return () => map.remove();
+    return () => {
+      activePopup?.remove();
+      mapInstance.current = null;
+      map.remove();
+    };
   }, [data]);
 
   return (
@@ -74,18 +287,29 @@ export function EvidenceMap({ data, loading, error }: Props) {
         {data && !loading && (data.aggregate_grid ?? []).length === 0 && <div className="map-message map-low">No grid shown — the strong evidence gate did not pass.</div>}
         <div className="map-legend" aria-label="Map legend">
           <strong>Legend</strong>
-          <span><i className="legend-swatch grid" /> Aggregate evidence grid</span>
-          <span><i className="legend-swatch candidate" /> Evidence-grounded candidate</span>
-          <span><i className="legend-swatch contextual" /> Contextual site — not recommended</span>
-          <span><i className="legend-swatch start" /> Generalised start</span>
+          <div className="legend-block">
+            <span className="legend-group">Evidence grid · records per 1 km cell</span>
+            <div className="legend-children">
+              <span><i className="legend-swatch grid-lower" /> Lower density · 3–9</span>
+              <span><i className="legend-swatch grid-medium" /> Medium density · 10–24</span>
+              <span><i className="legend-swatch grid-higher" /> Higher density · 25+</span>
+            </div>
+          </div>
+          <div className="legend-block">
+            <span className="legend-group">Site locations</span>
+            <span><i className="legend-swatch candidate" /><i className="legend-mini-pin candidate" /> Evidence-grounded candidate</span>
+            <span><i className="legend-swatch contextual" /><i className="legend-mini-pin contextual" /> Contextual site — not recommended</span>
+            <span><i className="legend-swatch start" /> Generalised start</span>
+          </div>
+          <small>Density is relative record count, not abundance.</small>
         </div>
       </div>
       {data && (
         <div className="map-ledger">
           <p>{data.grid_note}</p>
           <div className="map-site-ledger" aria-label="Mapped sites as text">
-            {(data.candidate_sites ?? []).map((site) => <span key={site.properties.site_id}><strong>Candidate</strong> {site.properties.name}</span>)}
-            {(data.contextual_sites ?? []).map((site) => <span key={site.properties.site_id}><strong>Context</strong> {site.properties.name}</span>)}
+            {(data.candidate_sites ?? []).map((site) => <button type="button" className="candidate-site" key={site.properties.site_id} onClick={() => focusFeature(site.geometry.coordinates)}><strong>Candidate</strong> {site.properties.name}</button>)}
+            {(data.contextual_sites ?? []).map((site) => <button type="button" className="contextual-site" key={site.properties.site_id} onClick={() => focusFeature(site.geometry.coordinates)}><strong>Context</strong> {site.properties.name}</button>)}
           </div>
           <div className="attribution-row">{data.attributions.map((item) => <span key={item}>{item}</span>)}</div>
         </div>
