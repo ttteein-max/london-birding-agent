@@ -10,6 +10,7 @@ pyproj>=3.7,<4.0
 fastapi>=0.116,<1.0
 uvicorn[standard]>=0.35,<1.0
 httpx>=0.28,<1.0
+certifi>=2025.8.3
 
 # TypedDict compatibility across supported Python versions.
 typing-extensions>=4.12,<5.0
