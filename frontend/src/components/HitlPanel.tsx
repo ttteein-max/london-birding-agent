@@ -17,6 +17,26 @@ function monthNames(months: number[] | undefined): string {
   return (months ?? []).map((month) => MONTH_NAMES[month - 1]).filter(Boolean).join(", ");
 }
 
+type TaxonEvidencePreview = NonNullable<
+  NonNullable<PendingDecisionView["candidates"]>[number]["evidence_preview"]
+>;
+
+function evidencePreviewSummary(preview: TaxonEvidencePreview): string {
+  if (preview.status === "not_evaluated_budget") {
+    return "Not evaluated · preview budget exhausted";
+  }
+  if (preview.status === "source_failure") {
+    return "Source failure · evidence unavailable";
+  }
+  const retained = preview.retained_count == null
+    ? "retained count unavailable"
+    : `${preview.retained_count.toLocaleString("en-GB")} retained`;
+  const datasets = preview.dataset_count == null
+    ? "dataset count unavailable"
+    : `${preview.dataset_count.toLocaleString("en-GB")} datasets`;
+  return `${humanise(preview.status)} · ${retained} · ${datasets}`;
+}
+
 export function HitlPanel({ decision, busy, onResume }: Props) {
   const draft = decision.parsed_draft;
   const [postcode, setPostcode] = useState(draft?.postcode ?? "");
@@ -108,9 +128,7 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
                 <span>{candidate.rank} · GBIF {candidate.accepted_taxon_key}</span>
                 {candidate.relation_level && <span>{humanise(candidate.relation_level)} · not an ecological substitute</span>}
                 {candidate.evidence_preview && (
-                  <small>
-                    {humanise(candidate.evidence_preview.status)} · {candidate.evidence_preview.retained_count ?? 0} retained · {candidate.evidence_preview.dataset_count ?? 0} datasets
-                  </small>
+                  <small>{evidencePreviewSummary(candidate.evidence_preview)}</small>
                 )}
               </button>
             ))}

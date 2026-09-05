@@ -69,6 +69,28 @@ python -m uvicorn app.biodiversity.api.main:app \
   --port 8000
 ```
 
+On macOS, the ORS key can be kept in Keychain instead of shell history or a
+plaintext startup file. The trailing `-w` prompts securely for the Basic key:
+
+```bash
+security add-generic-password \
+  -U \
+  -a "$USER" \
+  -s "london-biodiversity-ors" \
+  -l "London Biodiversity ORS API Key" \
+  -w
+
+# Run this in each shell that starts FastAPI or an opt-in live routing test.
+export ORS_API_KEY="$(security find-generic-password \
+  -a "$USER" \
+  -s "london-biodiversity-ors" \
+  -w)"
+```
+
+Do not print the value, paste it into chat, add it to `VITE_*`, or commit it.
+Keychain retrieval may ask for local approval. The application still receives
+the secret only as a backend environment variable.
+
 The four choices mean:
 
 - `fixture/scripted`: versioned offline data and deterministic scripted models;

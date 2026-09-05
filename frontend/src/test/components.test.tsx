@@ -95,6 +95,55 @@ describe("field notebook cards", () => {
 });
 
 describe("typed human decisions", () => {
+  it("does not present an unevaluated taxonomy preview as zero evidence", () => {
+    const candidate = {
+      accepted_taxon_key: 2489281,
+      common_name: "Lesser Ground-robin",
+      scientific_name: "Amalocichla incerta",
+      canonical_name: "Amalocichla incerta",
+      rank: "SPECIES",
+      taxonomic_status: "ACCEPTED",
+      resolution_method: "gbif_search",
+    };
+    const decision: PendingDecisionView = {
+      kind: "taxon_selection",
+      question: "Which candidate?",
+      checkpoint_id: "checkpoint-taxonomy-preview",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      candidates: [
+        {
+          ...candidate,
+          evidence_preview: {
+            status: "evaluated",
+            retained_count: 0,
+            dataset_count: 0,
+            source_status: "available",
+          },
+        },
+        {
+          ...candidate,
+          accepted_taxon_key: 2489282,
+          common_name: "Budget-limited candidate",
+          evidence_preview: {
+            status: "not_evaluated_budget",
+            retained_count: null,
+            dataset_count: null,
+            source_status: "not_evaluated_budget",
+          },
+        },
+      ],
+      options: [],
+      validation_errors: [],
+    };
+
+    render(<HitlPanel decision={decision} busy={false} onResume={vi.fn()} />);
+
+    expect(screen.getByText("Evaluated · 0 retained · 0 datasets")).toBeInTheDocument();
+    expect(screen.getByText("Not evaluated · preview budget exhausted")).toBeInTheDocument();
+    expect(screen.queryByText(/Not Evaluated Budget · 0 retained/)).not.toBeInTheDocument();
+  });
+
   it("submits an allow-listed taxonomy selection payload", async () => {
     const onResume = vi.fn().mockResolvedValue(undefined);
     const decision: PendingDecisionView = {

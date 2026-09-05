@@ -118,6 +118,8 @@ test("mobile layout keeps route facts and text alternatives accessible", async (
 test("robin taxonomy HITL resumes on the same thread", async ({ page }) => {
   const threadId = await startExample(page, "Taxonomy HITL");
   await expect(page.getByRole("heading", { name: "Taxon Selection", exact: true })).toBeVisible();
+  await expect(page.getByText("Not evaluated · preview budget exhausted").first()).toBeVisible();
+  await expect(page.getByText(/Not Evaluated Budget · 0 retained/)).toHaveCount(0);
   await page.locator(".candidate-choice-grid button").first().click();
   await expect(page.getByRole("heading", { name: "Actionable Tradeoff", exact: true })).toBeVisible();
   await expect(page.locator(".run-list button.selected .run-title")).toHaveText(threadId);
