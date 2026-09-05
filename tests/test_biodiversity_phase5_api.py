@@ -62,6 +62,9 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
         walking = plan["walking_plan"]
         assert walking["status"] == "ready"
         assert walking["selected_site_id"]
+        assert "deterministic routing code" in walking["selection_rationale"]
+        assert "total outing" in plan["itinerary_summary"]
+        assert walking["selected_site_name"] in plan["itinerary_summary"]
         assert walking["entrance"]["association_method"] == "osm_boundary_member"
         assert walking["total_distance_km"] == round(
             walking["outbound_distance_km"] + walking["return_distance_km"], 3
@@ -83,8 +86,10 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
         selected = next(
             item
             for item in routes["options"]
-            if item["site_id"] == walking["selected_site_id"]
+            if item["option_id"] == routes["selected_option_id"]
         )
+        assert selected["site_id"] == walking["selected_site_id"]
+        assert selected["entrance"]["entrance_id"] == walking["entrance"]["entrance_id"]
         assert selected["route_geometry_reference"] == (
             map_view["route_geometry_reference"]
         )
@@ -123,7 +128,7 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
     provider_spans = [
         span for span in timings["spans"] if span["kind"] == "provider"
     ]
-    assert len(provider_spans) == 4
+    assert len(provider_spans) == 6
     assert all(span["name"] == "fixture-openrouteservice" for span in provider_spans)
     report_payload = "\n".join(
         path.read_text(encoding="utf-8")

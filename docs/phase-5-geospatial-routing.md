@@ -19,9 +19,9 @@ The normative decisions are split into reviewable records:
 The deterministic route pipeline runs only after Phase 4 deterministic evidence validation:
 
 1. `resolve_public_site_entrances` considers only directly-grounded candidate sites and joins them to audited OSM boundary-member entrance identities.
-2. `request_walking_routes` sends at most the first three evidence-ordered candidates to a configured walking provider. Provider inputs contain the private routing origin and a mapped entrance only; occurrence coordinates and safe-cell coordinates are never eligible inputs.
+2. `request_walking_routes` sends at most the first three evidence-ordered candidates to the configured journey provider. Provider inputs contain the private routing origin and a mapped entrance only; occurrence coordinates and safe-cell coordinates are never eligible inputs.
 3. `validate_route_constraints` evaluates actual outbound plus actual return distance and duration.
-4. `rank_route_options` uses stable code-defined ordering: passed evidence gate, directly-grounded site, eligible entrance, passed route constraints, explicit-public before uncertain access, evidence-site order, actual route cost, stable identities.
+4. `rank_route_options` uses stable code-defined ordering: passed evidence gate, directly-grounded site, eligible entrance, passed route constraints (including an outside-in entrance approach), explicit-public before uncertain access, least complete travel time, walking distance, evidence-site order and stable identities.
 5. `route_tradeoff_interrupt` appears only when a typed action can alter the outcome: accept an uncertain entrance, raise a walking limit to at least a computed route, or keep the constraints and finish without a fabricated route.
 6. `compose_expedition_plan` receives a compact typed route summary after validation. It may write British English explanation and itinerary prose, but cannot select a route or change entrance, geometry, distance, duration, elevation, constraints or provider facts.
 7. `grounding_and_safety_checks` compares every route fact to deterministic state. A composer exception, schema failure or unsafe revision ends in `deterministic_plan_fallback`, which retains the complete validated nested walking plan.
@@ -34,7 +34,7 @@ Low evidence, a missing candidate site and entrance-source failure never call a 
 | --- | --- | --- |
 | Site and entrance | Selects one directly-grounded site and one eligible audited entrance using stable ranking | Names and explains those supplied identities |
 | Route shape and directions | Stores provider geometry and provider manoeuvres behind a private reference | Summarises the itinerary; does not invent turn-by-turn directions |
-| Distance and duration | Parses provider units, sums independent outbound/return legs and subtracts walking time from the expedition budget | Restates the validated totals in British English |
+| Distance and duration | Parses provider units, separates walking from complete travel, sums independent outbound/return journeys and subtracts total travel from the outing budget | Restates only the supplied validated totals in British English |
 | Elevation | Parses provider samples and explicit missing/partial state | Describes only the supplied ascent, descent and limitations |
 | Constraints and alternatives | Applies walking-limit/duration gates and deterministic tie-breaks | Explains the passed/failed results and supplied alternatives |
 | Provenance and limitations | Fixes provider, retrieval time, licence, attribution, cache state and warnings | Organises those facts without changing them |
@@ -60,15 +60,16 @@ shasum -a 256 data/osm/london-public-green-space-entrances-2026-09-04.geojson
 `WalkingRouteProvider` is implemented by:
 
 - `FixtureWalkingRouteProvider`, which replays saved real API-shaped outbound and return responses;
+- `TfLJourneyProvider`, the default live least-time public-transport-and-walking provider using the official TfL Unified API;
 - `OpenRouteServiceWalkingProvider`, using `https://api.heigit.org/openrouteservice/v2/directions/foot-walking/geojson` with `httpx` timeouts, at most two attempts and typed authentication/quota/timeout/malformed/no-route/unavailable errors;
 - optional `GraphHopperWalkingProvider`, available only as a configured second live adapter;
 - `FailoverWalkingRouteProvider`, which attempts the second live provider only when it exists.
 
-Fixture mode uses only the versioned fixture. Live mode never silently falls back to fixture data. Without a second live provider, an ORS failure carries `failover_not_configured`; with `GRAPHHOPPER_API_KEY`, the provider attempt and actual failover are recorded.
+Fixture mode uses only the versioned walking fixture. Live mode uses TfL public transport plus walking and never silently falls back to fixture data or changes to walking-only. ORS/GraphHopper failover remains available only inside an explicitly configured walking-only provider chain.
 
-`ORS_API_KEY` and `GRAPHHOPPER_API_KEY` are read by backend adapters only. They are absent from browser DTOs, logs, checkpoints, reports, cache keys and `VITE_*` configuration. A cache key contains route schema version, provider and provider version, walking profile, origin, public entrance and routing options. Cache and exact route GeoJSON live under the gitignored `data/runtime/routes/` directory (or `BIODIVERSITY_ROUTE_RUNTIME`). API keys are not cached.
+`TFL_API_KEY`, `ORS_API_KEY` and `GRAPHHOPPER_API_KEY` are read by backend adapters only. They are absent from browser DTOs, logs, checkpoints, reports, cache keys and `VITE_*` configuration. TfL's bounded anonymous access means the first key is optional locally, but configured quota is recommended for deployment. A cache key contains route schema version, provider and provider version, profile, origin, public entrance, date/time and routing options. Cache and exact route GeoJSON live under the gitignored `data/runtime/routes/` directory (or `BIODIVERSITY_ROUTE_RUNTIME`). API keys are not cached.
 
-Outbound and return are requested separately and summed; the code never assumes the return is exactly twice the outbound. Provider manoeuvres are retained as route evidence and are the only permitted source for turn-by-turn instructions.
+Outbound and return are requested separately and summed; the code never assumes the return is exactly twice the outbound. If their geometries are exact reverses, the map draws one shared line. Provider manoeuvres and journey legs are the only permitted source for turn-by-turn or service instructions.
 
 ## Walking and duration semantics
 
@@ -76,14 +77,14 @@ The normative decision record is [ADR 0001](adr/0001-phase-5-routing-semantics.m
 
 - `search_radius_km` is the straight-line/projected candidate-site retrieval radius and is not a walking-distance promise.
 - `maximum_walking_distance_km` is the whole excursion's outbound-plus-return route distance.
-- `duration_hours` is the full expedition budget. `remaining_field_time = expedition duration − provider walking duration` and is time only, never sighting probability.
-- Walking that consumes or exceeds the complete duration fails the route constraint.
+- `duration_hours` is the complete outing budget, including outbound and return travel. `remaining_field_time = outing duration − provider total travel duration` and is time only, never sighting probability.
+- Travel that consumes or exceeds the complete duration fails the route constraint.
 - A site may pass the search radius and fail actual walking constraints.
 - Without a walking limit a route may be ready, with an explicit “No explicit walking limit supplied” constraint result.
 
 ## Typed contracts and safe API views
 
-The strict domain models are `RouteStatus`, `PublicEntranceCandidate`, `WalkingRouteRequest`, `RouteLeg`, `ElevationSample`, `WalkingRouteEvidence`, `RouteConstraintResult`, `RouteOption` and `ValidatedWalkingPlan`. A ready plan requires a site and entrance identity, access certainty, profile, both leg distances, total distance and duration, expedition and remaining field time, geometry reference, provider/version/provenance, cache status and passing constraints. Elevation, ascent/descent, alternatives, warnings and limitations are typed and may explicitly be absent.
+The strict domain models are `RouteStatus`, `PublicEntranceCandidate`, `WalkingRouteRequest`, `RouteLeg`, `JourneySegment`, `ElevationSample`, `WalkingRouteEvidence`, `RouteConstraintResult`, `RouteOption` and `ValidatedWalkingPlan`. A ready plan requires a site and entrance identity, access certainty, profile, both leg distances, walking and complete travel durations, expedition and remaining field time, geometry reference, provider/version/provenance, cache status, deterministic selection rationale and passing constraints. Elevation, ascent/descent, alternatives, warnings and limitations are typed and may explicitly be absent.
 
 FastAPI exposes route summaries and options separately from geometry. `/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/route-geometry/{reference}` accepts only a reference present in that exact checkpoint. Local/private runs may receive their own geometry. Public read-only mode serves geometry only for the planned, non-private fixture origin. Route geometry is absent from generic state, SSE, logs, reports and public checkpoint views. Occurrence coordinates and IDs remain absent from every API.
 
@@ -99,7 +100,7 @@ The CSP permits the configured style origin plus the strictly validated HTTPS or
 
 ## Checkpoints, invalidation and compatibility
 
-The workflow is `phase-5.0`, state schema `3`, route schema `1`. `RunManifest` records data/model identities plus provider, provider version, foot-walking profile, route schema and routing endpoint fingerprint. Resume validates the exact thread/checkpoint/branch/execution and current runtime profile. Route-affecting fork or HITL changes clear route options and validated evidence before recalculation.
+The workflow is `phase-5.0`, state schema `3`, route schema `1`. `RunManifest` records data/model identities plus provider, provider version, route profile, route schema and routing endpoint fingerprint. Resume validates the exact thread/checkpoint/branch/execution and current runtime profile, so an older live ORS execution is readable but cannot be resumed under the TfL profile. Route-affecting fork or HITL changes clear route options and validated evidence before recalculation.
 
 Phase 4 manifests (`phase-3.1`, schema `2`) remain parseable for history and safe read-only views. They are never silently migrated or resumed into the Phase 5 graph; mutation returns an explicit instruction to start a new Phase 5 run.
 
@@ -126,6 +127,7 @@ The relevant backend settings are:
 | `BIODIVERSITY_ROUTE_RUNTIME` | `data/runtime/routes` | Gitignored cache and private geometry directory |
 | `ORS_API_KEY` | unset | Backend-only ORS live-routing credential |
 | `GRAPHHOPPER_API_KEY` | unset | Backend-only optional second live provider |
+| `TFL_API_KEY` | unset | Optional backend-only TfL quota key for the default live multimodal provider |
 | `BIODIVERSITY_DATA_MODE` | `fixture` | Fixture or live upstream data/routing |
 
 Compose and Render set the keyless basemap, fixture/scripted public policy and persistent route-runtime directory. Public demo mode remains read-only/fixture-only and does not need a model or routing key.

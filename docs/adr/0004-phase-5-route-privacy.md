@@ -6,7 +6,7 @@
 
 ## Context
 
-Precise walking geometry can reveal a user's start. Historical occurrence coordinates, identifiers and safe-cell internals are already prohibited from public output.
+Precise walking or public-transport journey geometry can reveal a user's start. Historical occurrence coordinates, identifiers and safe-cell internals are already prohibited from public output.
 
 ## Decision
 

@@ -86,9 +86,17 @@ describe("privacy-bounded evidence map", () => {
     });
     await waitFor(() => expect(addSource).toHaveBeenCalledWith("walking-route", expect.any(Object)));
     expect(addSource).toHaveBeenCalledWith("selected-entrance", expect.any(Object));
-    expect(addSource).toHaveBeenCalledWith("start-context", expect.any(Object));
+    expect(addSource).toHaveBeenCalledWith("start-context", expect.objectContaining({
+      data: expect.objectContaining({
+        features: [expect.objectContaining({
+          geometry: { type: "Point", coordinates: [-0.161005, 51.476041] },
+          properties: expect.objectContaining({ layer: "route_start" }),
+        })],
+      }),
+    }));
     expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: "walking-route-outbound" }));
     expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: "walking-route-return" }));
+    expect(screen.getByLabelText("Map legend")).toHaveTextContent("Route start");
     expect(screen.getByText("OpenFreeMap")).toBeInTheDocument();
     expect(screen.queryByText("Basemap unavailable — evidence overlays remain available")).not.toBeInTheDocument();
   });
@@ -104,6 +112,28 @@ describe("privacy-bounded evidence map", () => {
     expect(await screen.findByText("Basemap unavailable — evidence overlays remain available")).toBeInTheDocument();
     expect(setStyle).toHaveBeenCalledWith(expect.objectContaining({ version: 8, sources: {} }));
     await waitFor(() => expect(addSource).toHaveBeenCalledWith("aggregate-grid", expect.any(Object)));
+  });
+
+  it("draws materially identical outbound and return corridors only once", async () => {
+    render(<EvidenceMap
+      data={mapFixture}
+      loading={false}
+      error={null}
+      routeGeometry={{
+        ...routeGeometryFixture,
+        geojson: {
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", properties: { direction: "outbound" }, geometry: { type: "LineString", coordinates: [[-0.16, 51.48], [-0.155, 51.49], [-0.1519, 51.5076]] } },
+            { type: "Feature", properties: { direction: "return" }, geometry: { type: "LineString", coordinates: [[-0.1519, 51.5076], [-0.1551, 51.4901], [-0.16, 51.48]] } },
+          ],
+        },
+      }}
+    />);
+    await waitFor(() => expect(addSource).toHaveBeenCalledWith("walking-route", expect.any(Object)));
+    const routeSource = addSource.mock.calls.find(([name]) => name === "walking-route")?.[1];
+    expect(routeSource.data.features).toHaveLength(1);
+    expect(routeSource.data.features[0].properties.direction).toBe("outbound_return");
   });
 
   it("uses an offline style, exposes a text legend, and renders low-evidence state", async () => {

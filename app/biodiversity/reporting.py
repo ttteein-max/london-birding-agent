@@ -74,6 +74,12 @@ def _redacted_route_option(value: dict[str, Any]) -> dict[str, Any]:
                 "routing_profile": route.get("routing_profile"),
                 "total_distance_m": route.get("total_distance_m"),
                 "total_duration_seconds": route.get("total_duration_seconds"),
+                "total_walking_duration_seconds": route.get(
+                    "total_walking_duration_seconds"
+                ),
+                "total_public_transport_duration_seconds": route.get(
+                    "total_public_transport_duration_seconds"
+                ),
                 "ascent_m": route.get("ascent_m"),
                 "descent_m": route.get("descent_m"),
                 "retrieved_at": route.get("retrieved_at"),

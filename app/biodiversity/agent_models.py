@@ -105,6 +105,7 @@ class BiodiversityExpeditionPlan(StrictModel):
     low_confidence_accepted: bool = False
     low_confidence_notice: NonEmptyText | None = None
     walking_plan: ValidatedWalkingPlan | None = None
+    itinerary_summary: NonEmptyText | None = None
     explanation: NonEmptyText
     generated_by: Literal[
         "llm_composer",

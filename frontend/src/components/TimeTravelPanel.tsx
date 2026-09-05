@@ -60,7 +60,7 @@ const FIELDS = [
   ["target_month_override", "Target month override"],
   ["target_local_date", "Target local date"],
   ["rain_preference", "Rain preference"],
-  ["duration_hours", "Duration (hours)"],
+  ["duration_hours", "Total outing duration (hours)"],
   ["maximum_walking_distance_km", "Maximum round-trip walking (km)"],
   ["selected_related_taxon_key", "Validated related taxon key"],
 ] as const;

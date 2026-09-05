@@ -53,23 +53,45 @@ function ElevationProfile({ samples }: { samples: NonNullable<FinalPlanView["wal
 function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_plan"]> }) {
   const ready = plan.status === "ready";
   const alternatives = plan.alternative_feasible_routes ?? [];
+  const multimodal = plan.journey_type === "public_transport_and_walking";
+  const displayedSegments = (plan.journey_segments ?? []).filter(
+    (segment) => !plan.return_route_same_as_outbound || segment.direction === "outbound",
+  );
   return (
     <section className={`walking-itinerary route-${plan.status}`} aria-labelledby="walking-title">
       <div className="list-heading">
-        <div><p className="eyebrow">Deterministic routing</p><h3 id="walking-title">Validated walking itinerary</h3></div>
+        <div><p className="eyebrow">Deterministic routing</p><h3 id="walking-title">Validated journey itinerary</h3></div>
         <span>{humanise(plan.status)}</span>
       </div>
       {ready ? (
         <>
           <p className="route-destination"><strong>{plan.selected_site_name}</strong><span>{plan.entrance?.label} · {humanise(plan.entrance?.access_certainty ?? "unspecified")} access evidence</span></p>
+          {plan.selection_rationale && <p className="route-selection"><strong>Why this site and entrance:</strong> {plan.selection_rationale}</p>}
           <dl className="route-metrics">
-            <div><dt>Outbound</dt><dd>{plan.outbound_distance_km?.toFixed(2)} km</dd></div>
-            <div><dt>Return</dt><dd>{plan.return_distance_km?.toFixed(2)} km</dd></div>
+            <div><dt>Journey</dt><dd>{multimodal ? "Public transport + walking" : "Walking only"}</dd></div>
+            <div><dt>Outbound travel</dt><dd>{plan.outbound_travel_duration_minutes?.toFixed(0) ?? plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
+            <div><dt>Return travel</dt><dd>{plan.return_travel_duration_minutes?.toFixed(0) ?? "—"} min</dd></div>
+            <div><dt>Total travel</dt><dd>{plan.total_travel_duration_minutes?.toFixed(0) ?? plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
             <div><dt>Total walking</dt><dd>{plan.total_distance_km?.toFixed(2)} km</dd></div>
             <div><dt>Walking time</dt><dd>{plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
             <div><dt>Field time left</dt><dd>{plan.remaining_field_time_minutes?.toFixed(0)} min</dd></div>
             <div><dt>Ascent / descent</dt><dd>{plan.ascent_m?.toFixed(0) ?? "—"} / {plan.descent_m?.toFixed(0) ?? "—"} m</dd></div>
           </dl>
+          <p className="route-budget-note">
+            The {plan.expedition_duration_minutes.toFixed(0)}-minute request is treated as the complete outing: outbound travel, field time and return travel.
+            {plan.planning_departure_time_local ? ` Planning baseline: ${plan.planning_departure_time_local}.` : ""}
+          </p>
+          {displayedSegments.length > 0 && (
+            <ol className="journey-segments" aria-label="Provider journey steps">
+              {displayedSegments.map((segment) => (
+                <li key={segment.segment_id}>
+                  <strong>{humanise(segment.direction)} · {segment.line_name ? `${segment.mode} ${segment.line_name}` : humanise(segment.mode)}</strong>
+                  <span>{segment.instruction} · {segment.duration_minutes.toFixed(0)} min</span>
+                </li>
+              ))}
+            </ol>
+          )}
+          {plan.return_route_same_as_outbound && <p className="route-budget-note">The return follows the same mapped path, so the map draws it only once.</p>}
           <div className="route-constraints" aria-label="Walking route constraints">
             {(plan.constraint_results ?? []).map((constraint) => (
               <p key={constraint.code} className={constraint.passed ? "constraint-pass" : "constraint-fail"}>
@@ -90,7 +112,7 @@ function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_p
           )}
         </>
       ) : (
-        <p className="empty-copy">No walking route was fabricated. {humanise(plan.status)}.</p>
+        <p className="empty-copy">No journey was fabricated. {humanise(plan.status)}.</p>
       )}
       {[...(plan.warnings ?? []), ...(plan.limitations ?? [])].length > 0 && (
         <details className="route-limitations" open>
@@ -110,14 +132,23 @@ export function PlanPanel({ plan }: Props) {
         <div>
           <p className="eyebrow">Validated field plan</p>
           <h2 id="plan-title">{plan.target_species}</h2>
-          <p>{plan.target_date} · {plan.duration_hours} hours · {plan.resolved_london_start_context}</p>
+          <p>{plan.target_date} · {plan.duration_hours} hours total outing budget · {plan.resolved_london_start_context}</p>
         </div>
         <span className={`plan-gate ${plan.evidence_gate_passed ? "passed" : "held"}`}>
           {plan.evidence_gate_passed ? "Evidence gate passed" : "Evidence gate held"}
         </span>
       </div>
       {plan.low_confidence_notice && <div className="low-confidence" role="note">{plan.low_confidence_notice}</div>}
-      <p className="plan-explanation">{plan.explanation}</p>
+      <section className="plan-overview" aria-labelledby="overview-title">
+        <h3 id="overview-title">Expedition overview</h3>
+        <p className="plan-explanation">{plan.itinerary_summary ?? plan.explanation}</p>
+      </section>
+      {plan.itinerary_summary && (
+        <details className="evidence-explanation">
+          <summary>Model-written evidence explanation</summary>
+          <p>{plan.explanation}</p>
+        </details>
+      )}
       <p className={`generated-note ${plan.generated_by === "deterministic_fallback" ? "fallback" : ""}`}>
         {plan.generated_by === "deterministic_fallback"
           ? "Deterministic fallback plan"

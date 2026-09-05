@@ -53,7 +53,7 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
         version="5.0.0",
         description=(
             "A privacy-bounded API for London bird-expedition evidence, "
-            "agent execution, validated walking routes, human decisions, and "
+            "agent execution, validated public-transport-and-walking journeys, human decisions, and "
             "checkpoint time travel."
         ),
         lifespan=lifespan,

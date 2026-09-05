@@ -418,6 +418,21 @@ class ElevationSampleView(StrictModel):
     elevation_m: float
 
 
+class JourneySegmentView(StrictModel):
+    segment_id: str
+    direction: Literal["outbound", "return"]
+    sequence: int = Field(ge=0)
+    mode: str
+    line_name: str | None = None
+    instruction: str
+    origin_label: str | None = None
+    destination_label: str | None = None
+    duration_minutes: float = Field(ge=0)
+    distance_m: float | None = Field(default=None, ge=0)
+    departure_time: str | None = None
+    arrival_time: str | None = None
+
+
 class RouteOptionView(StrictModel):
     option_id: str
     status: str
@@ -428,6 +443,7 @@ class RouteOptionView(StrictModel):
     return_distance_km: float | None = None
     total_distance_km: float | None = None
     walking_duration_minutes: float | None = None
+    total_travel_duration_minutes: float | None = None
     feasible: bool
     provider: str | None = None
     cache_status: str | None = None
@@ -442,10 +458,21 @@ class ValidatedWalkingPlanView(StrictModel):
     selected_site_name: str | None = None
     entrance: PublicEntranceView | None = None
     routing_profile: str
+    journey_type: Literal["walking_only", "public_transport_and_walking"] = (
+        "walking_only"
+    )
+    planning_departure_time_local: str | None = None
     outbound_distance_km: float | None = None
     return_distance_km: float | None = None
     total_distance_km: float | None = None
     walking_duration_minutes: float | None = None
+    outbound_travel_duration_minutes: float | None = None
+    return_travel_duration_minutes: float | None = None
+    total_travel_duration_minutes: float | None = None
+    public_transport_duration_minutes: float | None = None
+    journey_segments: list[JourneySegmentView] = Field(default_factory=list)
+    return_route_same_as_outbound: bool = False
+    selection_rationale: str | None = None
     expedition_duration_minutes: float
     remaining_field_time_minutes: float | None = None
     ascent_m: float | None = None
@@ -504,6 +531,7 @@ class FinalPlanView(StrictModel):
     low_confidence_accepted: bool = False
     low_confidence_notice: str | None = None
     walking_plan: ValidatedWalkingPlanView | None = None
+    itinerary_summary: str | None = None
     explanation: str
     generated_by: str
 

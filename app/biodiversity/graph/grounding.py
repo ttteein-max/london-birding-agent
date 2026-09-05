@@ -99,6 +99,68 @@ def weather_plan_context(bundle: ExpeditionEvidenceBundle) -> dict[str, Any] | N
     }
 
 
+def deterministic_itinerary_summary(
+    bundle: ExpeditionEvidenceBundle,
+    walking_plan: ValidatedWalkingPlan | None,
+) -> str:
+    """Build a complete, coordinate-free overview from validated facts only."""
+
+    total_minutes = round(bundle.request.duration_hours * 60)
+    parts = [
+        f"This is a {total_minutes}-minute total outing on {bundle.request.target_local_date.isoformat()} for {bundle.taxon.canonical_name or bundle.request.bird_input}; travel in both directions is included in that budget."
+    ]
+    if walking_plan and walking_plan.status.value == "ready":
+        mode = (
+            "public transport and walking"
+            if walking_plan.journey_type == "public_transport_and_walking"
+            else "walking"
+        )
+        total_travel = (
+            walking_plan.total_travel_duration_minutes
+            if walking_plan.total_travel_duration_minutes is not None
+            else walking_plan.walking_duration_minutes
+        )
+        parts.append(
+            f"Use {mode} to reach {walking_plan.selected_site_name} via {walking_plan.entrance.label if walking_plan.entrance else 'the selected entrance'}."
+        )
+        if total_travel is not None:
+            parts.append(
+                f"Validated outbound and return travel takes {total_travel:.0f} minutes in total, including {walking_plan.walking_duration_minutes or 0:.0f} minutes and {walking_plan.total_distance_km or 0:.2f} km of walking, leaving {walking_plan.remaining_field_time_minutes or 0:.0f} minutes for field observation."
+            )
+        if walking_plan.return_route_same_as_outbound:
+            parts.append("The return uses the same mapped path, so it is displayed once.")
+        if walking_plan.selection_rationale:
+            parts.append(walking_plan.selection_rationale)
+    elif walking_plan:
+        parts.append(
+            f"No route is presented because deterministic routing ended with {walking_plan.status.value.replace('_', ' ')}."
+        )
+    weather = bundle.weather
+    if weather and weather.status.value == "available":
+        temperature = ""
+        if (
+            weather.minimum_temperature_c is not None
+            and weather.maximum_temperature_c is not None
+        ):
+            temperature = (
+                f" with temperatures from {weather.minimum_temperature_c:.0f}°C to "
+                f"{weather.maximum_temperature_c:.0f}°C"
+            )
+        rain = ""
+        if weather.precipitation_probability_percent is not None:
+            rain = (
+                f" and up to {weather.precipitation_probability_percent}% forecast "
+                "precipitation probability"
+            )
+        parts.append(f"The exact-date weather context is available{temperature}{rain}.")
+    else:
+        parts.append("Exact-date weather is unavailable; no substitute date is used.")
+    parts.append(
+        "Historical occurrence evidence supports planning only; it does not predict or guarantee a sighting, and current access, service disruption and local conditions must be checked before departure."
+    )
+    return " ".join(parts)
+
+
 def compact_plan_payload(
     bundle: ExpeditionEvidenceBundle,
     phase1_plan: ExpeditionPlan,
@@ -154,15 +216,36 @@ def compact_plan_payload(
                     else None
                 ),
                 "routing_profile": walking_plan.routing_profile,
+                "journey_type": walking_plan.journey_type,
+                "planning_departure_time_local": (
+                    walking_plan.planning_departure_time_local
+                ),
                 "outbound_distance_km": walking_plan.outbound_distance_km,
                 "return_distance_km": walking_plan.return_distance_km,
                 "total_distance_km": walking_plan.total_distance_km,
                 "walking_duration_minutes": walking_plan.walking_duration_minutes,
+                "outbound_travel_duration_minutes": (
+                    walking_plan.outbound_travel_duration_minutes
+                ),
+                "return_travel_duration_minutes": (
+                    walking_plan.return_travel_duration_minutes
+                ),
+                "total_travel_duration_minutes": (
+                    walking_plan.total_travel_duration_minutes
+                ),
+                "public_transport_duration_minutes": (
+                    walking_plan.public_transport_duration_minutes
+                ),
                 "remaining_field_time_minutes": walking_plan.remaining_field_time_minutes,
                 "ascent_m": walking_plan.ascent_m,
                 "descent_m": walking_plan.descent_m,
                 "provider": walking_plan.provider,
                 "attribution": walking_plan.attribution,
+                "selection_rationale": walking_plan.selection_rationale,
+                "journey_segments": [
+                    item.model_dump(mode="json")
+                    for item in walking_plan.journey_segments
+                ],
                 "constraint_results": [
                     item.model_dump(mode="json")
                     for item in walking_plan.constraint_results
@@ -307,6 +390,9 @@ def validate_grounded_plan(
     )
     if actual_walking != expected_walking:
         errors.append("Validated walking-route facts were omitted or altered.")
+    expected_summary = deterministic_itinerary_summary(bundle, walking_plan)
+    if draft.itinerary_summary != expected_summary:
+        errors.append("The deterministic itinerary summary was omitted or altered.")
 
     # Every structured field above is compared exactly with trusted deterministic
     # input. The explanation is the only free-form model output and therefore the
@@ -375,6 +461,7 @@ def deterministic_safe_plan(
             LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
         ),
         walking_plan=walking_plan,
+        itinerary_summary=deterministic_itinerary_summary(bundle, walking_plan),
         explanation=(
             f"{status_explanation} Candidate distances are approximate straight-line "
             "projected distances, not walking distances. Access and opening must be checked independently."

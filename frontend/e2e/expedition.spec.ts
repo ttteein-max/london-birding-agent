@@ -55,7 +55,7 @@ test("Common woodpigeon strong-evidence happy path", async ({ page }) => {
   );
   await expect(page.getByRole("heading", { name: "Columba palumbus" })).toBeVisible();
   await expect(page.getByText("Evidence gate passed", { exact: true })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Validated walking itinerary" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Validated journey itinerary" })).toBeVisible();
   await expect(page.getByText(/fixture-openrouteservice · foot-walking/)).toBeVisible();
   await expect(page.getByText(/Selected entrance:/)).toBeVisible();
   await expect(page.locator(".plan-columns > div").first().locator("li")).not.toHaveCount(0);
@@ -85,7 +85,7 @@ test("walking-limit trade-off resumes with typed input on the same execution", a
   await limit.fill("10");
   await page.getByRole("button", { name: "Recalculate routes" }).click();
   await waitForCompletedPlan(page, accepted.thread_id);
-  await expect(page.getByRole("heading", { name: "Validated walking itinerary" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Validated journey itinerary" })).toBeVisible();
   await expect(page.getByLabel("Walking route constraints")).toContainText("Pass");
 });
 
@@ -104,11 +104,11 @@ test("mobile layout keeps route facts and text alternatives accessible", async (
   const threadId = await startExample(page, "Strong evidence");
   await waitForCompletedPlan(page, threadId);
   await expect(page.getByRole("heading", { name: "Evidence map" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Validated walking itinerary" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Validated journey itinerary" })).toBeVisible();
   await expect(page.getByLabel("Walking route constraints")).toContainText("Pass");
   await expect(page.getByRole("img", { name: /Walking route elevation profile/ })).toBeVisible();
   await expect(page.locator("footer")).toContainText(
-    "Routes end at audited public-site entrances",
+    "Journeys end at audited public-site entrances",
   );
   expect(await page.evaluate(
     () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,

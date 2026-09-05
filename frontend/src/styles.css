@@ -201,6 +201,9 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .plan-gate.passed { color: #f5f1e8; background: var(--green); }
 .plan-gate.held { color: #70491a; background: #edd39f; }
 .plan-explanation { margin: 12px 0; color: #4c5751; font-family: "Iowan Old Style", serif; font-size: 0.88rem; line-height: 1.55; }
+.plan-overview { margin: 12px 0; border-left: 3px solid var(--green); padding: 2px 0 2px 12px; }
+.plan-overview h3 { margin: 0; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; }
+.evidence-explanation { margin: 8px 0 12px; color: var(--muted); font-size: 0.68rem; }
 .generated-note { margin: -5px 0 12px; color: var(--muted); font-size: 0.61rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .generated-note.fallback { border-left: 3px solid var(--orange); padding: 6px 8px; color: #843c2f; background: #f5dfd8; }
 .low-confidence, .warning-box { border-left: 3px solid var(--amber); padding: 9px 10px; color: #6a4a21; background: #f6ead3; font-size: 0.72rem; line-height: 1.45; }
@@ -222,6 +225,11 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .route-destination { display: flex; flex-direction: column; margin-bottom: 10px; }
 .route-destination strong { font-family: "Iowan Old Style", serif; font-size: 1.05rem; }
 .route-destination span, .route-provider, .route-attribution { color: var(--muted); font-size: 0.62rem; line-height: 1.4; }
+.route-selection, .route-budget-note { color: var(--muted); font-size: 0.66rem; line-height: 1.45; }
+.journey-segments { display: grid; gap: 5px; margin: 8px 0 10px; padding-left: 20px; }
+.journey-segments li { padding-left: 3px; }
+.journey-segments strong, .journey-segments span { display: block; }
+.journey-segments span { color: var(--muted); font-size: 0.64rem; line-height: 1.4; }
 .route-metrics { display: grid; grid-template-columns: repeat(3, 1fr); margin: 0 0 10px; border: 1px solid var(--line); border-radius: 5px; background: #f8f6ef; }
 .route-metrics div { padding: 7px; border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .route-metrics div:nth-child(3n) { border-right: 0; }

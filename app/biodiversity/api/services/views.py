@@ -140,6 +140,19 @@ def _route_option_view(value: dict[str, Any]) -> RouteOptionView:
             else None
         ),
         walking_duration_minutes=(
+            round(
+                float(
+                    route.get("total_walking_duration_seconds")
+                    if route.get("total_walking_duration_seconds") is not None
+                    else route["total_duration_seconds"]
+                )
+                / 60,
+                1,
+            )
+            if route.get("total_duration_seconds") is not None
+            else None
+        ),
+        total_travel_duration_minutes=(
             round(float(route["total_duration_seconds"]) / 60, 1)
             if route.get("total_duration_seconds") is not None
             else None
@@ -167,10 +180,25 @@ def _walking_plan_view(value: dict[str, Any]) -> ValidatedWalkingPlanView:
             _entrance_view(dict(value["entrance"])) if value.get("entrance") else None
         ),
         routing_profile=str(value.get("routing_profile") or "foot-walking"),
+        journey_type=str(value.get("journey_type") or "walking_only"),
+        planning_departure_time_local=value.get("planning_departure_time_local"),
         outbound_distance_km=value.get("outbound_distance_km"),
         return_distance_km=value.get("return_distance_km"),
         total_distance_km=value.get("total_distance_km"),
         walking_duration_minutes=value.get("walking_duration_minutes"),
+        outbound_travel_duration_minutes=value.get(
+            "outbound_travel_duration_minutes"
+        ),
+        return_travel_duration_minutes=value.get("return_travel_duration_minutes"),
+        total_travel_duration_minutes=value.get("total_travel_duration_minutes"),
+        public_transport_duration_minutes=value.get(
+            "public_transport_duration_minutes"
+        ),
+        journey_segments=list(value.get("journey_segments") or []),
+        return_route_same_as_outbound=bool(
+            value.get("return_route_same_as_outbound")
+        ),
+        selection_rationale=value.get("selection_rationale"),
         expedition_duration_minutes=float(
             value.get("expedition_duration_minutes") or 1
         ),
@@ -483,6 +511,7 @@ class SafeCheckpointViews:
                 if value.get("walking_plan")
                 else None
             ),
+            itinerary_summary=value.get("itinerary_summary"),
             explanation=value["explanation"],
             generated_by=value["generated_by"],
         )
@@ -801,8 +830,16 @@ class SafeCheckpointViews:
             _route_option_view(dict(item)) for item in values.get("route_options") or []
         ]
         selected_site_id = walking_plan.get("selected_site_id")
+        selected_entrance = dict(walking_plan.get("entrance") or {})
+        selected_geometry_reference = walking_plan.get("route_geometry_reference")
         selected_option_id = next(
-            (item.option_id for item in options if item.site_id == selected_site_id),
+            (
+                item.option_id
+                for item in options
+                if item.site_id == selected_site_id
+                and item.entrance.entrance_id == selected_entrance.get("entrance_id")
+                and item.route_geometry_reference == selected_geometry_reference
+            ),
             None,
         )
         return RouteOptionsView(

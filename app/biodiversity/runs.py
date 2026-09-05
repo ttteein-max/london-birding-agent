@@ -1133,6 +1133,9 @@ class BiodiversityRunManager:
                 route_status=walking_plan.get("status"),
                 selected_route_site_id=walking_plan.get("selected_site_id"),
                 total_walking_distance_km=walking_plan.get("total_distance_km"),
+                total_travel_duration_minutes=walking_plan.get(
+                    "total_travel_duration_minutes"
+                ),
                 remaining_field_time_minutes=walking_plan.get(
                     "remaining_field_time_minutes"
                 ),

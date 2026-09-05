@@ -30,6 +30,72 @@ function collection(features: unknown[]): GeoJSONSourceSpecification["data"] {
   return { type: "FeatureCollection", features } as GeoJSONSourceSpecification["data"];
 }
 
+function routeStartContext(routeGeometry: RouteGeometryView | null) {
+  const features = routeGeometry?.geojson?.features;
+  if (!Array.isArray(features)) return null;
+  const outbound = features.find((feature) => (
+    feature?.properties?.direction === "outbound"
+    || feature?.properties?.direction === "outbound_return"
+  ));
+  const point = asPosition(outbound?.geometry?.coordinates?.[0]);
+  if (!point) return null;
+  return {
+    type: "Feature" as const,
+    geometry: { type: "Point" as const, coordinates: point },
+    properties: {
+      layer: "route_start",
+      label: routeGeometry?.origin_visibility === "planned_public_fixture"
+        ? "Planned public fixture route start"
+        : "Current private route start",
+      precision: "matches the displayed route geometry",
+    },
+  };
+}
+
+function displayedRouteGeoJson(routeGeometry: RouteGeometryView | null) {
+  const raw = routeGeometry?.geojson;
+  const features = raw?.features;
+  if (!raw || !Array.isArray(features) || features.length !== 2) return raw;
+  const outbound = features.find((feature) => feature?.properties?.direction === "outbound");
+  const returnFeature = features.find((feature) => feature?.properties?.direction === "return");
+  const outboundCoordinates = outbound?.geometry?.coordinates;
+  const returnCoordinates = returnFeature?.geometry?.coordinates;
+  const sameReverse = Array.isArray(outboundCoordinates)
+    && Array.isArray(returnCoordinates)
+    && pathsShareCorridor(outboundCoordinates, [...returnCoordinates].reverse());
+  if (!sameReverse || !outbound) return raw;
+  return {
+    ...raw,
+    features: [{
+      ...outbound,
+      properties: {
+        ...outbound.properties,
+        direction: "outbound_return",
+        same_path_both_directions: true,
+      },
+    }],
+  };
+}
+
+function pathsShareCorridor(first: unknown[], second: unknown[]): boolean {
+  const firstPath = first.map(asPosition).filter((point): point is Position => point !== null);
+  const secondPath = second.map(asPosition).filter((point): point is Position => point !== null);
+  if (firstPath.length < 2 || secondPath.length < 2) return false;
+  const endpointToleranceSquared = 0.0008 ** 2;
+  if (
+    distanceToSegmentSquared(firstPath[0], secondPath[0], secondPath[0]) > endpointToleranceSquared
+    || distanceToSegmentSquared(firstPath[firstPath.length - 1], secondPath[secondPath.length - 1], secondPath[secondPath.length - 1]) > endpointToleranceSquared
+  ) return false;
+  const corridorToleranceSquared = 0.00055 ** 2;
+  const closeRatio = (points: Position[], path: Position[]) => (
+    points.filter((point) => Math.min(...path.slice(1).map((end, index) => (
+      distanceToSegmentSquared(point, path[index], end)
+    ))) <= corridorToleranceSquared).length / points.length
+  );
+  return closeRatio(firstPath, secondPath) >= 0.9
+    && closeRatio(secondPath, firstPath) >= 0.9;
+}
+
 function extendBounds(bounds: maplibregl.LngLatBounds, value: unknown): void {
   if (!Array.isArray(value)) return;
   if (value.length >= 2 && typeof value[0] === "number" && typeof value[1] === "number") {
@@ -214,17 +280,19 @@ export function EvidenceMap({
       map.addSource("candidate-sites", { type: "geojson", data: collection(data.candidate_sites ?? []) });
       map.addLayer({ id: "candidate-fill", type: "fill", source: "candidate-sites", paint: { "fill-color": ["case", ["==", ["get", "site_id"], data.selected_site_id ?? ""], "#0b382f", "#174f43"], "fill-opacity": ["case", ["==", ["get", "site_id"], data.selected_site_id ?? ""], 0.74, 0.52] } });
       map.addLayer({ id: "candidate-line", type: "line", source: "candidate-sites", paint: { "line-color": "#0b382f", "line-width": ["case", ["==", ["get", "site_id"], data.selected_site_id ?? ""], 4, 2.2] } });
-      if (data.start_context) {
-        map.addSource("start-context", { type: "geojson", data: collection([data.start_context]) });
+      const displayedStart = routeStartContext(routeGeometry) ?? data.start_context;
+      const displayedRoute = displayedRouteGeoJson(routeGeometry);
+      if (displayedStart) {
+        map.addSource("start-context", { type: "geojson", data: collection([displayedStart]) });
         map.addLayer({ id: "start-point", type: "circle", source: "start-context", paint: { "circle-radius": 7, "circle-color": "#f7f1df", "circle-stroke-color": "#1c2d29", "circle-stroke-width": 3 } });
       }
-      if (routeGeometry?.geojson && Array.isArray(routeGeometry.geojson.features)) {
+      if (displayedRoute && Array.isArray(displayedRoute.features)) {
         map.addSource("walking-route", {
           type: "geojson",
-          data: routeGeometry.geojson as GeoJSONSourceSpecification["data"],
+          data: displayedRoute as GeoJSONSourceSpecification["data"],
         });
         map.addLayer({ id: "walking-route-shadow", type: "line", source: "walking-route", paint: { "line-color": "#f7f1df", "line-width": 7, "line-opacity": 0.86 } });
-        map.addLayer({ id: "walking-route-outbound", type: "line", source: "walking-route", filter: ["==", ["get", "direction"], "outbound"], paint: { "line-color": "#315d73", "line-width": 4 } });
+        map.addLayer({ id: "walking-route-outbound", type: "line", source: "walking-route", filter: ["in", ["get", "direction"], ["literal", ["outbound", "outbound_return"]]], paint: { "line-color": "#315d73", "line-width": 4 } });
         map.addLayer({ id: "walking-route-return", type: "line", source: "walking-route", filter: ["==", ["get", "direction"], "return"], paint: { "line-color": "#d6573e", "line-width": 4, "line-dasharray": [2, 1] } });
       }
       if (data.selected_entrance) {
@@ -236,11 +304,11 @@ export function EvidenceMap({
         ...(data.aggregate_grid ?? []),
         ...(data.candidate_sites ?? []),
         ...(data.contextual_sites ?? []),
-        ...(data.start_context ? [data.start_context] : []),
+        ...(displayedStart ? [displayedStart] : []),
         ...(data.selected_entrance ? [data.selected_entrance] : []),
         ...(
-          Array.isArray(routeGeometry?.geojson.features)
-            ? routeGeometry.geojson.features as Array<{ geometry?: { coordinates?: unknown } }>
+          Array.isArray(displayedRoute?.features)
+            ? displayedRoute.features as Array<{ geometry?: { coordinates?: unknown } }>
             : []
         ),
       ].forEach((feature) => extendBounds(bounds, feature.geometry?.coordinates));
@@ -358,7 +426,7 @@ export function EvidenceMap({
         {error && <div className="map-message error" role="alert">{error}</div>}
         {basemapStatus === "loading" && data && <div className="basemap-notice" role="status">Loading basemap…</div>}
         {basemapStatus === "unavailable" && data && <div className="basemap-notice error" role="status">Basemap unavailable — evidence overlays remain available</div>}
-        {routeLoading && <div className="route-loading" role="status">Loading selected walking route…</div>}
+        {routeLoading && <div className="route-loading" role="status">Loading selected journey…</div>}
         {!loading && !error && !data && <div className="map-message">Start or select a run to load its checkpoint map.</div>}
         {data && !loading && (data.aggregate_grid ?? []).length === 0 && <div className="map-message map-low">No grid shown — the strong evidence gate did not pass.</div>}
         <div className="map-legend" aria-label="Map legend">
@@ -375,10 +443,10 @@ export function EvidenceMap({
             <span className="legend-group">Site locations</span>
             <span><i className="legend-swatch candidate" /><i className="legend-mini-pin candidate" /> Evidence-grounded candidate</span>
             <span><i className="legend-swatch contextual" /><i className="legend-mini-pin contextual" /> Contextual site — not recommended</span>
-            <span><i className="legend-swatch start" /> Generalised start</span>
+            <span><i className="legend-swatch start" /> {routeGeometry ? "Route start" : "Generalised start"}</span>
             <span><i className="legend-swatch entrance" /> Verified public-site entrance</span>
-            <span><i className="legend-swatch route-outbound" /> Outbound walking route</span>
-            <span><i className="legend-swatch route-return" /> Return walking route</span>
+            <span><i className="legend-swatch route-outbound" /> Outbound journey</span>
+            <span><i className="legend-swatch route-return" /> Return journey (when different)</span>
           </div>
           <small>Density is relative record count, not abundance.</small>
         </div>
@@ -396,7 +464,7 @@ export function EvidenceMap({
             </p>
           )}
           {feasibleRoutes.length > 1 && (
-            <div className="route-switcher" aria-label="Alternative feasible walking routes">
+            <div className="route-switcher" aria-label="Alternative feasible journeys">
               <strong>Show route</strong>
               {feasibleRoutes.map((option) => (
                 <button
@@ -405,7 +473,7 @@ export function EvidenceMap({
                   aria-pressed={routeGeometry?.route_geometry_reference === option.route_geometry_reference}
                   onClick={() => option.route_geometry_reference && onRouteSelect?.(option.route_geometry_reference)}
                 >
-                  {option.site_name} · {option.total_distance_km?.toFixed(2)} km
+                  {option.site_name} · {option.total_travel_duration_minutes?.toFixed(0) ?? "—"} min · {option.total_distance_km?.toFixed(2)} km walking
                 </button>
               ))}
             </div>

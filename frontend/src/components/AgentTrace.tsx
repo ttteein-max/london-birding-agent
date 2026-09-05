@@ -34,7 +34,7 @@ const STAGE_LABELS: Record<WorkflowNodeView["stage"], string> = {
   taxonomy: "Bird taxonomy",
   evidence: "Evidence loop",
   validation: "Validation + HITL",
-  routing: "Entrances + walking routes",
+  routing: "Entrances + validated journeys",
   planning: "Plan + grounding",
   outcome: "Outcome",
 };

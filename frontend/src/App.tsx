@@ -500,7 +500,7 @@ export default function App() {
       </main>
       <footer>
         <span>London-only · birds-first · historical evidence</span>
-        <span>Routes end at audited public-site entrances; access conditions and sightings are never guaranteed</span>
+        <span>Journeys end at audited public-site entrances; timetables, access conditions and sightings are never guaranteed</span>
       </footer>
       <StateInspector state={inspectedState} loading={loadingState} onClose={() => setInspectedState(null)} />
     </div>

@@ -492,19 +492,28 @@ def test_strong_woodpigeon_evidence_reaches_candidate_plan_ready() -> None:
 
 
 @pytest.mark.parametrize(
-    ("bird", "month"),
-    [("House sparrow", 5), ("Turdus iliacus", 1)],
+    ("bird", "month", "needs_access_acknowledgement"),
+    [("House sparrow", 5, True), ("Turdus iliacus", 1, False)],
 )
-def test_same_snapshot_grounded_candidates_with_access_acknowledgement(
+def test_access_acknowledgement_only_interrupts_without_an_explicit_candidate(
     bird: str,
     month: int,
+    needs_access_acknowledgement: bool,
 ) -> None:
     memory = create_biodiversity_checkpointer()
     graph = graph_for(request_draft(bird, month), checkpointer=memory)
     config = {"configurable": {"thread_id": bird}}
     interrupted = graph.invoke({"original_request_text": bird}, config)
-    assert interrupt_payload(interrupted)["options"] == [{"option": "accept_uncertain_access"}]
-    result = graph.invoke(Command(resume={"option": "accept_uncertain_access"}), config)
+    if needs_access_acknowledgement:
+        assert interrupt_payload(interrupted)["options"] == [
+            {"option": "accept_uncertain_access"}
+        ]
+        result = graph.invoke(
+            Command(resume={"option": "accept_uncertain_access"}), config
+        )
+    else:
+        assert "__interrupt__" not in interrupted
+        result = interrupted
     assert result["deterministic_plan_status"] == "candidate_plan_ready"
     assert result["final_validated_plan"]["recommended_sites"]
     assert any(

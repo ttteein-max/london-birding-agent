@@ -150,6 +150,8 @@ export const walkingPlanFixture: NonNullable<FinalPlanView["walking_plan"]> = {
     limitations: [],
   },
   routing_profile: "foot-walking",
+  journey_type: "walking_only",
+  return_route_same_as_outbound: true,
   outbound_distance_km: 4.56,
   return_distance_km: 4.57,
   total_distance_km: 9.13,
@@ -183,6 +185,7 @@ export const routePlanFixture: FinalPlanView = {
   ...planFixture,
   duration_hours: 3,
   walking_plan: walkingPlanFixture,
+  itinerary_summary: "This is a 180-minute total outing. Use walking to reach Evidence Garden via Main gate; validated travel leaves 58 minutes for field observation.",
 };
 
 export const historyFixture: HistoryView = {
@@ -345,8 +348,7 @@ export const routeGeometryFixture: RouteGeometryView = {
   geojson: {
     type: "FeatureCollection",
     features: [
-      { type: "Feature", properties: { direction: "outbound" }, geometry: { type: "LineString", coordinates: [[-0.16, 51.48], [-0.1519, 51.5076]] } },
-      { type: "Feature", properties: { direction: "return" }, geometry: { type: "LineString", coordinates: [[-0.1519, 51.5076], [-0.16, 51.48]] } },
+      { type: "Feature", properties: { direction: "outbound_return", same_path_both_directions: true }, geometry: { type: "LineString", coordinates: [[-0.161005, 51.476041], [-0.1519, 51.5076]] } },
     ],
   },
   limitations: [],

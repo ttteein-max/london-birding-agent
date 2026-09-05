@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import datetime
 from enum import Enum
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import Field, StringConstraints, model_validator
 
@@ -85,7 +85,10 @@ class WalkingRouteRequest(StrictModel):
     entrance_id: NonEmptyText
     origin: WGS84Point
     destination: WGS84Point
-    profile: str = Field(default="foot-walking", pattern=r"^foot-walking$")
+    profile: str = Field(
+        default="foot-walking",
+        pattern=r"^(foot-walking|public-transport-and-walking)$",
+    )
     options: dict[str, Any] = Field(default_factory=dict)
 
 
@@ -113,6 +116,23 @@ class RouteLeg(StrictModel):
     geometry_reference: NonEmptyText
 
 
+class JourneySegment(StrictModel):
+    """Coordinate-free provider segment safe for plans, reports, and the UI."""
+
+    segment_id: NonEmptyText
+    direction: Literal["outbound", "return"]
+    sequence: int = Field(ge=0)
+    mode: NonEmptyText
+    line_name: str | None = None
+    instruction: NonEmptyText
+    origin_label: str | None = None
+    destination_label: str | None = None
+    duration_minutes: float = Field(ge=0)
+    distance_m: float | None = Field(default=None, ge=0)
+    departure_time: str | None = None
+    arrival_time: str | None = None
+
+
 class WalkingRouteEvidence(StrictModel):
     schema_version: int = Field(default=ROUTE_SCHEMA_VERSION, ge=1)
     route_id: NonEmptyText
@@ -120,11 +140,17 @@ class WalkingRouteEvidence(StrictModel):
     entrance_id: NonEmptyText
     provider: NonEmptyText
     provider_version: NonEmptyText
-    routing_profile: str = Field(pattern=r"^foot-walking$")
+    routing_profile: str = Field(
+        pattern=r"^(foot-walking|public-transport-and-walking)$"
+    )
     outbound: RouteLeg
     return_leg: RouteLeg
     total_distance_m: float = Field(ge=0)
     total_duration_seconds: float = Field(ge=0)
+    total_walking_duration_seconds: float | None = Field(default=None, ge=0)
+    total_public_transport_duration_seconds: float = Field(default=0, ge=0)
+    journey_segments: list[JourneySegment] = Field(default_factory=list)
+    return_route_same_as_outbound: bool = False
     ascent_m: float | None = Field(default=None, ge=0)
     descent_m: float | None = Field(default=None, ge=0)
     elevation_profile: list[ElevationSample] = Field(default_factory=list)
@@ -176,11 +202,25 @@ class ValidatedWalkingPlan(StrictModel):
     selected_site_id: NonEmptyText | None = None
     selected_site_name: NonEmptyText | None = None
     entrance: PublicEntranceCandidate | None = None
-    routing_profile: str = Field(default="foot-walking", pattern=r"^foot-walking$")
+    routing_profile: str = Field(
+        default="foot-walking",
+        pattern=r"^(foot-walking|public-transport-and-walking)$",
+    )
+    journey_type: Literal[
+        "walking_only", "public_transport_and_walking"
+    ] = "walking_only"
+    planning_departure_time_local: str | None = None
     outbound_distance_km: float | None = Field(default=None, ge=0)
     return_distance_km: float | None = Field(default=None, ge=0)
     total_distance_km: float | None = Field(default=None, ge=0)
     walking_duration_minutes: float | None = Field(default=None, ge=0)
+    outbound_travel_duration_minutes: float | None = Field(default=None, ge=0)
+    return_travel_duration_minutes: float | None = Field(default=None, ge=0)
+    total_travel_duration_minutes: float | None = Field(default=None, ge=0)
+    public_transport_duration_minutes: float | None = Field(default=None, ge=0)
+    journey_segments: list[JourneySegment] = Field(default_factory=list)
+    return_route_same_as_outbound: bool = False
+    selection_rationale: str | None = None
     expedition_duration_minutes: float = Field(gt=0)
     remaining_field_time_minutes: float | None = Field(default=None, ge=0)
     ascent_m: float | None = Field(default=None, ge=0)

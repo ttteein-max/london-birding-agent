@@ -63,7 +63,8 @@ describe("field notebook cards", () => {
 
   it("renders the nested validated itinerary without creating a second final plan", () => {
     render(<PlanPanel plan={routePlanFixture} />);
-    expect(screen.getByRole("heading", { name: "Validated walking itinerary" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Validated journey itinerary" })).toBeInTheDocument();
+    expect(screen.getByText(/180-minute total outing/)).toBeInTheDocument();
     expect(screen.getByText("Main gate · Explicit Public access evidence")).toBeInTheDocument();
     expect(screen.getByText("9.13 km")).toBeInTheDocument();
     expect(screen.getByText("58 min")).toBeInTheDocument();
@@ -86,7 +87,7 @@ describe("field notebook cards", () => {
         limitations: ["The configured live routing provider was unavailable."],
       },
     }} />);
-    expect(screen.getByText(/No walking route was fabricated/)).toHaveTextContent(
+    expect(screen.getByText(/No journey was fabricated/)).toHaveTextContent(
       "Source Unavailable",
     );
     expect(screen.getByText("The configured live routing provider was unavailable.")).toBeInTheDocument();
@@ -244,7 +245,7 @@ describe("typed human decisions", () => {
     expect(screen.getByLabelText("Recognised request details")).toHaveTextContent("Rainham Marshes");
     expect(screen.getByLabelText(/Named London place/)).toHaveValue("Rainham Marshes");
     expect(screen.getByLabelText("Bird name")).toHaveValue("Yellow-browed Warbler");
-    expect(screen.getByLabelText("Duration hours")).toHaveValue(3);
+    expect(screen.getByLabelText(/Total outing hours/)).toHaveValue(3);
     await userEvent.type(screen.getByLabelText("Target date"), "2026-09-12");
     await userEvent.click(screen.getByRole("button", { name: "Apply corrections" }));
     expect(onResume).toHaveBeenCalledWith({

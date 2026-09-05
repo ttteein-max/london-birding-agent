@@ -42,7 +42,7 @@ The shortest reproducible browser flow is entirely fixture/scripted and offline 
 
 5. Open `http://127.0.0.1:5173`, select **Strong evidence**, then choose **Start expedition**. For the complete fixture/scripted browser demonstration, run `npm run test:e2e` from `frontend/`.
 
-The browser receives an operation immediately, streams node/model/tool/provider/checkpoint events, and reads only allow-listed state/evidence/map/route DTOs. A walking route is calculated only after the evidence gate, directly-grounded site and mapped-entrance checks pass. The route terminates at an audited public-site entrance—never an occurrence point, safe-cell centre, polygon centroid or arbitrary road point. See [the Phase 5 geospatial and routing documentation](docs/phase-5-geospatial-routing.md), [routing ADR](docs/adr/0001-phase-5-routing-semantics.md) and [OpenAPI contract](docs/phase-5-openapi.json).
+The browser receives an operation immediately, streams node/model/tool/provider/checkpoint events, and reads only allow-listed state/evidence/map/route DTOs. A journey is calculated only after the evidence gate, directly-grounded site and mapped-entrance checks pass. Live mode asks the official TfL Journey Planner for the least-time public-transport-and-walking option; the walking-only fixture remains offline and reproducible. Every journey terminates at an audited public-site entrance—never an occurrence point, safe-cell centre, polygon centroid or arbitrary road point. A deterministic approach check rejects a route that crosses deeply into the selected polygon before reaching its claimed entrance. See [the Phase 5 geospatial and routing documentation](docs/phase-5-geospatial-routing.md), [routing ADR](docs/adr/0001-phase-5-routing-semantics.md) and [OpenAPI contract](docs/phase-5-openapi.json).
 
 The default basemap is the keyless OpenFreeMap Liberty MapLibre style. Configure or disable it with the backend-only `BIODIVERSITY_BASEMAP_STYLE_URL`; the URL is validated and returned as safe map configuration. For a custom style, list its additional HTTPS sprite, glyph and tile origins in `BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS`; the style host itself is added to CSP automatically. Do not place secret-bearing styles or provider keys in `VITE_*`. If the style fails, the browser explicitly switches to the empty style while keeping evidence and route overlays available. Default unit and Playwright tests mock the style and never contact public tile servers.
 
@@ -57,10 +57,12 @@ Set the model credentials in the shell that starts FastAPI, then select `live/li
 ```bash
 export OPENAI_API_KEY='your-key'
 export OPENAI_MODEL='your-model-id'
-# Required by live data mode when routing is reached:
+# Optional walking-only adapter and explicit ORS live test:
 export ORS_API_KEY='your-openrouteservice-key'
-# Optional second live routing provider:
+# Optional second walking-only provider:
 export GRAPHHOPPER_API_KEY='your-graphhopper-key'
+# Optional higher-quota key for the default TfL public-transport journey API:
+export TFL_API_KEY='your-tfl-key'
 # Optional for an OpenAI-compatible provider:
 export OPENAI_BASE_URL='https://provider.example/v1'
 
@@ -292,7 +294,8 @@ All public API requests are sequential, carry a project-specific User-Agent, hav
 - OpenStreetMap/Overpass: one-off green-space candidate snapshot, not a runtime query.
 - OpenStreetMap/Overpass: versioned public-green-space entrance snapshot with exact OSM boundary-member associations; entrance tags are not proof of legal access.
 - OpenFreeMap Liberty: default keyless MapLibre basemap style, with OpenFreeMap/OpenMapTiles/OpenStreetMap attribution.
-- openrouteservice by HeiGIT: opt-in live foot-walking routes through the current `api.heigit.org` endpoint. The key stays on the backend.
+- Transport for London Journey Planner API: default live least-time public-transport-and-walking journey; a backend `TFL_API_KEY` is optional for the public allowance and recommended for deployed quota.
+- openrouteservice by HeiGIT: retained walking-only adapter and explicit live foot-walking test through the current `api.heigit.org` endpoint. The key stays on the backend.
 - GraphHopper: optional second live walking adapter; it is used only when configured and never as a fixture fallback.
 
 The public Nominatim service requires no API key for low-volume use, but it is not an unlimited or guaranteed hosting dependency. This application sends only explicit submitted searches, caps the response at three candidates, identifies itself with a project User-Agent, serializes requests to no more than one per second, and does not implement client-side autocomplete. OpenStreetMap attribution is retained. A larger public deployment should use a hosted geocoding plan or its own compliant instance.

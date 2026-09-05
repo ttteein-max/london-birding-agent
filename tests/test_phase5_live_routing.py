@@ -17,6 +17,8 @@ from app.biodiversity.routing import (
     ORS_ENDPOINT,
     OpenRouteServiceWalkingProvider,
     RoutingServices,
+    TFL_JOURNEY_ENDPOINT,
+    TfLJourneyProvider,
 )
 from app.biodiversity.routing_models import RouteStatus, WalkingRouteRequest
 
@@ -45,13 +47,38 @@ def test_current_heigit_foot_walking_endpoint_without_openai_key() -> None:
     assert route.provider == "openrouteservice"
 
 
+def test_current_tfl_least_time_journey_endpoint_without_openai_key() -> None:
+    assert TFL_JOURNEY_ENDPOINT == (
+        "https://api.tfl.gov.uk/Journey/JourneyResults"
+    )
+    route = TfLJourneyProvider().route(
+        WalkingRouteRequest(
+            request_id="public-london-multimodal-demo-live",
+            site_id="osm-way-3986346",
+            entrance_id="osm-node-1109765916",
+            origin=WGS84Point(longitude=-0.1663, latitude=51.4704),
+            destination=WGS84Point(longitude=-0.184302, latitude=51.501883),
+            profile="public-transport-and-walking",
+            options={
+                "direction": "outbound",
+                "local_date": "20260915",
+                "local_time": "0900",
+                "time_is": "Departing",
+            },
+        )
+    )
+    assert route.duration_seconds > 0
+    assert route.walking_duration_seconds and route.walking_duration_seconds > 0
+    assert any(segment.mode != "walking" for segment in route.journey_segments)
+    assert route.provider == "tfl-journey-planner"
+
+
 @pytest.mark.skipif(
     not (
-        os.getenv("ORS_API_KEY")
-        and os.getenv("OPENAI_API_KEY")
+        os.getenv("OPENAI_API_KEY")
         and os.getenv("OPENAI_MODEL")
     ),
-    reason="ORS_API_KEY and OpenAI credentials are required for a live/live milestone.",
+    reason="OpenAI credentials are required for a live/live milestone; TfL routing can use bounded anonymous access.",
 )
 def test_live_live_milestone_uses_current_evidence_model_and_routing(
     tmp_path,
@@ -75,7 +102,7 @@ def test_live_live_milestone_uses_current_evidence_model_and_routing(
     assert result["terminal_status"] == "completed"
     walking = result["final_validated_plan"]["walking_plan"]
     assert walking["status"] == RouteStatus.ready.value
-    assert walking["provider"] in {"openrouteservice", "graphhopper"}
+    assert walking["provider"] == "tfl-journey-planner"
     public_plan = json.dumps(result["final_validated_plan"]).casefold()
     assert '"latitude"' not in public_plan
     assert '"longitude"' not in public_plan

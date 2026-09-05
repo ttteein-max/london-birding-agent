@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "London Biodiversity Expedition Planner API",
-    "description": "A privacy-bounded API for London bird-expedition evidence, agent execution, validated walking routes, human decisions, and checkpoint time travel.",
+    "description": "A privacy-bounded API for London bird-expedition evidence, agent execution, validated public-transport-and-walking journeys, human decisions, and checkpoint time travel.",
     "version": "5.0.0"
   },
   "paths": {
@@ -1750,6 +1750,17 @@
               }
             ]
           },
+          "itinerary_summary": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Itinerary Summary"
+          },
           "explanation": {
             "type": "string",
             "title": "Explanation"
@@ -2266,6 +2277,118 @@
           "option"
         ],
         "title": "HitlOptionView"
+      },
+      "JourneySegmentView": {
+        "properties": {
+          "segment_id": {
+            "type": "string",
+            "title": "Segment Id"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "outbound",
+              "return"
+            ],
+            "title": "Direction"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Sequence"
+          },
+          "mode": {
+            "type": "string",
+            "title": "Mode"
+          },
+          "line_name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Line Name"
+          },
+          "instruction": {
+            "type": "string",
+            "title": "Instruction"
+          },
+          "origin_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Origin Label"
+          },
+          "destination_label": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Destination Label"
+          },
+          "duration_minutes": {
+            "type": "number",
+            "minimum": 0.0,
+            "title": "Duration Minutes"
+          },
+          "distance_m": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Distance M"
+          },
+          "departure_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Departure Time"
+          },
+          "arrival_time": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Arrival Time"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "segment_id",
+          "direction",
+          "sequence",
+          "mode",
+          "instruction",
+          "duration_minutes"
+        ],
+        "title": "JourneySegmentView"
       },
       "LocationCorrectionDecision": {
         "properties": {
@@ -3643,6 +3766,17 @@
             ],
             "title": "Walking Duration Minutes"
           },
+          "total_travel_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Travel Duration Minutes"
+          },
           "feasible": {
             "type": "boolean",
             "title": "Feasible"
@@ -4622,6 +4756,18 @@
             ],
             "title": "Total Walking Distance Km"
           },
+          "total_travel_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number",
+                "minimum": 0.0
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Travel Duration Minutes"
+          },
           "remaining_field_time_minutes": {
             "anyOf": [
               {
@@ -5306,6 +5452,26 @@
             "type": "string",
             "title": "Routing Profile"
           },
+          "journey_type": {
+            "type": "string",
+            "enum": [
+              "walking_only",
+              "public_transport_and_walking"
+            ],
+            "title": "Journey Type",
+            "default": "walking_only"
+          },
+          "planning_departure_time_local": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Planning Departure Time Local"
+          },
           "outbound_distance_km": {
             "anyOf": [
               {
@@ -5349,6 +5515,73 @@
               }
             ],
             "title": "Walking Duration Minutes"
+          },
+          "outbound_travel_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Outbound Travel Duration Minutes"
+          },
+          "return_travel_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Return Travel Duration Minutes"
+          },
+          "total_travel_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Total Travel Duration Minutes"
+          },
+          "public_transport_duration_minutes": {
+            "anyOf": [
+              {
+                "type": "number"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Public Transport Duration Minutes"
+          },
+          "journey_segments": {
+            "items": {
+              "$ref": "#/components/schemas/JourneySegmentView"
+            },
+            "type": "array",
+            "title": "Journey Segments"
+          },
+          "return_route_same_as_outbound": {
+            "type": "boolean",
+            "title": "Return Route Same As Outbound",
+            "default": false
+          },
+          "selection_rationale": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Selection Rationale"
           },
           "expedition_duration_minutes": {
             "type": "number",

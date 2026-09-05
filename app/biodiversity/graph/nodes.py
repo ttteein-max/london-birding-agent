@@ -21,6 +21,7 @@ from app.biodiversity.agent_models import (
 )
 from app.biodiversity.graph.grounding import (
     compact_plan_payload,
+    deterministic_itinerary_summary,
     deterministic_safe_plan,
     validate_grounded_plan,
 )
@@ -32,6 +33,7 @@ from app.biodiversity.graph.prompts import (
 )
 from app.biodiversity.graph.state import BiodiversityAgentState
 from app.biodiversity.models import (
+    AccessCertainty,
     ConstraintStatus,
     EvidenceItem,
     EvidenceOutcome,
@@ -942,15 +944,33 @@ def _actionable_tradeoff(
             "options": [{"option": "revise_rain_preference"}, {"option": "continue_with_weather_acknowledgement"}],
             "resume_schema": {"option": "one listed option"},
         }
-    uncertain = next((item for item in bundle.constraints if item.code == "site_access_uncertain"), None)
-    if uncertain and "accept_uncertain_access" not in decisions:
+    uncertain = next(
+        (
+            item
+            for item in bundle.constraints
+            if item.code == "site_access_uncertain"
+        ),
+        None,
+    )
+    has_explicit_public_candidate = any(
+        site.access_certainty == AccessCertainty.explicit_public
+        for site in bundle.candidate_sites
+    )
+    if (
+        uncertain
+        and not has_explicit_public_candidate
+        and "accept_uncertain_access" not in decisions
+    ):
         return {
             "kind": "actionable_tradeoff",
-            "question": "Some candidate-site access is unspecified. Continue while acknowledging that access must be checked?",
+            "question": "Every candidate site has unspecified mapped access. Continue while acknowledging that access must be checked?",
             "reason": uncertain.message,
             "options": [{"option": "accept_uncertain_access"}],
             "resume_schema": {"option": "accept_uncertain_access"},
         }
+    # Site-level missing access tags remain a visible warning, not a generic
+    # interrupt. A route-specific interrupt is raised later only when routing
+    # genuinely needs an uncertain entrance and there is an actionable choice.
     return None
 
 
@@ -1559,15 +1579,33 @@ def validate_route_constraints(state: BiodiversityAgentState) -> dict[str, Any]:
         RouteOption.model_validate(item) for item in state.get("route_options") or []
     ]
     tradeoff: dict[str, Any] | None = None
+    explicit_approach_failed = any(
+        any(
+            item.code == "verified_entrance_approach" and not item.passed
+            for item in option.constraint_results
+        )
+        for option in options
+    )
     if (
-        plan.status == RouteStatus.no_valid_entrance
+        (
+            plan.status == RouteStatus.no_valid_entrance
+            or (
+                plan.status == RouteStatus.no_feasible_route
+                and explicit_approach_failed
+            )
+        )
         and state.get("route_uncertain_entrance_available")
         and not state.get("route_allow_uncertain_entrance")
     ):
         tradeoff = {
             "kind": "route_tradeoff",
-            "question": "Mapped entrances exist, but public access is uncertain. How should routing continue?",
-            "reason": "An entrance tag identifies a location but does not establish public access rights.",
+            "question": "The safe route may require an entrance whose access tag is unspecified. How should routing continue?",
+            "reason": (
+                "The explicit entrance route entered the target site well before its endpoint. "
+                "An alternative mapped gate may give a sensible approach, but its entrance tag does not establish public access rights."
+                if explicit_approach_failed
+                else "An entrance tag identifies a location but does not establish public access rights."
+            ),
             "options": [
                 {"option": "accept_uncertain_entrance"},
                 {"option": "keep_route_constraints_and_end"},
@@ -1746,6 +1784,14 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
             plan = response if isinstance(response, BiodiversityExpeditionPlan) else BiodiversityExpeditionPlan.model_validate(response)
             draft = plan.model_dump(mode="json")
             draft["walking_plan"] = state.get("validated_walking_plan")
+            draft["itinerary_summary"] = deterministic_itinerary_summary(
+                bundle,
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None,
+            )
             composer_failed = False
         except Exception as exc:  # model/schema failures become bounded grounding failures
             draft = {"__generation_error__": f"{type(exc).__name__}: {exc}"}
@@ -1793,6 +1839,14 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
             plan = response if isinstance(response, BiodiversityExpeditionPlan) else BiodiversityExpeditionPlan.model_validate(response)
             draft = plan.model_dump(mode="json")
             draft["walking_plan"] = state.get("validated_walking_plan")
+            draft["itinerary_summary"] = deterministic_itinerary_summary(
+                bundle,
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None,
+            )
             composer_failed = False
         except Exception as exc:
             draft = {"__generation_error__": f"{type(exc).__name__}: {exc}"}

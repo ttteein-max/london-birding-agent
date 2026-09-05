@@ -34,7 +34,10 @@ from app.biodiversity.routing import (
     OpenRouteServiceWalkingProvider,
     ProviderRoute,
     RoutingServices,
+    TfLJourneyProvider,
+    _geometry_collection,
     parse_ors_response,
+    parse_tfl_journey_response,
     plan_walking_routes,
     route_cache_key,
 )
@@ -104,6 +107,15 @@ class FixedEntranceRepository:
 
     def for_site(self, site):  # type: ignore[no-untyped-def]
         return [item for item in self.entrances if item.site_id == site.site_id]
+
+
+class FixedSiteGeometryRepository:
+    def __init__(self, geometry: dict[str, Any]):
+        self.geometry = geometry
+
+    def get(self, site_id: str) -> dict[str, Any] | None:
+        del site_id
+        return self.geometry
 
 
 def _services(provider: Any, entrances: Any) -> RoutingServices:
@@ -210,6 +222,177 @@ def test_ors_parser_converts_units_manoeuvres_and_partial_elevation() -> None:
     assert route.manoeuvres[0].instruction == "Continue north"
 
 
+def _tfl_response() -> dict[str, Any]:
+    return {
+        "journeys": [
+            {
+                "duration": 25,
+                "legs": [
+                    {
+                        "duration": 4,
+                        "distance": 300,
+                        "mode": {"id": "walking"},
+                        "instruction": {
+                            "summary": "Walk to Example Station",
+                            "steps": [
+                                {
+                                    "description": "Continue along Example Road",
+                                    "distance": 300,
+                                    "travelTime": 240,
+                                    "turnDirection": "STRAIGHT",
+                                    "streetName": "Example Road",
+                                }
+                            ],
+                        },
+                        "departurePoint": {"commonName": "Public demo origin"},
+                        "arrivalPoint": {"commonName": "Example Station"},
+                        "departureTime": "2026-09-15T09:00:00",
+                        "arrivalTime": "2026-09-15T09:04:00",
+                        "path": {
+                            "lineString": "[[51.4704,-0.1663],[51.4800,-0.1700]]"
+                        },
+                    },
+                    {
+                        "duration": 12,
+                        "distance": 5000,
+                        "mode": {"id": "bus"},
+                        "instruction": {"summary": "70 bus to Palace Gate"},
+                        "routeOptions": [{"name": "70"}],
+                        "departurePoint": {"commonName": "Example Station"},
+                        "arrivalPoint": {"commonName": "Palace Gate"},
+                        "path": {
+                            "lineString": "[[51.4800,-0.1700],[51.5010,-0.1830]]"
+                        },
+                    },
+                    {
+                        "duration": 4,
+                        "distance": 200,
+                        "mode": {"id": "walking"},
+                        "instruction": {"summary": "Walk to Palace Gate"},
+                        "departurePoint": {"commonName": "Palace Gate stop"},
+                        "arrivalPoint": {"commonName": "Palace Gate"},
+                        "path": {
+                            "lineString": "[[51.5010,-0.1830],[51.501883,-0.184302]]"
+                        },
+                    },
+                ],
+            }
+        ]
+    }
+
+
+def _tfl_request() -> WalkingRouteRequest:
+    return WalkingRouteRequest(
+        request_id="public-demo-outbound",
+        site_id="osm-way-3986346",
+        entrance_id="osm-node-1109765916",
+        origin=WGS84Point(longitude=-0.1663, latitude=51.4704),
+        destination=WGS84Point(longitude=-0.184302, latitude=51.501883),
+        profile="public-transport-and-walking",
+        options={
+            "direction": "outbound",
+            "local_date": "20260915",
+            "local_time": "0900",
+            "time_is": "Departing",
+        },
+    )
+
+
+def test_tfl_parser_separates_total_travel_from_walking_and_keeps_provider_steps() -> None:
+    route = parse_tfl_journey_response(
+        _tfl_response(),
+        request=_tfl_request(),
+        provider="tfl-journey-planner",
+        provider_version="v1",
+    )
+    assert route.distance_m == 500
+    assert route.duration_seconds == 25 * 60
+    assert route.walking_duration_seconds == 8 * 60
+    assert route.public_transport_duration_seconds == 17 * 60
+    assert [item.mode for item in route.journey_segments] == [
+        "walking",
+        "bus",
+        "walking",
+    ]
+    assert route.journey_segments[1].line_name == "70"
+    assert route.geometry["coordinates"][0] == [-0.1663, 51.4704]
+    assert route.geometry["coordinates"][-1] == [-0.184302, 51.501883]
+    assert route.manoeuvres[0].instruction == "Continue along Example Road"
+
+
+def test_tfl_provider_uses_least_time_and_keeps_optional_key_backend_only() -> None:
+    captured: dict[str, str] = {}
+
+    def handler(incoming: httpx.Request) -> httpx.Response:
+        captured.update(dict(incoming.url.params))
+        return httpx.Response(200, json=_tfl_response(), request=incoming)
+
+    provider = TfLJourneyProvider(
+        "backend-only-key",
+        client=httpx.Client(transport=httpx.MockTransport(handler)),
+        max_attempts=1,
+    )
+    route = provider.route(_tfl_request())
+    assert route.provider == "tfl-journey-planner"
+    assert captured["journeyPreference"] == "LeastTime"
+    assert captured["app_key"] == "backend-only-key"
+    assert "backend-only-key" not in route.model_dump_json()
+
+
+def test_multimodal_round_trip_subtracts_total_travel_but_limits_walking(
+    strong_result,
+) -> None:
+    site, entrance = _site_entrance(strong_result)
+    provider = TfLJourneyProvider(
+        client=httpx.Client(
+            transport=httpx.MockTransport(
+                lambda incoming: httpx.Response(
+                    200, json=_tfl_response(), request=incoming
+                )
+            )
+        ),
+        max_attempts=1,
+    )
+    services = RoutingServices(
+        entrances=FixedEntranceRepository([entrance]),
+        provider=provider,
+        cache=MemoryRouteCache(),
+        geometry_store=MemoryRouteGeometryStore(),
+        routing_profile="public-transport-and-walking",
+    )
+    plan, _options, _uncertain = plan_walking_routes(
+        _request(duration_hours=3, maximum_walking_distance_km=2),
+        strong_result.bundle.location,
+        [site],
+        services=services,
+    )
+    assert plan.status == RouteStatus.ready
+    assert plan.journey_type == "public_transport_and_walking"
+    assert plan.total_distance_km == 1
+    assert plan.walking_duration_minutes == 16
+    assert plan.total_travel_duration_minutes == 50
+    assert plan.remaining_field_time_minutes == 130
+    assert len(plan.journey_segments) == 6
+
+
+def test_identical_reverse_geometry_is_stored_once() -> None:
+    geometry = {
+        "type": "LineString",
+        "coordinates": [[-0.16, 51.48], [-0.15, 51.49]],
+    }
+    result = _geometry_collection(
+        geometry,
+        {
+            "type": "LineString",
+            "coordinates": list(reversed(geometry["coordinates"])),
+        },
+    )
+    assert len(result["features"]) == 1
+    assert result["features"][0]["properties"]["direction"] == (
+        "outbound_return"
+    )
+
+
 def test_fixture_round_trip_sums_independent_legs_and_has_elevation(strong_result) -> None:
     plan, options, _uncertain = plan_walking_routes(
         strong_result.bundle.request,
@@ -218,7 +401,12 @@ def test_fixture_round_trip_sums_independent_legs_and_has_elevation(strong_resul
         services=RoutingServices.fixture(),
     )
     assert plan.status == RouteStatus.ready
-    selected = next(item for item in options if item.site_id == plan.selected_site_id)
+    selected = next(
+        item
+        for item in options
+        if item.route is not None
+        and item.route.route_geometry_reference == plan.route_geometry_reference
+    )
     assert selected.route is not None
     assert selected.route.total_distance_m == pytest.approx(
         selected.route.outbound.distance_m + selected.route.return_leg.distance_m
@@ -300,6 +488,75 @@ def test_route_uses_internal_origin_and_public_entrance_not_site_centroid(
     assert provider.calls[0].destination == entrance.point
     assert provider.calls[0].destination != site.centre_point
     assert provider.calls[1].origin == entrance.point
+
+
+def test_route_that_crosses_target_before_claimed_entrance_is_rejected(
+    strong_result,
+) -> None:
+    site, entrance = _site_entrance(strong_result)
+
+    class CrossingProvider(CountingProvider):
+        def route(self, request: WalkingRouteRequest) -> ProviderRoute:
+            result = super().route(request)
+            destination = request.destination
+            if request.options["direction"] == "outbound":
+                coordinates = [
+                    [request.origin.longitude, request.origin.latitude],
+                    [destination.longitude + 0.019, destination.latitude],
+                    [destination.longitude + 0.005, destination.latitude],
+                    [destination.longitude, destination.latitude],
+                ]
+            else:
+                coordinates = [
+                    [request.origin.longitude, request.origin.latitude],
+                    [request.origin.longitude + 0.005, request.origin.latitude],
+                    [request.destination.longitude, request.destination.latitude],
+                ]
+            return result.model_copy(
+                update={
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": coordinates,
+                    }
+                }
+            )
+
+    longitude = entrance.point.longitude
+    latitude = entrance.point.latitude
+    services = RoutingServices(
+        entrances=FixedEntranceRepository([entrance]),
+        provider=CrossingProvider(),
+        cache=MemoryRouteCache(),
+        geometry_store=MemoryRouteGeometryStore(),
+        site_geometries=FixedSiteGeometryRepository(
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [longitude, latitude - 0.01],
+                        [longitude + 0.02, latitude - 0.01],
+                        [longitude + 0.02, latitude + 0.01],
+                        [longitude, latitude + 0.01],
+                        [longitude, latitude - 0.01],
+                    ]
+                ],
+            }
+        ),
+    )
+    plan, options, _uncertain = plan_walking_routes(
+        strong_result.bundle.request,
+        strong_result.bundle.location,
+        [site],
+        services=services,
+    )
+    approach = next(
+        item
+        for item in options[0].constraint_results
+        if item.code == "verified_entrance_approach"
+    )
+    assert plan.status == RouteStatus.no_feasible_route
+    assert not approach.passed
+    assert approach.actual_value and approach.actual_value > 750
 
 
 def test_search_radius_is_separate_from_actual_round_trip_walking_limit(

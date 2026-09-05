@@ -163,17 +163,17 @@ _NODE_PRESENTATION: dict[str, tuple[str, str, str, str, int]] = {
         0,
     ),
     "request_walking_routes": (
-        "Request walking routes",
+        "Request journeys",
         "routing",
         "deterministic",
-        "Request bounded outbound and return routes from the configured provider.",
+        "Request bounded outbound and return journeys from the configured provider.",
         1,
     ),
     "validate_route_constraints": (
         "Validate route constraints",
         "routing",
         "deterministic",
-        "Check actual round-trip distance and walking time against the request.",
+        "Check walking distance, entrance approach and total travel time against the request.",
         2,
     ),
     "rank_route_options": (

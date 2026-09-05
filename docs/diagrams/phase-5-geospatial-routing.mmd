@@ -8,15 +8,16 @@ flowchart LR
     subgraph Routing[Deterministic route authority]
         Entrances[Audited OSM entrances]
         Resolve[Resolve public site entrances]
-        Provider[Fixture or configured live walking provider]
-        Validate[Outbound + return constraints]
-        Rank[Stable route ranking]
+        Provider[Fixture walking or live TfL multimodal provider]
+        Validate[Walking, total-time and entrance-approach constraints]
+        Rank[Least-time deterministic ranking]
         Cache[(Private cache and geometry store)]
     end
 
     subgraph Plan[One expedition plan]
         Typed[ValidatedWalkingPlan]
-        Compose[British English composition]
+        Compose[British English evidence composition]
+        Summary[Typed route + weather overview]
         Ground[Grounding and route safety checks]
         Fallback[Deterministic fallback]
     end
@@ -24,7 +25,7 @@ flowchart LR
     subgraph Browser[Safe browser views]
         Basemap[MapLibre + OpenFreeMap]
         Overlay[Evidence, entrance and route overlays]
-        Itinerary[Validated walking itinerary]
+        Itinerary[Validated journey itinerary]
     end
 
     Gate --> Sites --> Resolve
@@ -33,9 +34,11 @@ flowchart LR
     Provider <--> Cache
     Provider --> Validate --> Rank --> Typed
     Typed --> Compose --> Ground
+    Typed --> Summary
     Ground -. model failure .-> Fallback
     Fallback --> Itinerary
     Ground --> Itinerary
+    Summary --> Itinerary
     Cache -->|reference-gated geometry| Overlay
     Basemap --> Overlay
     Cells -. never provider input .- Provider

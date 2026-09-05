@@ -46,9 +46,8 @@ from app.biodiversity.orchestration import BackendDependencies
 from app.biodiversity.reporting import save_biodiversity_run_report
 from app.biodiversity.routing import (
     FileRouteGeometryStore,
-    GRAPHHOPPER_ENDPOINT,
-    ORS_ENDPOINT,
     RoutingServices,
+    TFL_JOURNEY_ENDPOINT,
 )
 from app.biodiversity.run_models import ForkRequest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
@@ -78,22 +77,17 @@ def _profile(
     routing_provider = (
         "fixture-openrouteservice"
         if data_mode == "fixture"
-        else (
-            "openrouteservice+graphhopper"
-            if os.getenv("GRAPHHOPPER_API_KEY")
-            else "openrouteservice"
-        )
+        else "tfl-journey-planner"
     )
     routing_provider_version = (
         "ors-api-shaped-2026-09-04"
         if data_mode == "fixture"
-        else "v2-foot-walking-geojson"
+        else "unified-api-v1-least-time"
     )
     routing_endpoint = (
         "local-fixture"
         if data_mode == "fixture"
-        else ORS_ENDPOINT
-        + (f"|{GRAPHHOPPER_ENDPOINT}" if os.getenv("GRAPHHOPPER_API_KEY") else "")
+        else TFL_JOURNEY_ENDPOINT
     )
     return RunProfile(
         data_mode=data_mode,
@@ -102,6 +96,11 @@ def _profile(
         endpoint_fingerprint=endpoint_fingerprint,
         routing_provider=routing_provider,
         routing_provider_version=routing_provider_version,
+        routing_profile=(
+            "foot-walking"
+            if data_mode == "fixture"
+            else "public-transport-and-walking"
+        ),
         routing_endpoint_fingerprint=(
             "local-fixture"
             if data_mode == "fixture"

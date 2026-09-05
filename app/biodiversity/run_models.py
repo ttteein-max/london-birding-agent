@@ -29,7 +29,9 @@ class RunProfile(StrictModel):
     routing_provider_version: str = Field(
         default="ors-api-shaped-2026-09-04", min_length=1
     )
-    routing_profile: Literal["foot-walking"] = "foot-walking"
+    routing_profile: Literal[
+        "foot-walking", "public-transport-and-walking"
+    ] = "foot-walking"
     route_schema_version: Literal[1] = 1
     routing_endpoint_fingerprint: str = Field(default="local-fixture", min_length=1)
 
@@ -45,7 +47,9 @@ class RunManifest(StrictModel):
     endpoint_fingerprint: str = Field(min_length=1)
     routing_provider: str | None = None
     routing_provider_version: str | None = None
-    routing_profile: Literal["foot-walking"] | None = None
+    routing_profile: Literal[
+        "foot-walking", "public-transport-and-walking"
+    ] | None = None
     route_schema_version: Literal[1] | None = None
     routing_endpoint_fingerprint: str | None = None
     created_at: datetime
@@ -128,6 +132,7 @@ class StatePlanView(StrictModel):
     route_status: str | None = None
     selected_route_site_id: str | None = None
     total_walking_distance_km: float | None = Field(default=None, ge=0)
+    total_travel_duration_minutes: float | None = Field(default=None, ge=0)
     remaining_field_time_minutes: float | None = Field(default=None, ge=0)
     routing_provider: str | None = None
     route_cache_status: str | None = None

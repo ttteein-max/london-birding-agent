@@ -161,13 +161,13 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
                   </button>
                 );
               }
-              return <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: option.option as "consider_related_taxa" | "keep_constraints_accept_low_confidence" | "accept_context_only" | "continue_with_weather_acknowledgement" | "accept_uncertain_access" | "revise_rain_preference" } })}><strong>{humanise(option.option)}</strong><span>{option.option === "keep_constraints_accept_low_confidence" ? "Continue with a non-recommendation result" : "Apply this validated decision"}</span></button>;
+              return <button key={option.option} disabled={busy} onClick={() => onResume({ ...base, decision: { kind: "actionable_tradeoff", option: option.option as "consider_related_taxa" | "keep_constraints_accept_low_confidence" | "accept_context_only" | "continue_with_weather_acknowledgement" | "accept_uncertain_access" | "revise_rain_preference" } })}><strong>{humanise(option.option)}</strong><span>{option.option === "keep_constraints_accept_low_confidence" ? "Continue with a non-recommendation result" : option.option === "accept_uncertain_access" ? "Every candidate lacks an explicit mapped access tag; continue without claiming public access and verify conditions before travel" : "Apply this validated decision"}</span></button>;
             })}
           </div>
         )}
 
         {decision.kind === "route_tradeoff" && (
-          <div className="tradeoff-grid" aria-label="Walking route trade-off choices">
+          <div className="tradeoff-grid" aria-label="Journey route trade-off choices">
             {options.map((option) => option.option === "increase_maximum_walking_distance" ? (
               <form key={option.option} onSubmit={(event) => {
                 event.preventDefault();
@@ -251,7 +251,7 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
                 <span><strong>Start</strong>{draft.location_query ?? draft.postcode ?? (draft.has_explicit_start_point ? "Explicit map point" : "Needs input")}</span>
                 <span><strong>Bird</strong>{draft.bird_input ?? "Needs input"}</span>
                 <span><strong>Date</strong>{draft.target_local_date ?? "Needs input"}</span>
-                <span><strong>Duration</strong>{draft.duration_hours == null ? "Needs input" : `${draft.duration_hours} hours`}</span>
+                <span><strong>Total outing duration</strong>{draft.duration_hours == null ? "Needs input" : `${draft.duration_hours} hours including return travel`}</span>
               </div>
             )}
             <form className="hitl-form clarification-grid" autoComplete="off" onSubmit={clarification}>
@@ -264,7 +264,7 @@ export function HitlPanel({ decision, busy, onResume }: Props) {
               </label>
               <label htmlFor="clarify-bird">Bird name<input id="clarify-bird" value={bird} onChange={(event) => setBird(event.target.value)} /></label>
               <label htmlFor="clarify-date">Target date<input id="clarify-date" type="date" value={date} onChange={(event) => setDate(event.target.value)} /></label>
-              <label htmlFor="clarify-duration">Duration hours<input id="clarify-duration" type="number" min="0.5" max="24" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
+              <label htmlFor="clarify-duration">Total outing hours (including return travel)<input id="clarify-duration" type="number" min="0.5" max="24" step="0.5" value={duration} onChange={(event) => setDuration(event.target.value)} /></label>
               <button className="primary-action" disabled={busy}>Apply corrections</button>
             </form>
           </>
