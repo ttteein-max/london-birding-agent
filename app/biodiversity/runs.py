@@ -142,13 +142,9 @@ def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
                     str(item["bird_input"]) if item.get("bird_input") else None
                 ),
                 relation_level=(
-                    str(item["relation_level"])
-                    if item.get("relation_level")
-                    else None
+                    str(item["relation_level"]) if item.get("relation_level") else None
                 ),
-                rationale=(
-                    str(item["rationale"]) if item.get("rationale") else None
-                ),
+                rationale=(str(item["rationale"]) if item.get("rationale") else None),
                 search_radius_km=(
                     float(item["search_radius_km"])
                     if isinstance(item.get("search_radius_km"), (int, float))
@@ -158,19 +154,13 @@ def _safe_decision_views(values: dict[str, Any]) -> list[StateDecisionView]:
                 seasonal_window_radius_months=(
                     int(item["seasonal_window_radius_months"])
                     if isinstance(item.get("seasonal_window_radius_months"), int)
-                    and not isinstance(
-                        item.get("seasonal_window_radius_months"), bool
-                    )
+                    and not isinstance(item.get("seasonal_window_radius_months"), bool)
                     else None
                 ),
                 maximum_walking_distance_km=(
                     float(item["maximum_walking_distance_km"])
-                    if isinstance(
-                        item.get("maximum_walking_distance_km"), (int, float)
-                    )
-                    and not isinstance(
-                        item.get("maximum_walking_distance_km"), bool
-                    )
+                    if isinstance(item.get("maximum_walking_distance_km"), (int, float))
+                    and not isinstance(item.get("maximum_walking_distance_km"), bool)
                     else None
                 ),
                 changed_fields=(
@@ -252,7 +242,9 @@ def _validate_resume_payload(
         option = resume.get("option")
         allowed = {item.get("option") for item in payload.get("options", [])}
         if not isinstance(option, str) or option not in allowed:
-            raise ValueError("Resume option is not present in the deterministic option list")
+            raise ValueError(
+                "Resume option is not present in the deterministic option list"
+            )
         option_payload = next(
             item for item in payload["options"] if item.get("option") == option
         )
@@ -284,10 +276,14 @@ def _validate_resume_payload(
         option = resume.get("option")
         allowed = {item.get("option") for item in payload.get("options", [])}
         if not isinstance(option, str) or option not in allowed:
-            raise ValueError("Route trade-off option is not present in the offered list")
+            raise ValueError(
+                "Route trade-off option is not present in the offered list"
+            )
         if option == "increase_maximum_walking_distance":
             if set(resume) != {"option", "maximum_walking_distance_km"}:
-                raise ValueError("Increasing the walking limit requires one numeric value")
+                raise ValueError(
+                    "Increasing the walking limit requires one numeric value"
+                )
             value = resume.get("maximum_walking_distance_km")
             offered = next(
                 item for item in payload["options"] if item.get("option") == option
@@ -367,9 +363,11 @@ def _validate_resume_payload(
         values.update(location_update)
         ExpeditionRequest.model_validate(values)
     elif kind == "bird_input_correction":
-        if set(resume) != {"bird_input"} or not isinstance(
-            resume["bird_input"], str
-        ) or not resume["bird_input"].strip():
+        if (
+            set(resume) != {"bird_input"}
+            or not isinstance(resume["bird_input"], str)
+            or not resume["bird_input"].strip()
+        ):
             raise ValueError("Resume must contain only non-empty bird_input")
 
 
@@ -385,9 +383,7 @@ class BiodiversityRunManager:
     ) -> None:
         self.graph = graph
         self.recorder = recorder
-        self.run_profile = RunProfile.model_validate(
-            run_profile or RunProfile()
-        )
+        self.run_profile = RunProfile.model_validate(run_profile or RunProfile())
         self._recorded_checkpoint_ids = {
             str(event.payload["checkpoint_id"])
             for event in (recorder.events if recorder is not None else [])
@@ -453,9 +449,7 @@ class BiodiversityRunManager:
         parent_checkpoint_id = parent_config.get("configurable", {}).get(
             "checkpoint_id"
         )
-        parent_next_nodes = self._checkpoint_next_nodes.get(
-            str(parent_checkpoint_id)
-        )
+        parent_next_nodes = self._checkpoint_next_nodes.get(str(parent_checkpoint_id))
         if parent_checkpoint_id and parent_next_nodes is None:
             try:
                 parent = self._require_checkpoint(
@@ -497,9 +491,7 @@ class BiodiversityRunManager:
             node_id=node_id,
         )
         self._recorded_checkpoint_ids.add(checkpoint_id)
-        self._checkpoint_next_nodes[checkpoint_id] = list(
-            data.get("next") or []
-        )
+        self._checkpoint_next_nodes[checkpoint_id] = list(data.get("next") or [])
 
     def _record_snapshot_checkpoint(self, snapshot: Any) -> None:
         self._record_checkpoint_data(
@@ -542,11 +534,7 @@ class BiodiversityRunManager:
             execution_id=execution_id,
         )
         result = dict(latest.values)
-        interrupts = [
-            item
-            for task in latest.tasks
-            for item in task.interrupts
-        ]
+        interrupts = [item for task in latest.tasks for item in task.interrupts]
         if interrupts:
             result["__interrupt__"] = interrupts
         return result, latest
@@ -603,6 +591,11 @@ class BiodiversityRunManager:
             raise ValueError("Saved workflow version does not match this runtime")
         current = self.run_profile.model_dump(mode="json")
         expected = stored.model_dump(mode="json", exclude={"created_at"})
+        if stored.route_schema_version != self.run_profile.route_schema_version:
+            raise ValueError(
+                f"Route-schema-{stored.route_schema_version} execution is read-only under "
+                f"route-schema-{self.run_profile.route_schema_version}; create a new Phase 5 run."
+            )
         if current != expected:
             changed = sorted(
                 key for key in current if current.get(key) != expected.get(key)
@@ -752,8 +745,7 @@ class BiodiversityRunManager:
         if not pending:
             raise ValueError(f"Thread {thread_id!r} has no pending interrupt")
         choices = ", ".join(
-            f"{item.values.get('branch_id')}:{_checkpoint_id(item)}"
-            for item in pending
+            f"{item.values.get('branch_id')}:{_checkpoint_id(item)}" for item in pending
         )
         raise ValueError(
             "Thread has multiple pending executions; supply checkpoint_id or "
@@ -812,9 +804,7 @@ class BiodiversityRunManager:
         execution_metadata = {
             "execution_id": execution_id,
             "parent_execution_id": _parent_execution_id(snapshot),
-            "replayed_from_checkpoint_id": _replayed_from_checkpoint_id(
-                snapshot
-            ),
+            "replayed_from_checkpoint_id": _replayed_from_checkpoint_id(snapshot),
             "execution_created_at": _execution_created_at(snapshot).isoformat(),
             "branch_id": str(snapshot.values.get("branch_id") or "main"),
         }
@@ -855,9 +845,7 @@ class BiodiversityRunManager:
             {
                 "execution_id": execution_id,
                 "parent_execution_id": _parent_execution_id(latest),
-                "replayed_from_checkpoint_id": _replayed_from_checkpoint_id(
-                    latest
-                ),
+                "replayed_from_checkpoint_id": _replayed_from_checkpoint_id(latest),
                 "execution_created_at": _execution_created_at(latest).isoformat(),
             }
         )
@@ -865,9 +853,7 @@ class BiodiversityRunManager:
 
     def history(self, *, thread_id: str) -> list[CheckpointSummary]:
         history = self._require_thread(thread_id)
-        checkpoint_lookup = {
-            _checkpoint_id(snapshot): snapshot for snapshot in history
-        }
+        checkpoint_lookup = {_checkpoint_id(snapshot): snapshot for snapshot in history}
         root_branch_id = next(
             (
                 str(snapshot.values["branch_id"])
@@ -899,17 +885,13 @@ class BiodiversityRunManager:
                     branch_id=branch_id,
                     execution_id=execution_id,
                     parent_execution_id=_parent_execution_id(snapshot),
-                    replayed_from_checkpoint_id=_replayed_from_checkpoint_id(
-                        snapshot
-                    ),
+                    replayed_from_checkpoint_id=_replayed_from_checkpoint_id(snapshot),
                     parent_branch_id=values.get("parent_branch_id"),
                     checkpoint_id=_checkpoint_id(snapshot),
                     parent_checkpoint_id=(
                         str(parent_checkpoint_id) if parent_checkpoint_id else None
                     ),
-                    forked_from_checkpoint_id=values.get(
-                        "forked_from_checkpoint_id"
-                    ),
+                    forked_from_checkpoint_id=values.get("forked_from_checkpoint_id"),
                     created_at=_created_at(snapshot),
                     node_id=self._snapshot_node_id(
                         snapshot,
@@ -925,9 +907,7 @@ class BiodiversityRunManager:
                         item.model_dump(mode="json")
                         for item in _safe_decision_views(dict(values))
                     ),
-                    final_checkpoint_id=execution_finals.get(
-                        (branch_id, execution_id)
-                    ),
+                    final_checkpoint_id=execution_finals.get((branch_id, execution_id)),
                 )
             )
         return summaries
@@ -944,19 +924,15 @@ class BiodiversityRunManager:
             branch_created_at = snapshot.values.get("branch_created_at")
             created.setdefault(
                 branch_id,
-                datetime.fromisoformat(
-                    str(branch_created_at).replace("Z", "+00:00")
-                )
+                datetime.fromisoformat(str(branch_created_at).replace("Z", "+00:00"))
                 if branch_created_at
-                else _created_at(snapshot)
+                else _created_at(snapshot),
             )
         for snapshot in history:
             if not snapshot.values.get("branch_id"):
                 continue
             branch_id = str(snapshot.values["branch_id"])
-            state_execution_id = str(
-                snapshot.values.get("execution_id") or branch_id
-            )
+            state_execution_id = str(snapshot.values.get("execution_id") or branch_id)
             if _execution_id(snapshot) != state_execution_id:
                 continue
             heads.setdefault(branch_id, snapshot)
@@ -1070,12 +1046,8 @@ class BiodiversityRunManager:
                 StateLocationView(
                     status=location.get("status"),
                     input_kind=location.get("input_kind"),
-                    within_greater_london=location.get(
-                        "within_greater_london"
-                    ),
-                    administrative_district=location.get(
-                        "administrative_district"
-                    ),
+                    within_greater_london=location.get("within_greater_london"),
+                    administrative_district=location.get("administrative_district"),
                 )
                 if location
                 else None
@@ -1097,16 +1069,12 @@ class BiodiversityRunManager:
                 occurrence_outcome=occurrence.get("outcome"),
                 sampled_count=occurrence_counts.get("sampled_count"),
                 retained_count=occurrence_counts.get("retained_total_count"),
-                ranking_eligible_count=occurrence_counts.get(
-                    "ranking_eligible_count"
-                ),
+                ranking_eligible_count=occurrence_counts.get("ranking_eligible_count"),
                 safe_map_cell_count=len(occurrence.get("safe_map_cells") or []),
                 weather_status=weather.get("status"),
                 public_site_status=sites.get("status"),
                 candidate_site_count=len(sites.get("candidates") or []),
-                contextual_site_count=len(
-                    sites.get("contextual_sites") or []
-                ),
+                contextual_site_count=len(sites.get("contextual_sites") or []),
                 public_entrance_count=len(
                     values.get("public_entrance_candidates") or []
                 ),
@@ -1117,12 +1085,8 @@ class BiodiversityRunManager:
                 deterministic_status=values.get("deterministic_plan_status"),
                 final_status=final_plan.get("status"),
                 generated_by=final_plan.get("generated_by"),
-                recommended_site_count=len(
-                    final_plan.get("recommended_sites") or []
-                ),
-                contextual_site_count=len(
-                    final_plan.get("contextual_sites") or []
-                ),
+                recommended_site_count=len(final_plan.get("recommended_sites") or []),
+                contextual_site_count=len(final_plan.get("contextual_sites") or []),
                 evidence_gate_passed=final_plan.get("evidence_gate_passed"),
                 low_confidence_accepted=bool(
                     final_plan.get("low_confidence_accepted")
@@ -1179,9 +1143,7 @@ class BiodiversityRunManager:
         """Return newest-first safe views without exposing StateSnapshot values."""
 
         history = self._require_thread(thread_id)
-        checkpoint_lookup = {
-            _checkpoint_id(snapshot): snapshot for snapshot in history
-        }
+        checkpoint_lookup = {_checkpoint_id(snapshot): snapshot for snapshot in history}
         return [
             self._state_view(
                 snapshot,
@@ -1235,9 +1197,7 @@ class BiodiversityRunManager:
             )
             raise
         head_checkpoint_id = _checkpoint_id(head)
-        final_id = (
-            head_checkpoint_id if head.values.get("terminal_status") else None
-        )
+        final_id = head_checkpoint_id if head.values.get("terminal_status") else None
         self._event(
             "replay_completed",
             {
@@ -1273,15 +1233,15 @@ class BiodiversityRunManager:
 
     @staticmethod
     def _selected_related_taxon(values: dict[str, Any], key: int) -> dict[str, Any]:
-        current_key = (values.get("resolved_taxon") or {}).get(
-            "accepted_taxon_key"
-        )
+        current_key = (values.get("resolved_taxon") or {}).get("accepted_taxon_key")
         if values.get("related_taxon_source_key") != current_key:
             raise ValueError(
                 "Saved related candidates do not belong to the current taxon"
             )
         if key == current_key:
-            raise ValueError("selected related taxon must differ from the current taxon")
+            raise ValueError(
+                "selected related taxon must differ from the current taxon"
+            )
         candidates = list(values.get("related_taxon_candidates") or [])
         if not candidates:
             payload = values.get("pending_hitl_payload") or {}
@@ -1307,7 +1267,9 @@ class BiodiversityRunManager:
             raise ValueError(
                 "Fork updates require a checkpoint after request, location, and taxonomy resolution"
             )
-        previous_request = ExpeditionRequest.model_validate(values["expedition_request"])
+        previous_request = ExpeditionRequest.model_validate(
+            values["expedition_request"]
+        )
         raw_updates = request.updates.model_dump(mode="python", exclude_none=True)
         selected_key = raw_updates.pop("selected_related_taxon_key", None)
         updated_request_values = previous_request.model_dump(mode="python")
@@ -1316,8 +1278,7 @@ class BiodiversityRunManager:
         if selected_key is not None:
             selected_taxon = cls._selected_related_taxon(values, selected_key)
             updated_request_values["bird_input"] = (
-                selected_taxon.get("common_name")
-                or selected_taxon["canonical_name"]
+                selected_taxon.get("common_name") or selected_taxon["canonical_name"]
             )
         updated_request = ExpeditionRequest.model_validate(updated_request_values)
 
@@ -1436,9 +1397,7 @@ class BiodiversityRunManager:
                     source="GBIF Species API",
                     source_record_type="accepted_related_taxon_selection",
                     retrieved_at=datetime.now(UTC),
-                    licence=(
-                        "GBIF API terms; source datasets retain their own terms"
-                    ),
+                    licence=("GBIF API terms; source datasets retain their own terms"),
                     attribution="GBIF.org",
                     use_classification=EvidenceUse.validation,
                     limitations=[
@@ -1509,9 +1468,7 @@ class BiodiversityRunManager:
                 values=values,
                 as_node="apply_validated_user_choice",
             )
-            fork_checkpoint_id = str(
-                fork_config["configurable"]["checkpoint_id"]
-            )
+            fork_checkpoint_id = str(fork_config["configurable"]["checkpoint_id"])
             fork_snapshot = self._require_checkpoint(
                 request.thread_id,
                 fork_checkpoint_id,
@@ -1551,9 +1508,7 @@ class BiodiversityRunManager:
                 },
             )
             raise
-        final_id = (
-            _checkpoint_id(head) if head.values.get("terminal_status") else None
-        )
+        final_id = _checkpoint_id(head) if head.values.get("terminal_status") else None
         interrupt_kind = _interrupt_kind(head)
         self._event(
             "fork_completed",
@@ -1641,16 +1596,13 @@ class BiodiversityRunManager:
                 }
             ),
             "applied_user_decisions": [
-                item.model_dump(mode="json")
-                for item in _safe_decision_views(values)
+                item.model_dump(mode="json") for item in _safe_decision_views(values)
             ],
             "route_status": (plan.get("walking_plan") or {}).get("status")
             or (values.get("validated_walking_plan") or {}).get("status"),
             "selected_route_site_id": (
                 (plan.get("walking_plan") or {}).get("selected_site_id")
-                or (values.get("validated_walking_plan") or {}).get(
-                    "selected_site_id"
-                )
+                or (values.get("validated_walking_plan") or {}).get("selected_site_id")
             ),
             "total_walking_distance_km": (
                 (plan.get("walking_plan") or {}).get("total_distance_km")
@@ -1660,9 +1612,7 @@ class BiodiversityRunManager:
                 )
             ),
             "remaining_field_time_minutes": (
-                (plan.get("walking_plan") or {}).get(
-                    "remaining_field_time_minutes"
-                )
+                (plan.get("walking_plan") or {}).get("remaining_field_time_minutes")
                 if plan.get("walking_plan")
                 else (values.get("validated_walking_plan") or {}).get(
                     "remaining_field_time_minutes"

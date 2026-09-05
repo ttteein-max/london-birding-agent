@@ -5583,6 +5583,22 @@
             ],
             "title": "Selection Rationale"
           },
+          "historical_execution": {
+            "type": "boolean",
+            "title": "Historical Execution",
+            "default": false
+          },
+          "routing_policy_note": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Routing Policy Note"
+          },
           "expedition_duration_minutes": {
             "type": "number",
             "title": "Expedition Duration Minutes"

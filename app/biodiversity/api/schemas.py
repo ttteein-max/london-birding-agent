@@ -473,6 +473,8 @@ class ValidatedWalkingPlanView(StrictModel):
     journey_segments: list[JourneySegmentView] = Field(default_factory=list)
     return_route_same_as_outbound: bool = False
     selection_rationale: str | None = None
+    historical_execution: bool = False
+    routing_policy_note: str | None = None
     expedition_duration_minutes: float
     remaining_field_time_minutes: float | None = None
     ascent_m: float | None = None

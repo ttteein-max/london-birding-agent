@@ -82,7 +82,7 @@ def _profile(
     routing_provider_version = (
         "ors-api-shaped-2026-09-04"
         if data_mode == "fixture"
-        else "unified-api-v1-least-time"
+        else "unified-api-v1-least-time-v2"
     )
     routing_endpoint = (
         "local-fixture"

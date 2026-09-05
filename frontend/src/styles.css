@@ -226,6 +226,7 @@ button:disabled { opacity: 0.48; cursor: not-allowed; }
 .route-destination strong { font-family: "Iowan Old Style", serif; font-size: 1.05rem; }
 .route-destination span, .route-provider, .route-attribution { color: var(--muted); font-size: 0.62rem; line-height: 1.4; }
 .route-selection, .route-budget-note { color: var(--muted); font-size: 0.66rem; line-height: 1.45; }
+.historical-route-note { margin: 8px 0 10px; border-left: 3px solid var(--amber); padding: 7px 9px; color: #6a4a21; background: #f6ead3; font-size: 0.66rem; line-height: 1.45; }
 .journey-segments { display: grid; gap: 5px; margin: 8px 0 10px; padding-left: 20px; }
 .journey-segments li { padding-left: 3px; }
 .journey-segments strong, .journey-segments span { display: block; }

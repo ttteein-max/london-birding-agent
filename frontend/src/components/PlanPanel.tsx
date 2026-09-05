@@ -50,13 +50,55 @@ function ElevationProfile({ samples }: { samples: NonNullable<FinalPlanView["wal
   );
 }
 
+function isHistoricalRoute(plan: NonNullable<FinalPlanView["walking_plan"]>): boolean {
+  return plan.historical_execution || (
+    !plan.selection_rationale
+    && plan.routing_profile === "foot-walking"
+    && plan.total_travel_duration_minutes == null
+  );
+}
+
+function formatMinutes(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? rounded.toFixed(0) : rounded.toFixed(1);
+}
+
+function expeditionOverview(plan: FinalPlanView): string {
+  if (plan.itinerary_summary) return plan.itinerary_summary;
+  const route = plan.walking_plan;
+  if (!route || route.status !== "ready") return plan.explanation;
+  const historical = isHistoricalRoute(route);
+  const totalTravel = route.total_travel_duration_minutes ?? route.walking_duration_minutes;
+  const entrance = route.entrance?.label ?? "the recorded entrance";
+  const sentences = [
+    `This ${historical ? "historical " : ""}plan uses a ${(plan.duration_hours * 60).toFixed(0)}-minute total-outing budget, including outbound travel, field time and return travel.`,
+    `The recorded ${historical ? "walking-only " : ""}round trip reaches ${route.selected_site_name} via ${entrance}.`,
+  ];
+  if (totalTravel != null) {
+    sentences.push(
+      `${formatMinutes(totalTravel)} minutes is the total return-journey travel time, not the outbound leg alone; ${route.remaining_field_time_minutes != null ? formatMinutes(route.remaining_field_time_minutes) : "no"} minutes remains for field observation.`,
+    );
+  }
+  if (historical) {
+    sentences.push(
+      "This saved execution predates the current TfL public-transport-and-walking policy and is not recalculated; create a new live run for a current journey.",
+    );
+  }
+  return sentences.join(" ");
+}
+
 function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_plan"]> }) {
   const ready = plan.status === "ready";
   const alternatives = plan.alternative_feasible_routes ?? [];
   const multimodal = plan.journey_type === "public_transport_and_walking";
+  const historical = isHistoricalRoute(plan);
+  const outboundTravel = plan.outbound_travel_duration_minutes;
+  const returnTravel = plan.return_travel_duration_minutes;
+  const totalTravel = plan.total_travel_duration_minutes ?? plan.walking_duration_minutes;
   const displayedSegments = (plan.journey_segments ?? []).filter(
     (segment) => !plan.return_route_same_as_outbound || segment.direction === "outbound",
   );
+  const historicalRationale = "This immutable historical route passed the constraints recorded by its then-current deterministic routing policy. It has not been re-ranked with the current public-transport provider.";
   return (
     <section className={`walking-itinerary route-${plan.status}`} aria-labelledby="walking-title">
       <div className="list-heading">
@@ -66,19 +108,25 @@ function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_p
       {ready ? (
         <>
           <p className="route-destination"><strong>{plan.selected_site_name}</strong><span>{plan.entrance?.label} · {humanise(plan.entrance?.access_certainty ?? "unspecified")} access evidence</span></p>
-          {plan.selection_rationale && <p className="route-selection"><strong>Why this site and entrance:</strong> {plan.selection_rationale}</p>}
+          <p className="route-selection"><strong>Why this site and entrance:</strong> {plan.selection_rationale ?? historicalRationale}</p>
+          {historical && (
+            <p className="historical-route-note" role="note">
+              <strong>Historical walking-only execution.</strong> {plan.routing_policy_note ?? "Current live runs use TfL public transport plus walking. Create a new run to calculate a current journey; this checkpoint remains unchanged."}
+            </p>
+          )}
           <dl className="route-metrics">
-            <div><dt>Journey</dt><dd>{multimodal ? "Public transport + walking" : "Walking only"}</dd></div>
-            <div><dt>Outbound travel</dt><dd>{plan.outbound_travel_duration_minutes?.toFixed(0) ?? plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
-            <div><dt>Return travel</dt><dd>{plan.return_travel_duration_minutes?.toFixed(0) ?? "—"} min</dd></div>
-            <div><dt>Total travel</dt><dd>{plan.total_travel_duration_minutes?.toFixed(0) ?? plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
+            <div><dt>Journey</dt><dd>{historical ? "Historical walking-only" : multimodal ? "Public transport + walking" : "Walking only"}</dd></div>
+            <div><dt>Outbound travel</dt><dd>{outboundTravel != null ? `${formatMinutes(outboundTravel)} min` : "Not separately recorded"}</dd></div>
+            <div><dt>Return travel</dt><dd>{returnTravel != null ? `${formatMinutes(returnTravel)} min` : "Not separately recorded"}</dd></div>
+            <div><dt>Total travel</dt><dd>{totalTravel != null ? `${formatMinutes(totalTravel)} min` : "—"}</dd></div>
             <div><dt>Total walking</dt><dd>{plan.total_distance_km?.toFixed(2)} km</dd></div>
-            <div><dt>Walking time</dt><dd>{plan.walking_duration_minutes?.toFixed(0)} min</dd></div>
-            <div><dt>Field time left</dt><dd>{plan.remaining_field_time_minutes?.toFixed(0)} min</dd></div>
+            <div><dt>Walking time</dt><dd>{plan.walking_duration_minutes != null ? `${formatMinutes(plan.walking_duration_minutes)} min` : "—"}</dd></div>
+            <div><dt>Field time left</dt><dd>{plan.remaining_field_time_minutes != null ? `${formatMinutes(plan.remaining_field_time_minutes)} min` : "—"}</dd></div>
             <div><dt>Ascent / descent</dt><dd>{plan.ascent_m?.toFixed(0) ?? "—"} / {plan.descent_m?.toFixed(0) ?? "—"} m</dd></div>
           </dl>
           <p className="route-budget-note">
             The {plan.expedition_duration_minutes.toFixed(0)}-minute request is treated as the complete outing: outbound travel, field time and return travel.
+            {totalTravel != null && plan.remaining_field_time_minutes != null ? ` Budget check: ${formatMinutes(plan.expedition_duration_minutes)} total − ${formatMinutes(totalTravel)} travel = ${formatMinutes(plan.remaining_field_time_minutes)} minutes in the field.` : ""}
             {plan.planning_departure_time_local ? ` Planning baseline: ${plan.planning_departure_time_local}.` : ""}
           </p>
           {displayedSegments.length > 0 && (
@@ -91,7 +139,7 @@ function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_p
               ))}
             </ol>
           )}
-          {plan.return_route_same_as_outbound && <p className="route-budget-note">The return follows the same mapped path, so the map draws it only once.</p>}
+          {plan.return_route_same_as_outbound && <p className="route-budget-note">The return retraces the same route, so its map line and provider directions are shown only once; its separately validated return time remains included above.</p>}
           <div className="route-constraints" aria-label="Walking route constraints">
             {(plan.constraint_results ?? []).map((constraint) => (
               <p key={constraint.code} className={constraint.passed ? "constraint-pass" : "constraint-fail"}>
@@ -107,7 +155,7 @@ function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_p
           {alternatives.length > 0 && (
             <details>
               <summary>Alternative feasible routes · {alternatives.length}</summary>
-              <ul>{alternatives.map((option) => <li key={option.option_id}>{option.site_name} via {option.entrance.label} · {option.total_distance_km?.toFixed(2) ?? "—"} km</li>)}</ul>
+              <ul>{alternatives.map((option) => <li key={option.option_id}>{option.site_name} via {option.entrance.label} · {option.total_travel_duration_minutes != null ? formatMinutes(option.total_travel_duration_minutes) : "—"} min total travel · {option.total_distance_km?.toFixed(2) ?? "—"} km walking</li>)}</ul>
             </details>
           )}
         </>
@@ -126,6 +174,7 @@ function WalkingItinerary({ plan }: { plan: NonNullable<FinalPlanView["walking_p
 }
 
 export function PlanPanel({ plan }: Props) {
+  const overview = expeditionOverview(plan);
   return (
     <section className="plan-panel" aria-labelledby="plan-title">
       <div className="plan-hero">
@@ -141,9 +190,9 @@ export function PlanPanel({ plan }: Props) {
       {plan.low_confidence_notice && <div className="low-confidence" role="note">{plan.low_confidence_notice}</div>}
       <section className="plan-overview" aria-labelledby="overview-title">
         <h3 id="overview-title">Expedition overview</h3>
-        <p className="plan-explanation">{plan.itinerary_summary ?? plan.explanation}</p>
+        <p className="plan-explanation">{overview}</p>
       </section>
-      {plan.itinerary_summary && (
+      {overview !== plan.explanation && (
         <details className="evidence-explanation">
           <summary>Model-written evidence explanation</summary>
           <p>{plan.explanation}</p>

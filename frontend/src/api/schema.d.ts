@@ -1795,6 +1795,13 @@ export interface components {
             return_route_same_as_outbound: boolean;
             /** Selection Rationale */
             selection_rationale?: string | null;
+            /**
+             * Historical Execution
+             * @default false
+             */
+            historical_execution: boolean;
+            /** Routing Policy Note */
+            routing_policy_note?: string | null;
             /** Expedition Duration Minutes */
             expedition_duration_minutes: number;
             /** Remaining Field Time Minutes */

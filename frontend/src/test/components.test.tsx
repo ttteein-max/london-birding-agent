@@ -67,10 +67,71 @@ describe("field notebook cards", () => {
     expect(screen.getByText(/180-minute total outing/)).toBeInTheDocument();
     expect(screen.getByText("Main gate · Explicit Public access evidence")).toBeInTheDocument();
     expect(screen.getByText("9.13 km")).toBeInTheDocument();
-    expect(screen.getByText("58 min")).toBeInTheDocument();
+    expect(screen.getByText("58.2 min")).toBeInTheDocument();
     expect(screen.getByRole("img", { name: /Walking route elevation profile/ })).toBeInTheDocument();
     expect(screen.getByLabelText("Walking route constraints")).toHaveTextContent("Pass · Maximum Walking Distance");
     expect(screen.getByText(/fixture-openrouteservice · foot-walking/)).toBeInTheDocument();
+  });
+
+  it("does not mislabel a legacy round-trip duration as one-way travel", () => {
+    const legacyPlan: FinalPlanView = {
+      ...routePlanFixture,
+      duration_hours: 2,
+      itinerary_summary: null,
+      walking_plan: {
+        ...walkingPlanFixture,
+        historical_execution: true,
+        routing_policy_note: "Current live runs use TfL public transport plus walking.",
+        selection_rationale: null,
+        outbound_travel_duration_minutes: null,
+        return_travel_duration_minutes: null,
+        total_travel_duration_minutes: null,
+        walking_duration_minutes: 85.5,
+        expedition_duration_minutes: 120,
+        remaining_field_time_minutes: 34.5,
+      },
+    };
+
+    render(<PlanPanel plan={legacyPlan} />);
+
+    expect(screen.getByRole("heading", { name: "Expedition overview" })).toBeInTheDocument();
+    expect(screen.getByText(/85.5 minutes is the total return-journey travel time, not the outbound leg alone/)).toBeInTheDocument();
+    expect(screen.getByText("Historical walking-only")).toBeInTheDocument();
+    expect(screen.getAllByText("Not separately recorded")).toHaveLength(2);
+    expect(screen.getByText(/Historical walking-only execution/)).toBeInTheDocument();
+    expect(screen.getByText(/immutable historical route passed the constraints/)).toBeInTheDocument();
+  });
+
+  it("shows a repeated return path once without dropping its validated time", () => {
+    render(<PlanPanel plan={{
+      ...routePlanFixture,
+      walking_plan: {
+        ...walkingPlanFixture,
+        journey_segments: [
+          {
+            segment_id: "outbound-walk",
+            direction: "outbound",
+            sequence: 0,
+            mode: "walking",
+            instruction: "Walk to the main gate",
+            duration_minutes: 60.8,
+          },
+          {
+            segment_id: "return-walk",
+            direction: "return",
+            sequence: 0,
+            mode: "walking",
+            instruction: "Walk back from the main gate",
+            duration_minutes: 61,
+          },
+        ],
+      },
+    }} />);
+
+    expect(screen.getByText(/Walk to the main gate/)).toBeInTheDocument();
+    expect(screen.queryByText(/Walk back from the main gate/)).not.toBeInTheDocument();
+    expect(screen.getByText("61 min")).toBeInTheDocument();
+    expect(screen.getByText(/directions are shown only once/)).toBeInTheDocument();
   });
 
   it("keeps a Phase 4 plan readable without a walking plan", () => {

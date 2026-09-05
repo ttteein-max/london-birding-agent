@@ -46,11 +46,13 @@ from app.biodiversity.repositories import SnapshotGreenSpaceRepository
 from app.feasibility.core import FIXTURE_DIR, PROJECT_ROOT, canonical_sha256
 from app.feasibility.spatial import point_in_geometry
 
-ORS_ENDPOINT = "https://api.heigit.org/openrouteservice/v2/directions/foot-walking/geojson"
+ORS_ENDPOINT = (
+    "https://api.heigit.org/openrouteservice/v2/directions/foot-walking/geojson"
+)
 GRAPHHOPPER_ENDPOINT = "https://graphhopper.com/api/1/route"
 TFL_JOURNEY_ENDPOINT = "https://api.tfl.gov.uk/Journey/JourneyResults"
-ROUTE_PROVIDER_VERSION = "phase-5-v1"
-ROUTE_CACHE_SCHEMA_VERSION = 1
+ROUTE_PROVIDER_VERSION = "phase-5-v2"
+ROUTE_CACHE_SCHEMA_VERSION = 2
 MAX_ROUTE_CANDIDATES = 3
 MAX_ROUTE_ENTRANCES_PER_SITE = 2
 MAX_INSIDE_APPROACH_METRES = 250.0
@@ -74,6 +76,7 @@ class ProviderRoute(StrictModel):
     manoeuvres: list[RouteManoeuvre] = Field(default_factory=list)
     journey_segments: list[JourneySegment] = Field(default_factory=list)
     geometry: dict[str, Any]
+    approach_geometry: dict[str, Any] | None = None
     retrieved_at: datetime
     provider: str
     provider_version: str
@@ -197,7 +200,10 @@ class FileRouteGeometryStore:
         self.directory = directory
 
     def _path(self, reference: str) -> Path:
-        if not reference.startswith("route-") or not reference.replace("-", "").isalnum():
+        if (
+            not reference.startswith("route-")
+            or not reference.replace("-", "").isalnum()
+        ):
             raise ValueError("Invalid route geometry reference")
         return self.directory / f"{reference}.geojson"
 
@@ -300,8 +306,12 @@ def _paths_share_corridor(
 ) -> bool:
     """Return true only when reverse journeys materially share one corridor."""
 
-    valid_first = [point for point in first if isinstance(point, list) and len(point) >= 2]
-    valid_second = [point for point in second if isinstance(point, list) and len(point) >= 2]
+    valid_first = [
+        point for point in first if isinstance(point, list) and len(point) >= 2
+    ]
+    valid_second = [
+        point for point in second if isinstance(point, list) and len(point) >= 2
+    ]
     if len(valid_first) < 2 or len(valid_second) < 2:
         return False
     if (
@@ -321,12 +331,15 @@ def _paths_share_corridor(
         )
         return close / len(points)
 
-    return close_ratio(valid_first, valid_second) >= 0.9 and close_ratio(
-        valid_second, valid_first
-    ) >= 0.9
+    return (
+        close_ratio(valid_first, valid_second) >= 0.9
+        and close_ratio(valid_second, valid_first) >= 0.9
+    )
 
 
-def route_cache_key(provider: WalkingRouteProvider, request: WalkingRouteRequest) -> str:
+def route_cache_key(
+    provider: WalkingRouteProvider, request: WalkingRouteRequest
+) -> str:
     payload = {
         "schema_version": ROUTE_CACHE_SCHEMA_VERSION,
         "provider": provider.name,
@@ -385,18 +398,13 @@ def parse_ors_response(
         if geometry.get("type") != "LineString" or len(coordinates) < 2:
             raise ValueError("route geometry is not a LineString")
         segments = properties.get("segments") or []
-        steps = [
-            step
-            for segment in segments
-            for step in (segment.get("steps") or [])
-        ]
+        steps = [step for segment in segments for step in (segment.get("steps") or [])]
         ascent_values = [segment.get("ascent") for segment in segments]
         descent_values = [segment.get("descent") for segment in segments]
         cleaned_geometry = {
             "type": "LineString",
             "coordinates": [
-                [float(point[0]), float(point[1])]
-                for point in coordinates
+                [float(point[0]), float(point[1])] for point in coordinates
             ],
         }
         return ProviderRoute(
@@ -492,6 +500,7 @@ def parse_tfl_journey_response(
         if direction not in {"outbound", "return"}:
             raise ValueError("invalid journey direction")
         coordinates: list[list[float]] = []
+        final_walking_coordinates: list[list[float]] = []
         segments: list[JourneySegment] = []
         manoeuvres: list[RouteManoeuvre] = []
         walking_distance = 0.0
@@ -520,9 +529,7 @@ def parse_tfl_journey_response(
                         duration_seconds=float(step.get("travelTime") or 0),
                         type=step.get("turnDirection"),
                         way_name=(
-                            str(step["streetName"])
-                            if step.get("streetName")
-                            else None
+                            str(step["streetName"]) if step.get("streetName") else None
                         ),
                     )
                     for step in (instruction.get("steps") or [])
@@ -533,14 +540,10 @@ def parse_tfl_journey_response(
             departure = leg.get("departurePoint") or {}
             arrival = leg.get("arrivalPoint") or {}
             origin_label = (
-                str(departure["commonName"])
-                if departure.get("commonName")
-                else None
+                str(departure["commonName"]) if departure.get("commonName") else None
             )
             destination_label = (
-                str(arrival["commonName"])
-                if arrival.get("commonName")
-                else None
+                str(arrival["commonName"]) if arrival.get("commonName") else None
             )
             if direction == "outbound" and index == 0:
                 origin_label = "Route origin"
@@ -565,7 +568,13 @@ def parse_tfl_journey_response(
             leg_coordinates = _parse_tfl_line_string(
                 (leg.get("path") or {}).get("lineString")
             )
-            if coordinates and leg_coordinates and coordinates[-1] == leg_coordinates[0]:
+            if mode == "walking" and len(leg_coordinates) >= 2:
+                final_walking_coordinates = list(leg_coordinates)
+            if (
+                coordinates
+                and leg_coordinates
+                and coordinates[-1] == leg_coordinates[0]
+            ):
                 coordinates.extend(leg_coordinates[1:])
             else:
                 coordinates.extend(leg_coordinates)
@@ -573,6 +582,11 @@ def parse_tfl_journey_response(
             raise ValueError("journey geometry is unavailable")
         coordinates[0] = [request.origin.longitude, request.origin.latitude]
         coordinates[-1] = [request.destination.longitude, request.destination.latitude]
+        if final_walking_coordinates:
+            final_walking_coordinates[-1] = [
+                request.destination.longitude,
+                request.destination.latitude,
+            ]
         journey_duration_seconds = float(journey["duration"]) * 60
         public_transport_duration = max(
             public_transport_duration,
@@ -586,6 +600,10 @@ def parse_tfl_journey_response(
             manoeuvres=manoeuvres,
             journey_segments=segments,
             geometry={"type": "LineString", "coordinates": coordinates},
+            approach_geometry={
+                "type": "LineString",
+                "coordinates": final_walking_coordinates or coordinates,
+            },
             retrieved_at=retrieved_at or datetime.now(UTC),
             provider=provider,
             provider_version=provider_version,
@@ -616,7 +634,7 @@ class TfLJourneyProvider:
     """Fastest public-transport-and-walking journeys from the official TfL API."""
 
     name = "tfl-journey-planner"
-    version = "unified-api-v1-least-time"
+    version = "unified-api-v1-least-time-v2"
 
     def __init__(
         self,
@@ -871,8 +889,7 @@ class OpenRouteServiceWalkingProvider:
             **{
                 key: value
                 for key, value in request.options.items()
-                if key
-                not in {"direction", "local_date", "local_time", "time_is"}
+                if key not in {"direction", "local_date", "local_time", "time_is"}
             },
         }
         for attempt in range(1, self.max_attempts + 1):
@@ -1045,7 +1062,11 @@ class GraphHopperWalkingProvider:
                         distance_m=float(item.get("distance") or 0),
                         duration_seconds=float(item.get("time") or 0) / 1000,
                         type=item.get("sign"),
-                        way_name=(str(item["street_name"]) if item.get("street_name") else None),
+                        way_name=(
+                            str(item["street_name"])
+                            if item.get("street_name")
+                            else None
+                        ),
                     )
                     for item in instructions
                     if item.get("text")
@@ -1279,9 +1300,9 @@ def _same_path_in_reverse(
     collection = _geometry_collection(outbound, return_geometry)
     return bool(
         collection.get("features")
-        and collection["features"][0].get("properties", {}).get(
-            "same_path_both_directions"
-        )
+        and collection["features"][0]
+        .get("properties", {})
+        .get("same_path_both_directions")
     )
 
 
@@ -1379,12 +1400,15 @@ def _route_option(
             feasible=False,
             warnings=[f"{exc.category.value}: {exc.message}"],
         )
-    route_reference = "route-" + hashlib.sha256(
-        (
-            route_cache_key(services.provider, outbound_request)
-            + route_cache_key(services.provider, return_request)
-        ).encode()
-    ).hexdigest()[:24]
+    route_reference = (
+        "route-"
+        + hashlib.sha256(
+            (
+                route_cache_key(services.provider, outbound_request)
+                + route_cache_key(services.provider, return_request)
+            ).encode()
+        ).hexdigest()[:24]
+    )
     return_route_same_as_outbound = _same_path_in_reverse(
         outbound.geometry, return_route.geometry
     )
@@ -1410,7 +1434,10 @@ def _route_option(
         else None
     )
     inside_approach = (
-        _inside_approach_distance_m(outbound.geometry, site_geometry)
+        _inside_approach_distance_m(
+            outbound.approach_geometry or outbound.geometry,
+            site_geometry,
+        )
         if site_geometry
         else None
     )
@@ -1591,10 +1618,10 @@ def plan_walking_routes(
             [],
             False,
         )
-    _event(services, "entrance_resolution_started", candidate_count=len(candidate_sites))
-    routable: list[
-        tuple[int, int, PublicSiteCandidate, PublicEntranceCandidate]
-    ] = []
+    _event(
+        services, "entrance_resolution_started", candidate_count=len(candidate_sites)
+    )
+    routable: list[tuple[int, int, PublicSiteCandidate, PublicEntranceCandidate]] = []
     routable_site_count = 0
     uncertain_available = False
     for site_order, site in enumerate(candidate_sites):
@@ -1616,6 +1643,7 @@ def plan_walking_routes(
             for entrance in entrances
             if entrance.access_certainty == AccessCertainty.unspecified
         ]
+
         def distance_key(
             entrance: PublicEntranceCandidate,
         ) -> tuple[float, str]:
@@ -1629,6 +1657,7 @@ def plan_walking_routes(
                 ),
                 entrance.entrance_id,
             )
+
         selected_entrances = sorted(explicit, key=distance_key)[
             : services.maximum_entrances_per_site
         ]
@@ -1655,7 +1684,9 @@ def plan_walking_routes(
                 status=RouteStatus.no_valid_entrance,
                 expedition_duration_minutes=expedition_minutes,
                 warnings=(
-                    ["Uncertain mapped entrances are available only with explicit user acceptance."]
+                    [
+                        "Uncertain mapped entrances are available only with explicit user acceptance."
+                    ]
                     if uncertain_available
                     else []
                 ),
@@ -1748,9 +1779,7 @@ def plan_walking_routes(
             ),
             outbound_distance_km=outbound_distance_km,
             return_distance_km=return_distance_km,
-            total_distance_km=round(
-                outbound_distance_km + return_distance_km, 3
-            ),
+            total_distance_km=round(outbound_distance_km + return_distance_km, 3),
             walking_duration_minutes=round(
                 (
                     route.total_walking_duration_seconds
@@ -1766,9 +1795,7 @@ def plan_walking_routes(
             return_travel_duration_minutes=round(
                 route.return_leg.duration_seconds / 60, 1
             ),
-            total_travel_duration_minutes=round(
-                route.total_duration_seconds / 60, 1
-            ),
+            total_travel_duration_minutes=round(route.total_duration_seconds / 60, 1),
             public_transport_duration_minutes=round(
                 route.total_public_transport_duration_seconds / 60, 1
             ),

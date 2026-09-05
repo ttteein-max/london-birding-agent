@@ -179,15 +179,56 @@ def test_missing_access_is_uncertain_and_main_routing_entrance_is_retained() -> 
 
 def test_snapshot_generator_keeps_only_boundary_members_and_audits_exclusions() -> None:
     elements = [
-        {"type": "relation", "id": 20, "tags": {"leisure": "park"}, "members": [{"type": "way", "ref": 10, "role": "outer"}]},
+        {
+            "type": "relation",
+            "id": 20,
+            "tags": {"leisure": "park"},
+            "members": [{"type": "way", "ref": 10, "role": "outer"}],
+        },
         {"type": "way", "id": 10, "nodes": [1, 2, 3, 4, 5, 6]},
-        {"type": "node", "id": 1, "lon": -0.1, "lat": 51.5, "tags": {"entrance": "main", "access": "yes"}},
-        {"type": "node", "id": 2, "lon": -0.1, "lat": 51.5, "tags": {"barrier": "gate"}},
-        {"type": "node", "id": 3, "lon": -0.1, "lat": 51.5, "tags": {"entrance": "yes", "access": "private"}},
-        {"type": "node", "id": 4, "lon": -0.1, "lat": 51.5, "tags": {"entrance": "exit"}},
-        {"type": "node", "id": 5, "lon": -0.1, "lat": 51.5, "tags": {"entrance": "yes", "foot": "no"}},
+        {
+            "type": "node",
+            "id": 1,
+            "lon": -0.1,
+            "lat": 51.5,
+            "tags": {"entrance": "main", "access": "yes"},
+        },
+        {
+            "type": "node",
+            "id": 2,
+            "lon": -0.1,
+            "lat": 51.5,
+            "tags": {"barrier": "gate"},
+        },
+        {
+            "type": "node",
+            "id": 3,
+            "lon": -0.1,
+            "lat": 51.5,
+            "tags": {"entrance": "yes", "access": "private"},
+        },
+        {
+            "type": "node",
+            "id": 4,
+            "lon": -0.1,
+            "lat": 51.5,
+            "tags": {"entrance": "exit"},
+        },
+        {
+            "type": "node",
+            "id": 5,
+            "lon": -0.1,
+            "lat": 51.5,
+            "tags": {"entrance": "yes", "foot": "no"},
+        },
         {"type": "node", "id": 6, "lon": -0.1, "lat": 51.5},
-        {"type": "node", "id": 99, "lon": -0.2, "lat": 51.6, "tags": {"entrance": "yes", "access": "yes"}},
+        {
+            "type": "node",
+            "id": 99,
+            "lon": -0.2,
+            "lat": 51.6,
+            "tags": {"entrance": "yes", "access": "yes"},
+        },
     ]
     features, counts = process_elements(elements)
     assert {item["id"] for item in features} == {"osm-node-1", "osm-node-2"}
@@ -202,14 +243,36 @@ def test_snapshot_generator_keeps_only_boundary_members_and_audits_exclusions() 
 def test_ors_parser_converts_units_manoeuvres_and_partial_elevation() -> None:
     route = parse_ors_response(
         {
-            "features": [{
-                "type": "Feature",
-                "geometry": {"type": "LineString", "coordinates": [[-0.1, 51.5, 8], [-0.11, 51.51], [-0.12, 51.52, 15]]},
-                "properties": {
-                    "summary": {"distance": 1234.5, "duration": 678.9},
-                    "segments": [{"ascent": 12.5, "descent": 5.5, "steps": [{"instruction": "Continue north", "distance": 40, "duration": 25, "type": 6}]}],
-                },
-            }]
+            "features": [
+                {
+                    "type": "Feature",
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [-0.1, 51.5, 8],
+                            [-0.11, 51.51],
+                            [-0.12, 51.52, 15],
+                        ],
+                    },
+                    "properties": {
+                        "summary": {"distance": 1234.5, "duration": 678.9},
+                        "segments": [
+                            {
+                                "ascent": 12.5,
+                                "descent": 5.5,
+                                "steps": [
+                                    {
+                                        "instruction": "Continue north",
+                                        "distance": 40,
+                                        "duration": 25,
+                                        "type": 6,
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                }
+            ]
         },
         provider="openrouteservice",
         provider_version="v2",
@@ -248,9 +311,7 @@ def _tfl_response() -> dict[str, Any]:
                         "arrivalPoint": {"commonName": "Example Station"},
                         "departureTime": "2026-09-15T09:00:00",
                         "arrivalTime": "2026-09-15T09:04:00",
-                        "path": {
-                            "lineString": "[[51.4704,-0.1663],[51.4800,-0.1700]]"
-                        },
+                        "path": {"lineString": "[[51.4704,-0.1663],[51.4800,-0.1700]]"},
                     },
                     {
                         "duration": 12,
@@ -260,9 +321,7 @@ def _tfl_response() -> dict[str, Any]:
                         "routeOptions": [{"name": "70"}],
                         "departurePoint": {"commonName": "Example Station"},
                         "arrivalPoint": {"commonName": "Palace Gate"},
-                        "path": {
-                            "lineString": "[[51.4800,-0.1700],[51.5010,-0.1830]]"
-                        },
+                        "path": {"lineString": "[[51.4800,-0.1700],[51.5010,-0.1830]]"},
                     },
                     {
                         "duration": 4,
@@ -298,7 +357,9 @@ def _tfl_request() -> WalkingRouteRequest:
     )
 
 
-def test_tfl_parser_separates_total_travel_from_walking_and_keeps_provider_steps() -> None:
+def test_tfl_parser_separates_total_travel_from_walking_and_keeps_provider_steps() -> (
+    None
+):
     route = parse_tfl_journey_response(
         _tfl_response(),
         request=_tfl_request(),
@@ -317,6 +378,13 @@ def test_tfl_parser_separates_total_travel_from_walking_and_keeps_provider_steps
     assert route.journey_segments[1].line_name == "70"
     assert route.geometry["coordinates"][0] == [-0.1663, 51.4704]
     assert route.geometry["coordinates"][-1] == [-0.184302, 51.501883]
+    assert route.approach_geometry == {
+        "type": "LineString",
+        "coordinates": [
+            [-0.183, 51.501],
+            [-0.184302, 51.501883],
+        ],
+    }
     assert route.manoeuvres[0].instruction == "Continue along Example Road"
 
 
@@ -388,12 +456,12 @@ def test_identical_reverse_geometry_is_stored_once() -> None:
         },
     )
     assert len(result["features"]) == 1
-    assert result["features"][0]["properties"]["direction"] == (
-        "outbound_return"
-    )
+    assert result["features"][0]["properties"]["direction"] == ("outbound_return")
 
 
-def test_fixture_round_trip_sums_independent_legs_and_has_elevation(strong_result) -> None:
+def test_fixture_round_trip_sums_independent_legs_and_has_elevation(
+    strong_result,
+) -> None:
     plan, options, _uncertain = plan_walking_routes(
         strong_result.bundle.request,
         strong_result.bundle.location,
@@ -559,6 +627,77 @@ def test_route_that_crosses_target_before_claimed_entrance_is_rejected(
     assert approach.actual_value and approach.actual_value > 750
 
 
+def test_transit_crossing_does_not_replace_final_walking_approach_check(
+    strong_result,
+) -> None:
+    site, entrance = _site_entrance(strong_result)
+
+    class TransitCrossingProvider(CountingProvider):
+        def route(self, request: WalkingRouteRequest) -> ProviderRoute:
+            result = super().route(request)
+            if request.options["direction"] != "outbound":
+                return result
+            destination = request.destination
+            return result.model_copy(
+                update={
+                    "geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [request.origin.longitude, request.origin.latitude],
+                            [destination.longitude + 0.019, destination.latitude],
+                            [destination.longitude + 0.005, destination.latitude],
+                            [destination.longitude - 0.005, destination.latitude],
+                            [destination.longitude, destination.latitude],
+                        ],
+                    },
+                    "approach_geometry": {
+                        "type": "LineString",
+                        "coordinates": [
+                            [destination.longitude - 0.005, destination.latitude],
+                            [destination.longitude, destination.latitude],
+                        ],
+                    },
+                }
+            )
+
+    longitude = entrance.point.longitude
+    latitude = entrance.point.latitude
+    services = RoutingServices(
+        entrances=FixedEntranceRepository([entrance]),
+        provider=TransitCrossingProvider(),
+        cache=MemoryRouteCache(),
+        geometry_store=MemoryRouteGeometryStore(),
+        site_geometries=FixedSiteGeometryRepository(
+            {
+                "type": "Polygon",
+                "coordinates": [
+                    [
+                        [longitude, latitude - 0.01],
+                        [longitude + 0.02, latitude - 0.01],
+                        [longitude + 0.02, latitude + 0.01],
+                        [longitude, latitude + 0.01],
+                        [longitude, latitude - 0.01],
+                    ]
+                ],
+            }
+        ),
+        routing_profile="public-transport-and-walking",
+    )
+    plan, options, _uncertain = plan_walking_routes(
+        strong_result.bundle.request,
+        strong_result.bundle.location,
+        [site],
+        services=services,
+    )
+    approach = next(
+        item
+        for item in options[0].constraint_results
+        if item.code == "verified_entrance_approach"
+    )
+    assert plan.status == RouteStatus.ready
+    assert approach.passed
+
+
 def test_search_radius_is_separate_from_actual_round_trip_walking_limit(
     strong_result,
 ) -> None:
@@ -597,14 +736,18 @@ def test_no_walking_limit_is_explicitly_reported(strong_result) -> None:
         services=RoutingServices.fixture(),
     )
     distance_constraint = next(
-        item for item in plan.constraint_results if item.code == "maximum_walking_distance"
+        item
+        for item in plan.constraint_results
+        if item.code == "maximum_walking_distance"
     )
     assert distance_constraint.passed
     assert distance_constraint.limit_value is None
     assert "No explicit walking limit supplied" in distance_constraint.message
 
 
-def test_cache_hit_avoids_provider_calls_and_key_excludes_credentials(strong_result) -> None:
+def test_cache_hit_avoids_provider_calls_and_key_excludes_credentials(
+    strong_result,
+) -> None:
     site, entrance = _site_entrance(strong_result)
     provider = CountingProvider()
     services = _services(provider, FixedEntranceRepository([entrance]))

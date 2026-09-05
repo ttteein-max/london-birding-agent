@@ -45,7 +45,11 @@ def _site_view(site: Any) -> dict[str, Any]:
 def london_start_context(bundle: ExpeditionEvidenceBundle) -> str:
     location = bundle.location
     if location.normalised_postcode:
-        district = f", {location.administrative_district}" if location.administrative_district else ""
+        district = (
+            f", {location.administrative_district}"
+            if location.administrative_district
+            else ""
+        )
         return f"Postcode centroid {location.normalised_postcode}{district}, within Greater London."
     return "A user-selected, generalised planning point within Greater London."
 
@@ -99,6 +103,11 @@ def weather_plan_context(bundle: ExpeditionEvidenceBundle) -> dict[str, Any] | N
     }
 
 
+def _format_minutes(value: float) -> str:
+    rounded = round(value, 1)
+    return f"{rounded:.0f}" if rounded.is_integer() else f"{rounded:.1f}"
+
+
 def deterministic_itinerary_summary(
     bundle: ExpeditionEvidenceBundle,
     walking_plan: ValidatedWalkingPlan | None,
@@ -125,10 +134,12 @@ def deterministic_itinerary_summary(
         )
         if total_travel is not None:
             parts.append(
-                f"Validated outbound and return travel takes {total_travel:.0f} minutes in total, including {walking_plan.walking_duration_minutes or 0:.0f} minutes and {walking_plan.total_distance_km or 0:.2f} km of walking, leaving {walking_plan.remaining_field_time_minutes or 0:.0f} minutes for field observation."
+                f"Validated outbound and return travel takes {_format_minutes(total_travel)} minutes in total, including {_format_minutes(walking_plan.walking_duration_minutes or 0)} minutes and {walking_plan.total_distance_km or 0:.2f} km of walking, leaving {_format_minutes(walking_plan.remaining_field_time_minutes or 0)} minutes for field observation."
             )
         if walking_plan.return_route_same_as_outbound:
-            parts.append("The return uses the same mapped path, so it is displayed once.")
+            parts.append(
+                "The return uses the same mapped path, so it is displayed once."
+            )
         if walking_plan.selection_rationale:
             parts.append(walking_plan.selection_rationale)
     elif walking_plan:
@@ -203,9 +214,7 @@ def compact_plan_payload(
                 "selected_site_id": walking_plan.selected_site_id,
                 "selected_site_name": walking_plan.selected_site_name,
                 "entrance_id": (
-                    walking_plan.entrance.entrance_id
-                    if walking_plan.entrance
-                    else None
+                    walking_plan.entrance.entrance_id if walking_plan.entrance else None
                 ),
                 "entrance_label": (
                     walking_plan.entrance.label if walking_plan.entrance else None
@@ -297,7 +306,11 @@ def _positive_unsupported_claims(explanation: str) -> list[str]:
             r"\bwalk(?:ing)? time\b",
         ],
     }
-    return [label for label, patterns in checks.items() if any(re.search(pattern, text) for pattern in patterns)]
+    return [
+        label
+        for label, patterns in checks.items()
+        if any(re.search(pattern, text) for pattern in patterns)
+    ]
 
 
 def validate_grounded_plan(
@@ -323,9 +336,7 @@ def validate_grounded_plan(
         errors.append("Historical-evidence gate status was altered.")
     if draft.low_confidence_accepted != low_confidence_accepted:
         errors.append("Low-confidence user acceptance was altered.")
-    expected_notice = (
-        LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
-    )
+    expected_notice = LOW_CONFIDENCE_NOTICE if low_confidence_accepted else None
     if draft.low_confidence_notice != expected_notice:
         errors.append("The required low-confidence notice was omitted or altered.")
     if draft.resolved_london_start_context != london_start_context(bundle):
@@ -339,12 +350,20 @@ def validate_grounded_plan(
         errors.append("A recommended site ID is not a deterministic candidate.")
     if set(recommendation_ids).intersection(contextual):
         errors.append("A contextual site was promoted to a recommendation.")
-    if phase1_plan.status == ExpeditionPlanStatus.candidate_plan_ready and not recommendation_ids:
+    if (
+        phase1_plan.status == ExpeditionPlanStatus.candidate_plan_ready
+        and not recommendation_ids
+    ):
         errors.append("A candidate-ready plan omitted every grounded candidate.")
-    if phase1_plan.status != ExpeditionPlanStatus.candidate_plan_ready and recommendation_ids:
+    if (
+        phase1_plan.status != ExpeditionPlanStatus.candidate_plan_ready
+        and recommendation_ids
+    ):
         errors.append("A non-candidate-ready plan contains recommendations.")
     if any(site_id not in contextual for site_id in contextual_ids):
-        errors.append("A contextual site ID is not present in deterministic contextual evidence.")
+        errors.append(
+            "A contextual site ID is not present in deterministic contextual evidence."
+        )
 
     for plan_site in [*draft.recommended_sites, *draft.contextual_sites]:
         source = candidates.get(plan_site.site_id) or contextual.get(plan_site.site_id)
@@ -355,7 +374,9 @@ def validate_grounded_plan(
             errors.append(f"Site facts were altered for {plan_site.site_id}.")
 
     expected_weather = weather_plan_context(bundle)
-    actual_weather = draft.weather_context.model_dump(mode="json") if draft.weather_context else None
+    actual_weather = (
+        draft.weather_context.model_dump(mode="json") if draft.weather_context else None
+    )
     if actual_weather != expected_weather:
         errors.append("Weather status or quantitative weather values were altered.")
 
@@ -368,18 +389,26 @@ def validate_grounded_plan(
         }
         for item in bundle.constraints
     ]
-    if [item.model_dump(mode="json") for item in draft.constraints] != expected_constraints:
+    if [
+        item.model_dump(mode="json") for item in draft.constraints
+    ] != expected_constraints:
         errors.append("Required deterministic constraints were omitted or altered.")
     if draft.unresolved_limitations != bundle.safety_and_scientific_limitations:
-        errors.append("Required safety or scientific limitations were omitted or altered.")
+        errors.append(
+            "Required safety or scientific limitations were omitted or altered."
+        )
     if draft.suggested_next_actions != phase1_plan.suggested_actions:
         errors.append("Suggested actions were omitted, reordered, or invented.")
     if draft.provenance_references != provenance_references(bundle):
         errors.append("Provenance references were omitted, reordered, or invented.")
     if draft.evidence_attributions != evidence_attributions(bundle):
-        errors.append("Required evidence attribution was omitted, reordered, or invented.")
+        errors.append(
+            "Required evidence attribution was omitted, reordered, or invented."
+        )
     if draft.evidence_citations != required_evidence_citations(bundle):
-        errors.append("Evidence citations refer to missing evidence or omit required evidence.")
+        errors.append(
+            "Evidence citations refer to missing evidence or omit required evidence."
+        )
     expected_walking = (
         walking_plan.model_dump(mode="json") if walking_plan is not None else None
     )
@@ -403,7 +432,9 @@ def validate_grounded_plan(
         r"\bhmac(?:\s+(?:reference|ref))?\s*(?::|=|\s)\s*(?:secret|[a-f0-9]{8,})\b",
     ]
     if any(re.search(pattern, explanation) for pattern in sensitive_value_patterns):
-        errors.append("The draft exposes an occurrence coordinate or record identifier.")
+        errors.append(
+            "The draft exposes an occurrence coordinate or record identifier."
+        )
     if re.search(r"\bbng-1km-\d", explanation):
         errors.append("The draft exposes or invents safe-cell associations.")
     if re.search(
@@ -434,8 +465,14 @@ def deterministic_safe_plan(
         target_date=phase1_plan.target_date,
         duration_hours=bundle.request.duration_hours,
         resolved_london_start_context=london_start_context(bundle),
-        recommended_sites=[PlanSiteOption.model_validate(_site_view(site)) for site in bundle.candidate_sites],
-        contextual_sites=[PlanSiteOption.model_validate(_site_view(site)) for site in bundle.contextual_sites],
+        recommended_sites=[
+            PlanSiteOption.model_validate(_site_view(site))
+            for site in bundle.candidate_sites
+        ],
+        contextual_sites=[
+            PlanSiteOption.model_validate(_site_view(site))
+            for site in bundle.contextual_sites
+        ],
         weather_context=(
             PlanWeatherContext.model_validate(weather_plan_context(bundle))
             if bundle.weather is not None

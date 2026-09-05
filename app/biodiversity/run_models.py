@@ -21,18 +21,16 @@ class RunProfile(StrictModel):
     state_schema_version: Literal[3] = STATE_SCHEMA_VERSION
     data_mode: Literal["fixture", "live"] = "fixture"
     model_mode: Literal["scripted", "live"] = "scripted"
-    model_identifier: str = Field(
-        default="scripted-biodiversity-v1", min_length=1
-    )
+    model_identifier: str = Field(default="scripted-biodiversity-v1", min_length=1)
     endpoint_fingerprint: str = Field(default="local-scripted", min_length=1)
     routing_provider: str = Field(default="fixture-openrouteservice", min_length=1)
     routing_provider_version: str = Field(
         default="ors-api-shaped-2026-09-04", min_length=1
     )
-    routing_profile: Literal[
-        "foot-walking", "public-transport-and-walking"
-    ] = "foot-walking"
-    route_schema_version: Literal[1] = 1
+    routing_profile: Literal["foot-walking", "public-transport-and-walking"] = (
+        "foot-walking"
+    )
+    route_schema_version: Literal[2] = 2
     routing_endpoint_fingerprint: str = Field(default="local-fixture", min_length=1)
 
 
@@ -47,10 +45,10 @@ class RunManifest(StrictModel):
     endpoint_fingerprint: str = Field(min_length=1)
     routing_provider: str | None = None
     routing_provider_version: str | None = None
-    routing_profile: Literal[
-        "foot-walking", "public-transport-and-walking"
-    ] | None = None
-    route_schema_version: Literal[1] | None = None
+    routing_profile: Literal["foot-walking", "public-transport-and-walking"] | None = (
+        None
+    )
+    route_schema_version: Literal[1, 2] | None = None
     routing_endpoint_fingerprint: str | None = None
     created_at: datetime
 

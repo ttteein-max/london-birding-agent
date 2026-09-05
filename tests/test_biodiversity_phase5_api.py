@@ -10,6 +10,10 @@ from fastapi.testclient import TestClient
 
 from app.biodiversity.api.dependencies import APISettings
 from app.biodiversity.api.main import create_app
+from app.biodiversity.api.services.views import (
+    _historical_itinerary_summary,
+    _walking_plan_view,
+)
 
 REQUEST = (
     "Plan a three-hour expedition from SW11 4NJ on 15 June 2026 "
@@ -25,6 +29,71 @@ def _wait(client: TestClient, operation_id: str) -> dict:
             return operation
         time.sleep(0.02)
     raise AssertionError("Phase 5 API operation timed out")
+
+
+def test_historical_walking_plan_recovers_leg_times_without_rewriting_checkpoint() -> (
+    None
+):
+    historical = {
+        "status": "ready",
+        "selected_site_id": "osm-way-3986346",
+        "selected_site_name": "Kensington Gardens",
+        "entrance": {
+            "entrance_id": "osm-node-1109765916",
+            "site_id": "osm-way-3986346",
+            "label": "Palace Gate",
+            "access_certainty": "explicit_public",
+            "point": {"longitude": -0.1843018, "latitude": 51.5018829},
+        },
+        "routing_profile": "foot-walking",
+        "walking_duration_minutes": 85.5,
+        "expedition_duration_minutes": 120,
+        "remaining_field_time_minutes": 34.5,
+        "route_geometry_reference": "route-historical",
+    }
+    entrance = dict(historical["entrance"])
+    route_options = [
+        {
+            "site_id": historical["selected_site_id"],
+            "entrance": entrance,
+            "feasible": True,
+            "route": {
+                "route_geometry_reference": "route-historical",
+                "outbound": {"duration_seconds": 2565},
+                "return_leg": {"duration_seconds": 2565},
+                "total_duration_seconds": 5130,
+            },
+        }
+    ]
+
+    view = _walking_plan_view(historical, route_options=route_options)
+
+    assert view.historical_execution is True
+    assert view.outbound_travel_duration_minutes == 42.8
+    assert view.return_travel_duration_minutes == 42.8
+    assert view.total_travel_duration_minutes == 85.5
+    assert (
+        view.routing_policy_note and "TfL public transport" in view.routing_policy_note
+    )
+    assert (
+        view.selection_rationale
+        and "1 recorded feasible route option" in view.selection_rationale
+    )
+    summary = _historical_itinerary_summary(
+        {
+            "duration_hours": 2,
+            "weather_context": {
+                "status": "available",
+                "minimum_temperature_c": 12,
+                "maximum_temperature_c": 19.9,
+                "precipitation_probability_percent": 24,
+            },
+        },
+        view,
+    )
+    assert summary and "85.5 minutes" in summary
+    assert "42.8 minutes outbound and 42.8 minutes return" in summary
+    assert "34.5 minutes for field observation" in summary
 
 
 def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
@@ -90,8 +159,9 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
         )
         assert selected["site_id"] == walking["selected_site_id"]
         assert selected["entrance"]["entrance_id"] == walking["entrance"]["entrance_id"]
-        assert selected["route_geometry_reference"] == (
-            map_view["route_geometry_reference"]
+        assert (
+            selected["route_geometry_reference"]
+            == (map_view["route_geometry_reference"])
         )
 
         geometry = client.get(
@@ -102,7 +172,9 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
         payload = geometry.json()
         assert payload["origin_visibility"] == "local_private"
         assert payload["geojson"]["type"] == "FeatureCollection"
-        assert {item["properties"]["direction"] for item in payload["geojson"]["features"]} == {
+        assert {
+            item["properties"]["direction"] for item in payload["geojson"]["features"]
+        } == {
             "outbound",
             "return",
         }
@@ -125,14 +197,11 @@ def test_strong_fixture_exposes_typed_route_views_only_through_safe_endpoints(
     assert (report / "route-plan.json").is_file()
     assert (report / "provider-cache-timings.json").is_file()
     timings = json.loads((report / "timings.json").read_text(encoding="utf-8"))
-    provider_spans = [
-        span for span in timings["spans"] if span["kind"] == "provider"
-    ]
+    provider_spans = [span for span in timings["spans"] if span["kind"] == "provider"]
     assert len(provider_spans) == 6
     assert all(span["name"] == "fixture-openrouteservice" for span in provider_spans)
     report_payload = "\n".join(
-        path.read_text(encoding="utf-8")
-        for path in report.glob("*.json")
+        path.read_text(encoding="utf-8") for path in report.glob("*.json")
     ).casefold()
     assert '"coordinates"' not in report_payload
     assert "linestring" not in report_payload
@@ -237,9 +306,7 @@ def test_route_limit_resume_invalidates_old_evidence_and_uses_new_constraint(
         assert resumed.status_code == 202
         operation = _wait(client, resumed.json()["operation_id"])
         assert operation["status"] == "completed"
-        final = client.get("/api/v1/runs/route-limit-resume").json()[
-            "final_plan"
-        ]
+        final = client.get("/api/v1/runs/route-limit-resume").json()["final_plan"]
         walking = final["walking_plan"]
         assert walking["status"] == "ready"
         distance_constraint = next(

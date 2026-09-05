@@ -55,7 +55,10 @@ test("Common woodpigeon strong-evidence happy path", async ({ page }) => {
   );
   await expect(page.getByRole("heading", { name: "Columba palumbus" })).toBeVisible();
   await expect(page.getByText("Evidence gate passed", { exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Expedition overview" })).toBeVisible();
+  await expect(page.locator(".plan-overview")).toContainText("total outing");
   await expect(page.getByRole("heading", { name: "Validated journey itinerary" })).toBeVisible();
+  await expect(page.locator(".route-selection")).toContainText("deterministic routing code");
   await expect(page.getByText(/fixture-openrouteservice · foot-walking/)).toBeVisible();
   await expect(page.getByText(/Selected entrance:/)).toBeVisible();
   await expect(page.locator(".plan-columns > div").first().locator("li")).not.toHaveCount(0);

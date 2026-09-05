@@ -100,7 +100,7 @@ The CSP permits the configured style origin plus the strictly validated HTTPS or
 
 ## Checkpoints, invalidation and compatibility
 
-The workflow is `phase-5.0`, state schema `3`, route schema `1`. `RunManifest` records data/model identities plus provider, provider version, route profile, route schema and routing endpoint fingerprint. Resume validates the exact thread/checkpoint/branch/execution and current runtime profile, so an older live ORS execution is readable but cannot be resumed under the TfL profile. Route-affecting fork or HITL changes clear route options and validated evidence before recalculation.
+The workflow is `phase-5.0`, state schema `3`, route schema `2`. `RunManifest` records data/model identities plus provider, provider version, route profile, route schema and routing endpoint fingerprint. Resume validates the exact thread/checkpoint/branch/execution and current runtime profile, so older route-schema-1 or live ORS executions are readable but cannot be resumed under the current TfL profile. Their safe API view labels the historical walking-only policy, recovers separately stored leg times when available, and never re-ranks or rewrites the checkpoint. Route-affecting fork or HITL changes clear route options and validated evidence before recalculation.
 
 Phase 4 manifests (`phase-3.1`, schema `2`) remain parseable for history and safe read-only views. They are never silently migrated or resumed into the Phase 5 graph; mutation returns an explicit instruction to start a new Phase 5 run.
 
