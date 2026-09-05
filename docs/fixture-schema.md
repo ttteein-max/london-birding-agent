@@ -45,3 +45,9 @@ Server matches are never assumed to have been downloaded. Context-only and unkno
 `--live-refresh` writes all candidate fixtures plus `candidate-manifest.json` to a temporary/versioned output directory. It does not mutate `data/fixtures`.
 
 `--promote-candidate` is a distinct explicit action. It requires all canonical filenames, occurrence schema version 2 and internally consistent counts before copying. Offline validation then rechecks schema, provenance and payload checksums.
+
+## Phase 5 entrance and route fixtures
+
+`london-public-green-space-entrances-2026-09-04.geojson` is a point-feature snapshot with an OSM identity, source tags, access certainty and one or more exact green-space OSM boundary-member associations. Its provenance sidecar records the saved Overpass query hash and the GeoJSON SHA-256. Missing `access` remains uncertain; excluded access/foot/service tags never become runtime candidates. The fixture never synthesises a centroid or nearest-road entrance.
+
+`ors-foot-walking-routes.json` stores saved real, API-shaped outbound and return GeoJSON responses for a planned non-private demo origin and audited entrance identities. Its payload checksum is verified before use. Exact geometry is converted at runtime to a reference backed by the gitignored route store; general API/report payloads contain the reference and route summary, not geometry or a private origin.

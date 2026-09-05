@@ -66,6 +66,16 @@ class BiodiversityAgentState(TypedDict, total=False):
     occurrence_evidence: NotRequired[dict[str, Any] | None]
     weather_evidence: NotRequired[dict[str, Any] | None]
     public_site_search: NotRequired[dict[str, Any] | None]
+    public_entrance_candidates: NotRequired[
+        Annotated[list[dict[str, Any]], replace_list]
+    ]
+    route_options: NotRequired[Annotated[list[dict[str, Any]], replace_list]]
+    validated_walking_plan: NotRequired[dict[str, Any] | None]
+    route_allow_uncertain_entrance: NotRequired[bool]
+    route_uncertain_entrance_available: NotRequired[bool]
+    route_decision_route: NotRequired[
+        Literal["request_walking_routes", "compose_expedition_plan"] | None
+    ]
     structured_evidence_log: NotRequired[
         Annotated[list[dict[str, Any]], merge_unique_dicts]
     ]
@@ -86,6 +96,7 @@ class BiodiversityAgentState(TypedDict, total=False):
     draft_llm_plan: NotRequired[dict[str, Any] | None]
     final_validated_plan: NotRequired[dict[str, Any] | None]
     grounding_errors: NotRequired[Annotated[list[str], replace_list]]
+    composer_failed: NotRequired[bool]
     pending_hitl_kind: NotRequired[str | None]
     pending_hitl_payload: NotRequired[dict[str, Any] | None]
     pending_user_choice: NotRequired[dict[str, Any] | None]

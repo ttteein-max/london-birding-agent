@@ -1,4 +1,4 @@
-"""Run the Phase 3 London biodiversity LangGraph in the terminal."""
+"""Run the Phase 5 London biodiversity LangGraph in the terminal."""
 
 from __future__ import annotations
 
@@ -26,6 +26,10 @@ from app.biodiversity.observability import AgentRunRecorder
 from app.biodiversity.reporting import (
     default_report_directory,
     save_biodiversity_run_report,
+)
+from app.biodiversity.routing import (
+    RoutingServices,
+    TFL_JOURNEY_ENDPOINT,
 )
 from app.biodiversity.run_models import RunManifest, RunProfile
 from app.biodiversity.runs import checkpoint_node_id
@@ -159,6 +163,18 @@ def _automatic_resume(payload: dict[str, Any]) -> dict[str, Any]:
                 return {"option": name}
     if kind == "related_taxon_selection":
         return {"accepted_taxon_key": payload["candidates"][0]["accepted_taxon_key"]}
+    if kind == "route_tradeoff":
+        options = {item["option"]: item for item in payload["options"]}
+        if "increase_maximum_walking_distance" in options:
+            minimum = options["increase_maximum_walking_distance"][
+                "minimum_walking_distance_km"
+            ]
+            return {
+                "option": "increase_maximum_walking_distance",
+                "maximum_walking_distance_km": round(float(minimum) + 0.1, 3),
+            }
+        if "keep_route_constraints_and_end" in options:
+            return {"option": "keep_route_constraints_and_end"}
     raise RuntimeError(f"No safe automatic response is available for {kind}")
 
 
@@ -207,11 +223,36 @@ def main() -> None:
         if args.model_mode == "scripted"
         else hashlib.sha256(endpoint.encode()).hexdigest()[:16]
     )
+    routing_endpoint = (
+        "local-fixture"
+        if args.data_mode == "fixture"
+        else TFL_JOURNEY_ENDPOINT
+    )
     run_profile = RunProfile(
         data_mode=args.data_mode,
         model_mode=args.model_mode,
         model_identifier=model_identifier,
         endpoint_fingerprint=endpoint_fingerprint,
+        routing_provider=(
+            "fixture-openrouteservice"
+            if args.data_mode == "fixture"
+            else "tfl-journey-planner"
+        ),
+        routing_provider_version=(
+            "ors-api-shaped-2026-09-04"
+            if args.data_mode == "fixture"
+            else "unified-api-v1-least-time-v2"
+        ),
+        routing_profile=(
+            "foot-walking"
+            if args.data_mode == "fixture"
+            else "public-transport-and-walking"
+        ),
+        routing_endpoint_fingerprint=(
+            "local-fixture"
+            if args.data_mode == "fixture"
+            else hashlib.sha256(routing_endpoint.encode()).hexdigest()[:16]
+        ),
     )
     run_manifest = RunManifest(
         **run_profile.model_dump(mode="python"),
@@ -222,7 +263,37 @@ def main() -> None:
     checkpointer = stack.enter_context(
         open_biodiversity_sqlite_checkpointer(args.checkpoint_db)
     )
-    dependencies = BackendDependencies.fixture() if args.data_mode == "fixture" else BackendDependencies.live()
+    dependencies = (
+        BackendDependencies.fixture()
+        if args.data_mode == "fixture"
+        else BackendDependencies.live()
+    )
+    recorder = AgentRunRecorder(thread_id=args.thread_id)
+
+    def event_callback(event_type: str, payload: dict[str, Any]) -> None:
+        recorder.record_event(event_type, payload=payload)
+
+    routing_services = (
+        RoutingServices.fixture(
+            runtime_directory=Path(
+                os.getenv(
+                    "BIODIVERSITY_ROUTE_RUNTIME",
+                    str(PROJECT_ROOT / "data/runtime/routes"),
+                )
+            ),
+            event_callback=event_callback,
+        )
+        if args.data_mode == "fixture"
+        else RoutingServices.live(
+            runtime_directory=Path(
+                os.getenv(
+                    "BIODIVERSITY_ROUTE_RUNTIME",
+                    str(PROJECT_ROOT / "data/runtime/routes"),
+                )
+            ),
+            event_callback=event_callback,
+        )
+    )
     if args.model_mode == "scripted":
         parser_model, evidence_model, composer_model = make_scripted_biodiversity_models()
         graph = build_biodiversity_graph(
@@ -230,15 +301,16 @@ def main() -> None:
             evidence_model=evidence_model,
             composer_model=composer_model,
             dependencies=dependencies,
+            routing_services=routing_services,
             checkpointer=checkpointer,
         )
     else:
         graph = build_biodiversity_graph(
             create_live_chat_model(),
             dependencies=dependencies,
+            routing_services=routing_services,
             checkpointer=checkpointer,
         )
-    recorder = AgentRunRecorder(thread_id=args.thread_id)
     branch_id = uuid4().hex
     execution_id = uuid4().hex
     created_at = datetime.now(UTC).isoformat()
@@ -357,11 +429,32 @@ def main() -> None:
 
     final_plan = result.get("final_validated_plan")
     if args.compact and final_plan:
+        walking = final_plan.get("walking_plan")
         final_plan = {
             "status": final_plan["status"],
             "generated_by": final_plan["generated_by"],
             "recommended_site_ids": [item["site_id"] for item in final_plan["recommended_sites"]],
             "contextual_site_ids": [item["site_id"] for item in final_plan["contextual_sites"]],
+            "walking_plan": (
+                {
+                    "status": walking.get("status"),
+                    "selected_site_id": walking.get("selected_site_id"),
+                    "entrance_id": (walking.get("entrance") or {}).get(
+                        "entrance_id"
+                    ),
+                    "total_distance_km": walking.get("total_distance_km"),
+                    "walking_duration_minutes": walking.get(
+                        "walking_duration_minutes"
+                    ),
+                    "remaining_field_time_minutes": walking.get(
+                        "remaining_field_time_minutes"
+                    ),
+                    "provider": walking.get("provider"),
+                    "cache_status": walking.get("cache_status"),
+                }
+                if walking
+                else None
+            ),
         }
     summary = {
         "terminal_status": result.get("terminal_status"),

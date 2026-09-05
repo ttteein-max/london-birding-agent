@@ -6,6 +6,7 @@ services:
     environment:
       BIODIVERSITY_PUBLIC_DEMO: "true"
       BIODIVERSITY_ALLOWED_RUN_MODES: fixture/scripted
+      BIODIVERSITY_BASEMAP_STYLE_URL: https://tiles.openfreemap.org/styles/liberty
       BIODIVERSITY_MUTATIONS_PER_MINUTE: "20"
       BIODIVERSITY_MAX_CONCURRENT_OPERATIONS: "2"
       BIODIVERSITY_MAX_DEMO_THREADS: "100"

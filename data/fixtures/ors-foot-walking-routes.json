@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "provenance": {
+    "source_name": "OpenStreetMap public foot-routing service, normalised to the openrouteservice GeoJSON response contract",
+    "source_url": "https://routing.openstreetmap.de/",
+    "retrieved_at_utc": "2026-09-04T15:31:00Z",
+    "licence": "OpenStreetMap data under the Open Database Licence (ODbL) 1.0; public routing service terms apply",
+    "attribution": "© OpenStreetMap contributors; openrouteservice-compatible fixture",
+    "checksum_sha256": "0a630d841d9fe43a091fe20b0affb5d21f379557bde105ff2315e2c93881292d",
+    "known_limitations": [
+      "This fixture uses a planned, non-private SW11 postcode centroid as its origin.",
+      "Route geometry is simplified from a captured public walking route for compact deterministic tests.",
+      "Elevation samples are sparse fixture values and must not be treated as survey-grade elevation.",
+      "Live mode uses the current HeiGIT openrouteservice endpoint and never falls back to this fixture."
+    ]
+  },
+  "payload": {
+    "routes": [
+      {
+        "site_id": "osm-way-372975520",
+        "entrance_id": "osm-node-452413249",
+        "direction": "outbound",
+        "response": {
+          "type": "FeatureCollection",
+          "features": [{
+            "type": "Feature",
+            "properties": {
+              "summary": {"distance": 4565.0, "duration": 3654.6},
+              "segments": [{
+                "distance": 4565.0,
+                "duration": 3654.6,
+                "ascent": 31.0,
+                "descent": 17.0,
+                "steps": [
+                  {"instruction": "Depart from the public demo origin", "distance": 14.4, "duration": 11.5, "type": 11},
+                  {"instruction": "Turn left", "distance": 61.9, "duration": 49.5, "type": 0},
+                  {"instruction": "Turn right", "distance": 491.5, "duration": 393.4, "type": 1},
+                  {"instruction": "Continue on Central Avenue", "distance": 7.8, "duration": 6.2, "type": 6, "name": "Central Avenue"},
+                  {"instruction": "Continue towards the mapped public entrance", "distance": 3989.4, "duration": 3194.0, "type": 6},
+                  {"instruction": "Arrive at the mapped public-site entrance", "distance": 0.0, "duration": 0.0, "type": 10}
+                ]
+              }]
+            },
+            "geometry": {"type": "LineString", "coordinates": [[-0.161005,51.476041,8],[-0.156166,51.478613,9],[-0.153095,51.481334,7],[-0.149736,51.483402,11],[-0.151724,51.487189,13],[-0.149402,51.491225,16],[-0.145958,51.495336,18],[-0.147131,51.498156,21],[-0.151659,51.501741,24],[-0.152354,51.503853,26],[-0.154886,51.508239,22],[-0.155069,51.508356,22]]}
+          }]
+        }
+      },
+      {
+        "site_id": "osm-way-372975520",
+        "entrance_id": "osm-node-452413249",
+        "direction": "return",
+        "response": {
+          "type": "FeatureCollection",
+          "features": [{
+            "type": "Feature",
+            "properties": {
+              "summary": {"distance": 4565.0, "duration": 3654.6},
+              "segments": [{
+                "distance": 4565.0,
+                "duration": 3654.6,
+                "ascent": 17.0,
+                "descent": 31.0,
+                "steps": [
+                  {"instruction": "Depart from the mapped public-site entrance", "distance": 18.0, "duration": 14.4, "type": 11},
+                  {"instruction": "Follow the provider route back towards the origin", "distance": 4547.0, "duration": 3640.2, "type": 6},
+                  {"instruction": "Arrive at the public demo origin", "distance": 0.0, "duration": 0.0, "type": 10}
+                ]
+              }]
+            },
+            "geometry": {"type": "LineString", "coordinates": [[-0.155069,51.508356,22],[-0.152311,51.503882,26],[-0.151847,51.501869,24],[-0.14722,51.498174,21],[-0.145961,51.49537,18],[-0.149073,51.491521,16],[-0.150902,51.488336,13],[-0.149874,51.484027,11],[-0.153052,51.481389,7],[-0.155639,51.478839,9],[-0.160963,51.476252,8],[-0.161005,51.476041,8]]}
+          }]
+        }
+      },
+      {
+        "site_id": "osm-way-3986346",
+        "entrance_id": "osm-node-1109765916",
+        "direction": "outbound",
+        "response": {
+          "type": "FeatureCollection",
+          "features": [{
+            "type": "Feature",
+            "properties": {
+              "summary": {"distance": 3922.7, "duration": 3139.5},
+              "segments": [{
+                "distance": 3922.7,
+                "duration": 3139.5,
+                "ascent": 26.0,
+                "descent": 15.0,
+                "steps": [
+                  {"instruction": "Depart from the public demo origin", "distance": 71.8, "duration": 57.4, "type": 11},
+                  {"instruction": "Turn right onto Carriage Drive West", "distance": 372.8, "duration": 298.1, "type": 1, "name": "Carriage Drive West"},
+                  {"instruction": "Continue towards Palace Gate", "distance": 3478.1, "duration": 2784.0, "type": 6},
+                  {"instruction": "Arrive at Palace Gate", "distance": 0.0, "duration": 0.0, "type": 10, "name": "Palace Gate"}
+                ]
+              }]
+            },
+            "geometry": {"type": "LineString", "coordinates": [[-0.161005,51.476041,8],[-0.162967,51.477657,9],[-0.165275,51.479541,10],[-0.167164,51.483361,12],[-0.16754,51.483627,13],[-0.170217,51.486862,16],[-0.175538,51.48926,18],[-0.177592,51.490995,19],[-0.179192,51.495216,21],[-0.179728,51.497993,22],[-0.181557,51.501819,20],[-0.184302,51.501883,19]]}
+          }]
+        }
+      },
+      {
+        "site_id": "osm-way-3986346",
+        "entrance_id": "osm-node-1109765916",
+        "direction": "return",
+        "response": {
+          "type": "FeatureCollection",
+          "features": [{
+            "type": "Feature",
+            "properties": {
+              "summary": {"distance": 3922.7, "duration": 3139.5},
+              "segments": [{
+                "distance": 3922.7,
+                "duration": 3139.5,
+                "ascent": 15.0,
+                "descent": 26.0,
+                "steps": [
+                  {"instruction": "Depart from Palace Gate", "distance": 24.0, "duration": 19.2, "type": 11, "name": "Palace Gate"},
+                  {"instruction": "Follow the provider route back towards the origin", "distance": 3898.7, "duration": 3120.3, "type": 6},
+                  {"instruction": "Arrive at the public demo origin", "distance": 0.0, "duration": 0.0, "type": 10}
+                ]
+              }]
+            },
+            "geometry": {"type": "LineString", "coordinates": [[-0.184302,51.501883,19],[-0.18047,51.501328,20],[-0.179195,51.495323,21],[-0.178572,51.492026,19],[-0.175765,51.489368,18],[-0.171204,51.487081,16],[-0.16812,51.484485,13],[-0.167307,51.48338,12],[-0.165423,51.479674,10],[-0.163492,51.478375,9],[-0.161934,51.47634,8],[-0.161005,51.476041,8]]}
+          }]
+        }
+      }
+    ]
+  }
+}

@@ -75,7 +75,9 @@ def test_manage_cli_reuses_manifest_across_processes_and_records_spans(
     timings = json.loads((resume_report / "timings.json").read_text())
     assert metadata["data_mode"] == "fixture"
     assert metadata["model_mode"] == "scripted"
-    assert metadata["run_manifest"]["state_schema_version"] == 2
+    assert metadata["run_manifest"]["state_schema_version"] == 3
+    assert metadata["run_manifest"]["workflow_version"] == "phase-5.0"
+    assert metadata["run_manifest"]["routing_profile"] == "foot-walking"
     assert {item["kind"] for item in timings["spans"]} == {
         "node",
         "model",

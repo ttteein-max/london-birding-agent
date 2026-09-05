@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import json
 from collections.abc import Callable
+from dataclasses import replace
 from datetime import UTC, datetime
 from typing import Any
 
@@ -20,6 +21,7 @@ from app.biodiversity.agent_models import (
 )
 from app.biodiversity.graph.grounding import (
     compact_plan_payload,
+    deterministic_itinerary_summary,
     deterministic_safe_plan,
     validate_grounded_plan,
 )
@@ -31,6 +33,7 @@ from app.biodiversity.graph.prompts import (
 )
 from app.biodiversity.graph.state import BiodiversityAgentState
 from app.biodiversity.models import (
+    AccessCertainty,
     ConstraintStatus,
     EvidenceItem,
     EvidenceOutcome,
@@ -59,6 +62,13 @@ from app.biodiversity.orchestration import (
     build_deterministic_expedition_plan,
 )
 from app.biodiversity.request_parsing import merge_request_draft
+from app.biodiversity.routing import RoutingServices, plan_walking_routes
+from app.biodiversity.routing_models import (
+    PublicEntranceCandidate,
+    RouteOption,
+    RouteStatus,
+    ValidatedWalkingPlan,
+)
 from app.biodiversity.tools import (
     build_expedition_evidence_bundle,
     find_public_green_spaces,
@@ -934,15 +944,33 @@ def _actionable_tradeoff(
             "options": [{"option": "revise_rain_preference"}, {"option": "continue_with_weather_acknowledgement"}],
             "resume_schema": {"option": "one listed option"},
         }
-    uncertain = next((item for item in bundle.constraints if item.code == "site_access_uncertain"), None)
-    if uncertain and "accept_uncertain_access" not in decisions:
+    uncertain = next(
+        (
+            item
+            for item in bundle.constraints
+            if item.code == "site_access_uncertain"
+        ),
+        None,
+    )
+    has_explicit_public_candidate = any(
+        site.access_certainty == AccessCertainty.explicit_public
+        for site in bundle.candidate_sites
+    )
+    if (
+        uncertain
+        and not has_explicit_public_candidate
+        and "accept_uncertain_access" not in decisions
+    ):
         return {
             "kind": "actionable_tradeoff",
-            "question": "Some candidate-site access is unspecified. Continue while acknowledging that access must be checked?",
+            "question": "Every candidate site has unspecified mapped access. Continue while acknowledging that access must be checked?",
             "reason": uncertain.message,
             "options": [{"option": "accept_uncertain_access"}],
             "resume_schema": {"option": "accept_uncertain_access"},
         }
+    # Site-level missing access tags remain a visible warning, not a generic
+    # interrupt. A route-specific interrupt is raised later only when routing
+    # genuinely needs an uncertain entrance and there is an actionable choice.
     return None
 
 
@@ -1057,6 +1085,12 @@ def apply_validated_user_choice(state: BiodiversityAgentState) -> dict[str, Any]
         "draft_llm_plan": None,
         "final_validated_plan": None,
         "grounding_errors": [],
+        "public_entrance_candidates": [],
+        "route_options": [],
+        "validated_walking_plan": None,
+        "route_allow_uncertain_entrance": False,
+        "route_uncertain_entrance_available": False,
+        "route_decision_route": None,
         "terminal_status": None,
         "terminal_result": None,
         "low_confidence_accepted": False,
@@ -1412,6 +1446,313 @@ def apply_fork_updates(state: BiodiversityAgentState) -> dict[str, Any]:
     return {}
 
 
+def build_resolve_public_site_entrances_node(
+    routing_services: RoutingServices,
+) -> Callable[..., dict[str, Any]]:
+    def resolve_public_site_entrances(
+        state: BiodiversityAgentState,
+    ) -> dict[str, Any]:
+        bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
+        if bundle.evidence_outcome != EvidenceOutcome.strong_map_evidence:
+            return {
+                "public_entrance_candidates": [],
+                "route_uncertain_entrance_available": False,
+                "visited_nodes": ["resolve_public_site_entrances"],
+            }
+        try:
+            entrances = [
+                entrance.model_dump(mode="json")
+                for site in bundle.candidate_sites
+                for entrance in routing_services.entrances.for_site(site)
+            ]
+        except SourceFailure as exc:
+            if routing_services.event_callback:
+                routing_services.event_callback(
+                    "entrance_resolution_failed",
+                    {
+                        "status": "failed",
+                        "error_category": exc.code.value,
+                        "branch_id": state.get("branch_id"),
+                        "execution_id": state.get("execution_id"),
+                        "checkpoint_id": None,
+                    },
+                )
+            plan = ValidatedWalkingPlan(
+                status=RouteStatus.source_unavailable,
+                expedition_duration_minutes=bundle.request.duration_hours * 60,
+                limitations=[
+                    "The versioned public-entrance snapshot was unavailable; no route provider was called."
+                ],
+            )
+            return {
+                "public_entrance_candidates": [],
+                "route_options": [],
+                "validated_walking_plan": plan.model_dump(mode="json"),
+                "route_uncertain_entrance_available": False,
+                "visited_nodes": ["resolve_public_site_entrances"],
+            }
+        return {
+            "public_entrance_candidates": entrances,
+            "route_uncertain_entrance_available": any(
+                item["access_certainty"] == "unspecified" for item in entrances
+            ),
+            "visited_nodes": ["resolve_public_site_entrances"],
+        }
+
+    return resolve_public_site_entrances
+
+
+def build_request_walking_routes_node(
+    routing_services: RoutingServices,
+) -> Callable[..., dict[str, Any]]:
+    def request_walking_routes(
+        state: BiodiversityAgentState,
+    ) -> dict[str, Any]:
+        bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
+        existing = state.get("validated_walking_plan")
+        if existing:
+            prior = ValidatedWalkingPlan.model_validate(existing)
+            if prior.status == RouteStatus.source_unavailable:
+                return {
+                    "route_options": [],
+                    "validated_walking_plan": prior.model_dump(mode="json"),
+                    "route_uncertain_entrance_available": False,
+                    "visited_nodes": ["request_walking_routes"],
+                }
+        if bundle.evidence_outcome != EvidenceOutcome.strong_map_evidence:
+            plan = ValidatedWalkingPlan(
+                status=RouteStatus.not_requested_without_strong_evidence,
+                expedition_duration_minutes=bundle.request.duration_hours * 60,
+                limitations=[
+                    "Routing was not requested because the deterministic historical-evidence gate did not pass."
+                ],
+            )
+            return {
+                "route_options": [],
+                "validated_walking_plan": plan.model_dump(mode="json"),
+                "route_uncertain_entrance_available": False,
+                "visited_nodes": ["request_walking_routes"],
+            }
+        base_callback = routing_services.event_callback
+        identified_services = (
+            replace(
+                routing_services,
+                event_callback=lambda event_type, payload: base_callback(
+                    event_type,
+                    {
+                        **payload,
+                        "branch_id": state.get("branch_id"),
+                        "execution_id": state.get("execution_id"),
+                        "checkpoint_id": None,
+                    },
+                ),
+            )
+            if base_callback is not None
+            else routing_services
+        )
+        plan, options, uncertain = plan_walking_routes(
+            bundle.request,
+            bundle.location,
+            bundle.candidate_sites,
+            services=identified_services,
+            allow_uncertain_entrance=state.get(
+                "route_allow_uncertain_entrance", False
+            ),
+            resolved_entrances=[
+                PublicEntranceCandidate.model_validate(item)
+                for item in state.get("public_entrance_candidates") or []
+            ],
+        )
+        return {
+            "route_options": [item.model_dump(mode="json") for item in options],
+            "validated_walking_plan": plan.model_dump(mode="json"),
+            "route_uncertain_entrance_available": uncertain,
+            "visited_nodes": ["request_walking_routes"],
+        }
+
+    return request_walking_routes
+
+
+def validate_route_constraints(state: BiodiversityAgentState) -> dict[str, Any]:
+    plan = ValidatedWalkingPlan.model_validate(state["validated_walking_plan"])
+    options = [
+        RouteOption.model_validate(item) for item in state.get("route_options") or []
+    ]
+    tradeoff: dict[str, Any] | None = None
+    explicit_approach_failed = any(
+        any(
+            item.code == "verified_entrance_approach" and not item.passed
+            for item in option.constraint_results
+        )
+        for option in options
+    )
+    if (
+        (
+            plan.status == RouteStatus.no_valid_entrance
+            or (
+                plan.status == RouteStatus.no_feasible_route
+                and explicit_approach_failed
+            )
+        )
+        and state.get("route_uncertain_entrance_available")
+        and not state.get("route_allow_uncertain_entrance")
+    ):
+        tradeoff = {
+            "kind": "route_tradeoff",
+            "question": "The safe route may require an entrance whose access tag is unspecified. How should routing continue?",
+            "reason": (
+                "The explicit entrance route entered the target site well before its endpoint. "
+                "An alternative mapped gate may give a sensible approach, but its entrance tag does not establish public access rights."
+                if explicit_approach_failed
+                else "An entrance tag identifies a location but does not establish public access rights."
+            ),
+            "options": [
+                {"option": "accept_uncertain_entrance"},
+                {"option": "keep_route_constraints_and_end"},
+            ],
+            "resume_schema": {"option": "one listed option"},
+        }
+    elif plan.status == RouteStatus.no_feasible_route:
+        distance_only_failures = [
+            option
+            for option in options
+            if option.route is not None
+            and any(
+                item.code == "maximum_walking_distance" and not item.passed
+                for item in option.constraint_results
+            )
+            and all(
+                item.passed
+                for item in option.constraint_results
+                if item.code == "expedition_duration"
+            )
+        ]
+        choices: list[dict[str, Any]] = []
+        minimum = None
+        if distance_only_failures:
+            minimum = min(
+                option.route.total_distance_m / 1000
+                for option in distance_only_failures
+                if option.route is not None
+            )
+            choices.append(
+                {
+                    "option": "increase_maximum_walking_distance",
+                    "minimum_walking_distance_km": round(minimum, 3),
+                }
+            )
+        choices.append({"option": "keep_route_constraints_and_end"})
+        if len(choices) > 1:
+            tradeoff = {
+                "kind": "route_tradeoff",
+                "question": "The computed round trip exceeds the walking limit. Adjust it or keep the current constraint?",
+                "reason": "Search radius is not a walking-route distance.",
+                "options": choices,
+                "resume_schema": {
+                    "option": "one listed option",
+                    "maximum_walking_distance_km": (
+                        f"number at least {minimum:.3f} when increasing the limit"
+                        if minimum is not None
+                        else None
+                    ),
+                },
+            }
+    return {
+        "pending_hitl_kind": "route_tradeoff" if tradeoff else None,
+        "pending_hitl_payload": tradeoff,
+        "visited_nodes": ["validate_route_constraints"],
+    }
+
+
+def rank_route_options(state: BiodiversityAgentState) -> dict[str, Any]:
+    plan = ValidatedWalkingPlan.model_validate(state["validated_walking_plan"])
+    options = [
+        RouteOption.model_validate(item) for item in state.get("route_options") or []
+    ]
+    feasible = sorted(
+        (item for item in options if item.feasible),
+        key=lambda item: tuple(item.ranking_key),
+    )
+    if plan.status == RouteStatus.ready:
+        if not feasible or feasible[0].site_id != plan.selected_site_id:
+            raise ValueError("Validated walking-plan selection disagrees with route ranking")
+    return {"visited_nodes": ["rank_route_options"]}
+
+
+def route_tradeoff_interrupt(state: BiodiversityAgentState) -> dict[str, Any]:
+    payload = state.get("pending_hitl_payload")
+    if state.get("pending_hitl_kind") != "route_tradeoff" or not payload:
+        raise ValueError("Route trade-off interrupt has no pending payload")
+    resumed = interrupt(payload)
+    if not isinstance(resumed, dict) or not isinstance(resumed.get("option"), str):
+        raise ValueError("Route trade-off resume requires an option")
+    allowed = {str(item["option"]) for item in payload.get("options") or []}
+    if resumed["option"] not in allowed:
+        raise ValueError("Route trade-off option is not allowed")
+    return {
+        "pending_user_choice": resumed,
+        "visited_nodes": ["route_tradeoff_interrupt"],
+    }
+
+
+def apply_route_tradeoff_choice(state: BiodiversityAgentState) -> dict[str, Any]:
+    choice = dict(state.get("pending_user_choice") or {})
+    option = choice.get("option")
+    update: dict[str, Any] = {
+        "pending_hitl_kind": None,
+        "pending_hitl_payload": None,
+        "pending_user_choice": None,
+        "applied_user_decisions": [{"kind": "route_tradeoff", **choice}],
+        "visited_nodes": ["apply_route_tradeoff_choice"],
+    }
+    if option == "accept_uncertain_entrance":
+        update.update(
+            {
+                "route_allow_uncertain_entrance": True,
+                "route_options": [],
+                "validated_walking_plan": None,
+                "route_decision_route": "request_walking_routes",
+            }
+        )
+        return update
+    if option == "increase_maximum_walking_distance":
+        value = choice.get("maximum_walking_distance_km")
+        if not isinstance(value, (int, float)):
+            raise ValueError("Increasing the walking limit requires a numeric value")
+        payload = state.get("pending_hitl_payload") or {}
+        configured = next(
+            (
+                item
+                for item in payload.get("options") or []
+                if item.get("option") == option
+            ),
+            {},
+        )
+        minimum = float(configured.get("minimum_walking_distance_km") or 0)
+        if float(value) < minimum:
+            raise ValueError("The new walking limit is below the minimum feasible route")
+        request = ExpeditionRequest.model_validate(state["expedition_request"])
+        request = request.model_copy(
+            update={"maximum_walking_distance_km": float(value)}
+        )
+        bundle = ExpeditionEvidenceBundle.model_validate(state["evidence_bundle"])
+        bundle = bundle.model_copy(update={"request": request})
+        update.update(
+            {
+                "expedition_request": request.model_dump(mode="json"),
+                "evidence_bundle": bundle.model_dump(mode="json"),
+                "route_options": [],
+                "validated_walking_plan": None,
+                "route_decision_route": "request_walking_routes",
+            }
+        )
+        return update
+    if option == "keep_route_constraints_and_end":
+        update["route_decision_route"] = "compose_expedition_plan"
+        return update
+    raise ValueError("Unsupported route trade-off option")
+
+
 def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentState], dict[str, Any]]:
     structured_composer = composer_model.with_structured_output(
         BiodiversityExpeditionPlan,
@@ -1427,6 +1768,13 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
             low_confidence_accepted=state.get(
                 "low_confidence_accepted", False
             ),
+            walking_plan=(
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None
+            ),
         )
         payload["generated_by"] = "llm_composer"
         try:
@@ -1435,9 +1783,25 @@ def build_compose_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentS
             )
             plan = response if isinstance(response, BiodiversityExpeditionPlan) else BiodiversityExpeditionPlan.model_validate(response)
             draft = plan.model_dump(mode="json")
+            draft["walking_plan"] = state.get("validated_walking_plan")
+            draft["itinerary_summary"] = deterministic_itinerary_summary(
+                bundle,
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None,
+            )
+            composer_failed = False
         except Exception as exc:  # model/schema failures become bounded grounding failures
             draft = {"__generation_error__": f"{type(exc).__name__}: {exc}"}
-        return {"draft_llm_plan": draft, "grounding_errors": [], "visited_nodes": ["compose_expedition_plan"]}
+            composer_failed = True
+        return {
+            "draft_llm_plan": draft,
+            "grounding_errors": [],
+            "composer_failed": composer_failed,
+            "visited_nodes": ["compose_expedition_plan"],
+        }
 
     return compose_expedition_plan
 
@@ -1454,6 +1818,13 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
                 low_confidence_accepted=state.get(
                     "low_confidence_accepted", False
                 ),
+                walking_plan=(
+                    ValidatedWalkingPlan.model_validate(
+                        state["validated_walking_plan"]
+                    )
+                    if state.get("validated_walking_plan")
+                    else None
+                ),
             )
         validated_evidence["generated_by"] = "llm_revision"
         payload = {
@@ -1467,10 +1838,22 @@ def build_revise_plan_node(composer_model: Any) -> Callable[[BiodiversityAgentSt
             )
             plan = response if isinstance(response, BiodiversityExpeditionPlan) else BiodiversityExpeditionPlan.model_validate(response)
             draft = plan.model_dump(mode="json")
+            draft["walking_plan"] = state.get("validated_walking_plan")
+            draft["itinerary_summary"] = deterministic_itinerary_summary(
+                bundle,
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None,
+            )
+            composer_failed = False
         except Exception as exc:
             draft = {"__generation_error__": f"{type(exc).__name__}: {exc}"}
+            composer_failed = True
         return {
             "draft_llm_plan": draft,
+            "composer_failed": composer_failed,
             "plan_revision_count": state.get("plan_revision_count", 0) + 1,
             "grounding_errors": [],
             "visited_nodes": ["revise_expedition_plan"],
@@ -1494,6 +1877,13 @@ def grounding_and_safety_checks(state: BiodiversityAgentState) -> dict[str, Any]
             draft,
             low_confidence_accepted=state.get(
                 "low_confidence_accepted", False
+            ),
+            walking_plan=(
+                ValidatedWalkingPlan.model_validate(
+                    state["validated_walking_plan"]
+                )
+                if state.get("validated_walking_plan")
+                else None
             ),
         )
         expected_generator = (
@@ -1520,9 +1910,15 @@ def deterministic_plan_fallback(state: BiodiversityAgentState) -> dict[str, Any]
         bundle,
         phase1_plan,
         low_confidence_accepted=state.get("low_confidence_accepted", False),
+        walking_plan=(
+            ValidatedWalkingPlan.model_validate(state["validated_walking_plan"])
+            if state.get("validated_walking_plan")
+            else None
+        ),
     )
     return {
         "final_validated_plan": fallback.model_dump(mode="json"),
         "terminal_status": "completed_with_deterministic_fallback",
+        "composer_failed": False,
         "visited_nodes": ["deterministic_plan_fallback"],
     }

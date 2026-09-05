@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it, vi } from "vitest";
 import { AgentTrace } from "../components/AgentTrace";
@@ -12,7 +12,7 @@ import { SelectedRunRequest } from "../components/SelectedRunRequest";
 import { StateInspector } from "../components/StateInspector";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
 import type { FinalPlanView, PendingDecisionView, RunDetail } from "../api/contracts";
-import { comparisonFixture, evidenceFixture, historyFixture, planFixture, stateFixture, workflowTopologyFixture } from "./fixtures";
+import { comparisonFixture, evidenceFixture, historyFixture, planFixture, routePlanFixture, stateFixture, walkingPlanFixture, workflowTopologyFixture } from "./fixtures";
 
 describe("field notebook cards", () => {
   it("renders plan, evidence, constraints, provenance, and exact-date weather", () => {
@@ -60,9 +60,152 @@ describe("field notebook cards", () => {
     render(<PlanPanel plan={{ ...planFixture, generated_by: "deterministic_fallback" }} />);
     expect(screen.getByText("Deterministic fallback plan")).toBeInTheDocument();
   });
+
+  it("renders the nested validated itinerary without creating a second final plan", () => {
+    render(<PlanPanel plan={routePlanFixture} />);
+    expect(screen.getByRole("heading", { name: "Validated journey itinerary" })).toBeInTheDocument();
+    expect(screen.getByText(/180-minute total outing/)).toBeInTheDocument();
+    expect(screen.getByText("Main gate · Explicit Public access evidence")).toBeInTheDocument();
+    expect(screen.getByText("9.13 km")).toBeInTheDocument();
+    expect(screen.getByText("58.2 min")).toBeInTheDocument();
+    expect(screen.getByRole("img", { name: /Walking route elevation profile/ })).toBeInTheDocument();
+    expect(screen.getByLabelText("Walking route constraints")).toHaveTextContent("Pass · Maximum Walking Distance");
+    expect(screen.getByText(/fixture-openrouteservice · foot-walking/)).toBeInTheDocument();
+  });
+
+  it("does not mislabel a legacy round-trip duration as one-way travel", () => {
+    const legacyPlan: FinalPlanView = {
+      ...routePlanFixture,
+      duration_hours: 2,
+      itinerary_summary: null,
+      walking_plan: {
+        ...walkingPlanFixture,
+        historical_execution: true,
+        routing_policy_note: "Current live runs use TfL public transport plus walking.",
+        selection_rationale: null,
+        outbound_travel_duration_minutes: null,
+        return_travel_duration_minutes: null,
+        total_travel_duration_minutes: null,
+        walking_duration_minutes: 85.5,
+        expedition_duration_minutes: 120,
+        remaining_field_time_minutes: 34.5,
+      },
+    };
+
+    render(<PlanPanel plan={legacyPlan} />);
+
+    expect(screen.getByRole("heading", { name: "Expedition overview" })).toBeInTheDocument();
+    expect(screen.getByText(/85.5 minutes is the total return-journey travel time, not the outbound leg alone/)).toBeInTheDocument();
+    expect(screen.getByText("Historical walking-only")).toBeInTheDocument();
+    expect(screen.getAllByText("Not separately recorded")).toHaveLength(2);
+    expect(screen.getByText(/Historical walking-only execution/)).toBeInTheDocument();
+    expect(screen.getByText(/immutable historical route passed the constraints/)).toBeInTheDocument();
+  });
+
+  it("shows a repeated return path once without dropping its validated time", () => {
+    render(<PlanPanel plan={{
+      ...routePlanFixture,
+      walking_plan: {
+        ...walkingPlanFixture,
+        journey_segments: [
+          {
+            segment_id: "outbound-walk",
+            direction: "outbound",
+            sequence: 0,
+            mode: "walking",
+            instruction: "Walk to the main gate",
+            duration_minutes: 60.8,
+          },
+          {
+            segment_id: "return-walk",
+            direction: "return",
+            sequence: 0,
+            mode: "walking",
+            instruction: "Walk back from the main gate",
+            duration_minutes: 61,
+          },
+        ],
+      },
+    }} />);
+
+    expect(screen.getByText(/Walk to the main gate/)).toBeInTheDocument();
+    expect(screen.queryByText(/Walk back from the main gate/)).not.toBeInTheDocument();
+    expect(screen.getByText("61 min")).toBeInTheDocument();
+    expect(screen.getByText(/directions are shown only once/)).toBeInTheDocument();
+  });
+
+  it("keeps a Phase 4 plan readable without a walking plan", () => {
+    render(<PlanPanel plan={planFixture} />);
+    expect(screen.getByText(/historical plan predates validated walking routes/)).toBeInTheDocument();
+  });
+
+  it("renders a typed routing-provider failure without inventing a route", () => {
+    render(<PlanPanel plan={{
+      ...routePlanFixture,
+      walking_plan: {
+        ...walkingPlanFixture,
+        status: "source_unavailable",
+        limitations: ["The configured live routing provider was unavailable."],
+      },
+    }} />);
+    expect(screen.getByText(/No journey was fabricated/)).toHaveTextContent(
+      "Source Unavailable",
+    );
+    expect(screen.getByText("The configured live routing provider was unavailable.")).toBeInTheDocument();
+    expect(screen.queryByText("9.13 km")).not.toBeInTheDocument();
+  });
 });
 
 describe("typed human decisions", () => {
+  it("does not present an unevaluated taxonomy preview as zero evidence", () => {
+    const candidate = {
+      accepted_taxon_key: 2489281,
+      common_name: "Lesser Ground-robin",
+      scientific_name: "Amalocichla incerta",
+      canonical_name: "Amalocichla incerta",
+      rank: "SPECIES",
+      taxonomic_status: "ACCEPTED",
+      resolution_method: "gbif_search",
+    };
+    const decision: PendingDecisionView = {
+      kind: "taxon_selection",
+      question: "Which candidate?",
+      checkpoint_id: "checkpoint-taxonomy-preview",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      candidates: [
+        {
+          ...candidate,
+          evidence_preview: {
+            status: "evaluated",
+            retained_count: 0,
+            dataset_count: 0,
+            source_status: "available",
+          },
+        },
+        {
+          ...candidate,
+          accepted_taxon_key: 2489282,
+          common_name: "Budget-limited candidate",
+          evidence_preview: {
+            status: "not_evaluated_budget",
+            retained_count: null,
+            dataset_count: null,
+            source_status: "not_evaluated_budget",
+          },
+        },
+      ],
+      options: [],
+      validation_errors: [],
+    };
+
+    render(<HitlPanel decision={decision} busy={false} onResume={vi.fn()} />);
+
+    expect(screen.getByText("Evaluated · 0 retained · 0 datasets")).toBeInTheDocument();
+    expect(screen.getByText("Not evaluated · preview budget exhausted")).toBeInTheDocument();
+    expect(screen.queryByText(/Not Evaluated Budget · 0 retained/)).not.toBeInTheDocument();
+  });
+
   it("submits an allow-listed taxonomy selection payload", async () => {
     const onResume = vi.fn().mockResolvedValue(undefined);
     const decision: PendingDecisionView = {
@@ -112,6 +255,33 @@ describe("typed human decisions", () => {
     });
   });
 
+  it("submits only the typed route limit change", async () => {
+    const onResume = vi.fn().mockResolvedValue(undefined);
+    const decision: PendingDecisionView = {
+      kind: "route_tradeoff",
+      question: "The computed route exceeds the supplied walking limit.",
+      checkpoint_id: "checkpoint-route",
+      branch_id: "branch-one",
+      execution_id: "execution-one",
+      options: [{ option: "increase_maximum_walking_distance", minimum_walking_distance_km: 9.13 }],
+      candidates: [],
+      validation_errors: [],
+    };
+    render(<HitlPanel decision={decision} busy={false} onResume={onResume} />);
+    const input = screen.getByLabelText("Maximum full-excursion walking distance (km)");
+    await userEvent.clear(input);
+    await userEvent.type(input, "10");
+    await userEvent.click(screen.getByRole("button", { name: "Recalculate routes" }));
+    await waitFor(() => expect(onResume).toHaveBeenCalledWith({
+      checkpoint_id: "checkpoint-route",
+      decision: {
+        kind: "route_tradeoff",
+        option: "increase_maximum_walking_distance",
+        maximum_walking_distance_km: 10,
+      },
+    }));
+  });
+
   it("shows the safe partial parse and submits only the missing field", async () => {
     const onResume = vi.fn().mockResolvedValue(undefined);
     const decision: PendingDecisionView = {
@@ -136,7 +306,7 @@ describe("typed human decisions", () => {
     expect(screen.getByLabelText("Recognised request details")).toHaveTextContent("Rainham Marshes");
     expect(screen.getByLabelText(/Named London place/)).toHaveValue("Rainham Marshes");
     expect(screen.getByLabelText("Bird name")).toHaveValue("Yellow-browed Warbler");
-    expect(screen.getByLabelText("Duration hours")).toHaveValue(3);
+    expect(screen.getByLabelText(/Total outing hours/)).toHaveValue(3);
     await userEvent.type(screen.getByLabelText("Target date"), "2026-09-12");
     await userEvent.click(screen.getByRole("button", { name: "Apply corrections" }));
     expect(onResume).toHaveBeenCalledWith({

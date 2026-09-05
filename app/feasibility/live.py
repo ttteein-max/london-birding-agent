@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 import json
+import ssl
 import time
 from datetime import UTC, datetime
 from typing import Any
 from urllib.error import HTTPError, URLError
 from urllib.parse import urlencode
 from urllib.request import Request, urlopen
+
+import certifi
 
 from app.feasibility.core import canonical_sha256
 
@@ -44,9 +47,14 @@ def get_json(
         url = f"{base_url}?{urlencode(params, doseq=True)}"
     request = Request(url, headers={"User-Agent": USER_AGENT, "Accept": "application/json"})
     last_error: Exception | None = None
+    ssl_context = ssl.create_default_context(cafile=certifi.where())
     for attempt in range(1, attempts + 1):
         try:
-            with urlopen(request, timeout=timeout) as response:  # noqa: S310 - fixed public APIs
+            with urlopen(  # noqa: S310 - fixed public APIs
+                request,
+                timeout=timeout,
+                context=ssl_context,
+            ) as response:
                 if response.status != 200:
                     raise RuntimeError(f"GET {url} returned HTTP {response.status}")
                 return json.load(response), url

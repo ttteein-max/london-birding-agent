@@ -24,7 +24,7 @@ interface Props {
 type NodeStatus = "not-visited" | "completed" | "running" | "waiting" | "failed";
 
 const STAGES: Array<WorkflowNodeView["stage"]> = [
-  "entry", "intake", "location", "taxonomy", "evidence", "validation", "planning", "outcome",
+  "entry", "intake", "location", "taxonomy", "evidence", "validation", "routing", "planning", "outcome",
 ];
 
 const STAGE_LABELS: Record<WorkflowNodeView["stage"], string> = {
@@ -34,14 +34,20 @@ const STAGE_LABELS: Record<WorkflowNodeView["stage"], string> = {
   taxonomy: "Bird taxonomy",
   evidence: "Evidence loop",
   validation: "Validation + HITL",
+  routing: "Entrances + validated journeys",
   planning: "Plan + grounding",
   outcome: "Outcome",
 };
 
-function eventKind(event: AgentRunEvent): "node" | "model" | "tool" | "system" {
+function eventKind(event: AgentRunEvent): "node" | "model" | "tool" | "provider" | "system" {
   if (event.event_type.startsWith("node_")) return "node";
   if (event.event_type.startsWith("model_")) return "model";
   if (event.event_type.startsWith("tool_")) return "tool";
+  if (
+    event.event_type.startsWith("routing_provider_")
+    || event.event_type.startsWith("provider_")
+    || event.event_type.startsWith("route_cache_")
+  ) return "provider";
   return "system";
 }
 
@@ -259,7 +265,7 @@ export function AgentTrace({
       <details className="event-audit">
         <summary>Event audit · {events.length} live events</summary>
         {events.length === 0 ? (
-          <p className="empty-copy">Node, model, tool and checkpoint events will appear during an operation.</p>
+          <p className="empty-copy">Node, model, tool, routing-provider and checkpoint events will appear during an operation.</p>
         ) : (
           <ol className="trace-list" aria-label="Ordered agent events">
             {events.map((event) => {
@@ -290,7 +296,7 @@ export function AgentTrace({
           </ol>
         )}
       </details>
-      <p className="microcopy">The topology comes from the compiled backend graph. A label such as CP 17 · ×3 means the latest saved state for that node is graph step 17 and this execution saved three checkpoints there. Click it to inspect accumulated state. The event audit supplies live node, model and tool spans; model and tool spans are nested inside node wall time.</p>
+      <p className="microcopy">The topology comes from the compiled backend graph. A label such as CP 17 · ×3 means the latest saved state for that node is graph step 17 and this execution saved three checkpoints there. Click it to inspect accumulated state. Model and tool spans remain nested inside node wall time; routing-provider timing is also shown explicitly.</p>
     </section>
   );
 }

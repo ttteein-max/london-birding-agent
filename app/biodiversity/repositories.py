@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import re
+import ssl
 import threading
 import time
 from copy import deepcopy
@@ -13,6 +14,7 @@ from urllib.error import HTTPError, URLError
 from urllib.parse import quote, urlencode
 from urllib.request import Request, urlopen
 
+import certifi
 from pydantic import ValidationError
 
 from app.biodiversity.models import SourceFailure, ToolErrorCode
@@ -77,12 +79,19 @@ class GreenSpaceRepository(Protocol):
 class BoundedJsonClient:
     """Sequential JSON GET client with explicit timeouts and bounded retries."""
 
-    def __init__(self, *, timeout_seconds: float = 15, max_attempts: int = 3) -> None:
+    def __init__(
+        self,
+        *,
+        timeout_seconds: float = 15,
+        max_attempts: int = 3,
+        ssl_context: ssl.SSLContext | None = None,
+    ) -> None:
         if timeout_seconds <= 0 or not 1 <= max_attempts <= 3:
             raise ValueError("timeout must be positive and max_attempts must be 1..3")
         self.timeout_seconds = timeout_seconds
         self.max_attempts = max_attempts
         self.user_agent = "London-Biodiversity-Expedition-Planner/4.0"
+        self.ssl_context = ssl_context or ssl.create_default_context(cafile=certifi.where())
 
     def get_json(
         self, base_url: str, params: dict[str, Any] | None = None
@@ -97,7 +106,11 @@ class BoundedJsonClient:
         last_error: Exception | None = None
         for attempt in range(1, self.max_attempts + 1):
             try:
-                with urlopen(request, timeout=self.timeout_seconds) as response:  # noqa: S310
+                with urlopen(  # noqa: S310
+                    request,
+                    timeout=self.timeout_seconds,
+                    context=self.ssl_context,
+                ) as response:
                     if response.status != 200:
                         raise SourceFailure(
                             ToolErrorCode.source_unavailable,

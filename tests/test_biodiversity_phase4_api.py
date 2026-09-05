@@ -39,6 +39,7 @@ def _settings(tmp_path: Path, *, delay: float = 0) -> APISettings:
         checkpoint_db=tmp_path / "checkpoints.sqlite",
         catalog_db=tmp_path / "catalog.sqlite",
         report_root=tmp_path / "reports",
+        route_runtime=tmp_path / "routes",
         sse_heartbeat_seconds=0.02,
         operation_start_delay_seconds=delay,
     )
@@ -49,6 +50,7 @@ def _public_settings(tmp_path: Path, **updates: object) -> APISettings:
         checkpoint_db=tmp_path / "public-checkpoints.sqlite",
         catalog_db=tmp_path / "public-catalog.sqlite",
         report_root=tmp_path / "public-reports",
+        route_runtime=tmp_path / "public-routes",
         allowed_run_modes=(("fixture", "scripted"),),
         public_demo=True,
         expose_api_docs=False,
@@ -188,11 +190,19 @@ def test_workflow_topology_is_exported_from_the_compiled_graph(
     response = client.get("/api/v1/workflow/topology")
     assert response.status_code == 200
     topology = response.json()
-    assert topology["workflow_version"] == "phase-3.1"
-    assert len(topology["nodes"]) == 25
-    assert len(topology["edges"]) == 42
+    assert topology["workflow_version"] == "phase-5.0"
+    assert len(topology["nodes"]) == 31
+    assert len(topology["edges"]) == 50
     node_ids = {item["node_id"] for item in topology["nodes"]}
     assert {"__start__", "evidence_agent", "actionable_tradeoff_interrupt", "__end__"} <= node_ids
+    assert {
+        "resolve_public_site_entrances",
+        "request_walking_routes",
+        "validate_route_constraints",
+        "rank_route_options",
+        "route_tradeoff_interrupt",
+        "apply_route_tradeoff_choice",
+    } <= node_ids
     assert next(
         item
         for item in topology["nodes"]

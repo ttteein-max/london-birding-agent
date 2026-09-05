@@ -27,6 +27,8 @@ from app.biodiversity.api.schemas import (
     MapEvidenceView,
     OperationAccepted,
     ReplayRunRequest,
+    RouteGeometryView,
+    RouteOptionsView,
     ResumeRunRequest,
     RunDetail,
     RunSummary,
@@ -223,6 +225,52 @@ async def get_checkpoint_map(
             checkpoint_id=checkpoint_id,
         )
     except ValueError as exc:
+        raise _read_error(exc) from None
+
+
+@router.get(
+    "/runs/{thread_id}/checkpoints/{checkpoint_id}/routes",
+    response_model=RouteOptionsView,
+)
+async def get_checkpoint_routes(
+    thread_id: str,
+    checkpoint_id: str,
+    service: Phase4Application = Depends(application),
+) -> RouteOptionsView:
+    try:
+        return await asyncio.to_thread(
+            service.route_options,
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+        )
+    except ValueError as exc:
+        raise _read_error(exc) from None
+
+
+@router.get(
+    "/runs/{thread_id}/checkpoints/{checkpoint_id}/route-geometry/{route_geometry_reference}",
+    response_model=RouteGeometryView,
+)
+async def get_checkpoint_route_geometry(
+    thread_id: str,
+    checkpoint_id: str,
+    route_geometry_reference: str,
+    service: Phase4Application = Depends(application),
+) -> RouteGeometryView:
+    try:
+        return await asyncio.to_thread(
+            service.route_geometry,
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            route_geometry_reference=route_geometry_reference,
+        )
+    except PermissionError:
+        raise forbidden(
+            "Public route geometry is available only for the planned fixture origin."
+        ) from None
+    except ValueError as exc:
+        if str(exc) == "route_geometry_unavailable":
+            raise not_found("route geometry") from None
         raise _read_error(exc) from None
 
 

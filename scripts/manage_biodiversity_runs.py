@@ -1,4 +1,4 @@
-"""Manage durable biodiversity HITL runs, checkpoints, replay, and forks."""
+"""Manage Phase 5 durable biodiversity HITL runs, routes, checkpoints, replay, and forks."""
 
 from __future__ import annotations
 
@@ -20,6 +20,10 @@ from app.biodiversity.orchestration import BackendDependencies
 from app.biodiversity.reporting import (
     default_report_directory,
     save_biodiversity_run_report,
+)
+from app.biodiversity.routing import (
+    RoutingServices,
+    TFL_JOURNEY_ENDPOINT,
 )
 from app.biodiversity.run_models import ForkRequest, RunManifest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
@@ -96,12 +100,42 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _build_graph(
-    *, data_mode: str, model_mode: str, checkpointer: Any
+    *,
+    data_mode: str,
+    model_mode: str,
+    checkpointer: Any,
+    recorder: AgentRunRecorder | None = None,
 ) -> Any:
     dependencies = (
         BackendDependencies.fixture()
         if data_mode == "fixture"
         else BackendDependencies.live()
+    )
+    event_callback = (
+        (lambda event_type, payload: recorder.record_event(event_type, payload=payload))
+        if recorder
+        else None
+    )
+    routing_services = (
+        RoutingServices.fixture(
+            runtime_directory=Path(
+                os.getenv(
+                    "BIODIVERSITY_ROUTE_RUNTIME",
+                    str(PROJECT_ROOT / "data/runtime/routes"),
+                )
+            ),
+            event_callback=event_callback,
+        )
+        if data_mode == "fixture"
+        else RoutingServices.live(
+            runtime_directory=Path(
+                os.getenv(
+                    "BIODIVERSITY_ROUTE_RUNTIME",
+                    str(PROJECT_ROOT / "data/runtime/routes"),
+                )
+            ),
+            event_callback=event_callback,
+        )
     )
     if model_mode == "scripted":
         parser_model, evidence_model, composer_model = (
@@ -112,11 +146,13 @@ def _build_graph(
             evidence_model=evidence_model,
             composer_model=composer_model,
             dependencies=dependencies,
+            routing_services=routing_services,
             checkpointer=checkpointer,
         )
     return build_biodiversity_graph(
         create_live_chat_model(),
         dependencies=dependencies,
+        routing_services=routing_services,
         checkpointer=checkpointer,
     )
 
@@ -143,11 +179,36 @@ def _run_profile(
         raise ValueError(
             "OPENAI_MODEL does not match the model saved in the run manifest"
         )
+    routing_endpoint = (
+        "local-fixture"
+        if data_mode == "fixture"
+        else TFL_JOURNEY_ENDPOINT
+    )
     return RunProfile(
         data_mode=data_mode,
         model_mode=model_mode,
         model_identifier=model_identifier,
         endpoint_fingerprint=endpoint_fingerprint,
+        routing_provider=(
+            "fixture-openrouteservice"
+            if data_mode == "fixture"
+            else "tfl-journey-planner"
+        ),
+        routing_provider_version=(
+            "ors-api-shaped-2026-09-04"
+            if data_mode == "fixture"
+            else "unified-api-v1-least-time-v2"
+        ),
+        routing_profile=(
+            "foot-walking"
+            if data_mode == "fixture"
+            else "public-transport-and-walking"
+        ),
+        routing_endpoint_fingerprint=(
+            "local-fixture"
+            if data_mode == "fixture"
+            else hashlib.sha256(routing_endpoint.encode()).hexdigest()[:16]
+        ),
     )
 
 
@@ -306,28 +367,20 @@ def main() -> None:
                 return
             if args.command == "start":
                 profile = _run_profile(args.data_mode, args.model_mode)
-                graph = (
-                    reader_graph
-                    if profile.data_mode == "fixture"
-                    and profile.model_mode == "scripted"
-                    else _build_graph(
-                        data_mode=profile.data_mode,
-                        model_mode=profile.model_mode,
-                        checkpointer=checkpointer,
-                    )
+                graph = _build_graph(
+                    data_mode=profile.data_mode,
+                    model_mode=profile.model_mode,
+                    checkpointer=checkpointer,
+                    recorder=recorder,
                 )
             else:
                 manifest = reader.manifest(thread_id=args.thread_id)
                 profile = _resolve_execution_profile(args, manifest)
-                graph = (
-                    reader_graph
-                    if profile.data_mode == "fixture"
-                    and profile.model_mode == "scripted"
-                    else _build_graph(
-                        data_mode=profile.data_mode,
-                        model_mode=profile.model_mode,
-                        checkpointer=checkpointer,
-                    )
+                graph = _build_graph(
+                    data_mode=profile.data_mode,
+                    model_mode=profile.model_mode,
+                    checkpointer=checkpointer,
+                    recorder=recorder,
                 )
             manager = BiodiversityRunManager(
                 graph,

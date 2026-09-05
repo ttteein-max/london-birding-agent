@@ -1,6 +1,6 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { mapFixture } from "./fixtures";
+import { mapFixture, routeGeometryFixture, routeOptionsFixture } from "./fixtures";
 
 const addSource = vi.fn();
 const addLayer = vi.fn();
@@ -9,20 +9,28 @@ const remove = vi.fn();
 const popupContent = vi.fn();
 const markerElements: HTMLElement[] = [];
 const markerCoordinates: unknown[] = [];
+const mapOptions: unknown[] = [];
+const mapHandlers: Record<string, Array<() => void>> = {};
+const setStyle = vi.fn(() => {
+  mapHandlers["style.load"]?.forEach((handler) => handler());
+});
 
 vi.mock("maplibre-gl", () => {
   class Map {
+    constructor(options: unknown) { mapOptions.push(options); }
     addControl = vi.fn();
     addSource = addSource;
     addLayer = addLayer;
     fitBounds = fitBounds;
     remove = remove;
+    setStyle = setStyle;
     getCanvas = () => ({ style: { cursor: "" } });
     project([longitude, latitude]: [number, number]) {
       return { x: longitude * 10_000, y: -latitude * 10_000 };
     }
     on(name: string, layerOrCallback: string | (() => void), callback?: () => void) {
       const handler = typeof layerOrCallback === "function" ? layerOrCallback : callback;
+      if (handler) (mapHandlers[name] ??= []).push(handler);
       if (name === "load") handler?.();
       return this;
     }
@@ -54,6 +62,78 @@ describe("privacy-bounded evidence map", () => {
     markerElements.length = 0;
     markerCoordinates.length = 0;
     popupContent.mockClear();
+    mapOptions.length = 0;
+    Object.keys(mapHandlers).forEach((key) => delete mapHandlers[key]);
+    setStyle.mockClear();
+    addSource.mockClear();
+    addLayer.mockClear();
+  });
+
+  it("uses the configured MapLibre style, keeps attribution, and draws route data above it", async () => {
+    render(<EvidenceMap
+      data={mapFixture}
+      loading={false}
+      error={null}
+      basemapStyleUrl="https://tiles.openfreemap.org/styles/liberty"
+      basemapAttributions={["OpenFreeMap", "OpenMapTiles", "© OpenStreetMap contributors"]}
+      routeGeometry={routeGeometryFixture}
+      routeOptions={routeOptionsFixture}
+    />);
+
+    expect(mapOptions[0]).toMatchObject({
+      style: "https://tiles.openfreemap.org/styles/liberty",
+      attributionControl: { compact: true },
+    });
+    await waitFor(() => expect(addSource).toHaveBeenCalledWith("walking-route", expect.any(Object)));
+    expect(addSource).toHaveBeenCalledWith("selected-entrance", expect.any(Object));
+    expect(addSource).toHaveBeenCalledWith("start-context", expect.objectContaining({
+      data: expect.objectContaining({
+        features: [expect.objectContaining({
+          geometry: { type: "Point", coordinates: [-0.161005, 51.476041] },
+          properties: expect.objectContaining({ layer: "route_start" }),
+        })],
+      }),
+    }));
+    expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: "walking-route-outbound" }));
+    expect(addLayer).toHaveBeenCalledWith(expect.objectContaining({ id: "walking-route-return" }));
+    expect(screen.getByLabelText("Map legend")).toHaveTextContent("Route start");
+    expect(screen.getByText("OpenFreeMap")).toBeInTheDocument();
+    expect(screen.queryByText("Basemap unavailable — evidence overlays remain available")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the empty style and keeps overlays when the basemap errors", async () => {
+    render(<EvidenceMap
+      data={mapFixture}
+      loading={false}
+      error={null}
+      basemapStyleUrl="https://tiles.openfreemap.org/styles/liberty"
+    />);
+    mapHandlers.error[0]();
+    expect(await screen.findByText("Basemap unavailable — evidence overlays remain available")).toBeInTheDocument();
+    expect(setStyle).toHaveBeenCalledWith(expect.objectContaining({ version: 8, sources: {} }));
+    await waitFor(() => expect(addSource).toHaveBeenCalledWith("aggregate-grid", expect.any(Object)));
+  });
+
+  it("draws materially identical outbound and return corridors only once", async () => {
+    render(<EvidenceMap
+      data={mapFixture}
+      loading={false}
+      error={null}
+      routeGeometry={{
+        ...routeGeometryFixture,
+        geojson: {
+          type: "FeatureCollection",
+          features: [
+            { type: "Feature", properties: { direction: "outbound" }, geometry: { type: "LineString", coordinates: [[-0.16, 51.48], [-0.155, 51.49], [-0.1519, 51.5076]] } },
+            { type: "Feature", properties: { direction: "return" }, geometry: { type: "LineString", coordinates: [[-0.1519, 51.5076], [-0.1551, 51.4901], [-0.16, 51.48]] } },
+          ],
+        },
+      }}
+    />);
+    await waitFor(() => expect(addSource).toHaveBeenCalledWith("walking-route", expect.any(Object)));
+    const routeSource = addSource.mock.calls.find(([name]) => name === "walking-route")?.[1];
+    expect(routeSource.data.features).toHaveLength(1);
+    expect(routeSource.data.features[0].properties.direction).toBe("outbound_return");
   });
 
   it("uses an offline style, exposes a text legend, and renders low-evidence state", async () => {

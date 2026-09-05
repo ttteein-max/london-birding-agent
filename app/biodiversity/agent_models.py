@@ -16,6 +16,7 @@ from app.biodiversity.models import (
     SiteSearchAction,
     StrictModel,
 )
+from app.biodiversity.routing_models import ValidatedWalkingPlan
 
 
 NonEmptyText = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -84,7 +85,7 @@ class PlanConstraint(StrictModel):
 
 
 class BiodiversityExpeditionPlan(StrictModel):
-    """Strict Phase 3 plan returned only after deterministic grounding checks."""
+    """One expedition plan; Phase 5 walking facts remain a nested optional field."""
 
     status: ExpeditionPlanStatus
     target_species: NonEmptyText
@@ -103,6 +104,8 @@ class BiodiversityExpeditionPlan(StrictModel):
     evidence_gate_passed: bool
     low_confidence_accepted: bool = False
     low_confidence_notice: NonEmptyText | None = None
+    walking_plan: ValidatedWalkingPlan | None = None
+    itinerary_summary: NonEmptyText | None = None
     explanation: NonEmptyText
     generated_by: Literal[
         "llm_composer",

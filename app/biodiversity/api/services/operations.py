@@ -8,6 +8,7 @@ import json
 import os
 from contextlib import suppress
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
@@ -22,6 +23,8 @@ from app.biodiversity.api.schemas import (
     OperationKind,
     OperationView,
     PendingDecisionView,
+    RouteGeometryView,
+    RouteOptionsView,
     ResumeRunRequest,
     RunDetail,
     RunSummary,
@@ -41,6 +44,11 @@ from app.biodiversity.observability import (
 )
 from app.biodiversity.orchestration import BackendDependencies
 from app.biodiversity.reporting import save_biodiversity_run_report
+from app.biodiversity.routing import (
+    FileRouteGeometryStore,
+    RoutingServices,
+    TFL_JOURNEY_ENDPOINT,
+)
 from app.biodiversity.run_models import ForkRequest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
 from app.biodiversity.testing import make_scripted_biodiversity_models
@@ -66,11 +74,38 @@ def _profile(
             raise ValueError("Configured model does not match the saved run manifest")
         endpoint = os.getenv("OPENAI_BASE_URL") or "https://api.openai.com/v1"
         endpoint_fingerprint = hashlib.sha256(endpoint.encode()).hexdigest()[:16]
+    routing_provider = (
+        "fixture-openrouteservice"
+        if data_mode == "fixture"
+        else "tfl-journey-planner"
+    )
+    routing_provider_version = (
+        "ors-api-shaped-2026-09-04"
+        if data_mode == "fixture"
+        else "unified-api-v1-least-time-v2"
+    )
+    routing_endpoint = (
+        "local-fixture"
+        if data_mode == "fixture"
+        else TFL_JOURNEY_ENDPOINT
+    )
     return RunProfile(
         data_mode=data_mode,
         model_mode=model_mode,
         model_identifier=model_identifier,
         endpoint_fingerprint=endpoint_fingerprint,
+        routing_provider=routing_provider,
+        routing_provider_version=routing_provider_version,
+        routing_profile=(
+            "foot-walking"
+            if data_mode == "fixture"
+            else "public-transport-and-walking"
+        ),
+        routing_endpoint_fingerprint=(
+            "local-fixture"
+            if data_mode == "fixture"
+            else hashlib.sha256(routing_endpoint.encode()).hexdigest()[:16]
+        ),
     )
 
 
@@ -94,18 +129,46 @@ class _OperationEventSink:
 class GraphRuntime:
     """Build managers around one lifespan-owned durable checkpointer."""
 
-    def __init__(self, checkpointer: Any) -> None:
+    def __init__(self, checkpointer: Any, *, route_runtime: Path) -> None:
         self.checkpointer = checkpointer
+        self.route_runtime = route_runtime
         self._reader_graph = self._build_graph(
             data_mode="fixture",
             model_mode="scripted",
         )
 
-    def _build_graph(self, *, data_mode: str, model_mode: str) -> Any:
+    def _build_graph(
+        self,
+        *,
+        data_mode: str,
+        model_mode: str,
+        recorder: AgentRunRecorder | None = None,
+    ) -> Any:
         dependencies = (
             BackendDependencies.fixture()
             if data_mode == "fixture"
             else BackendDependencies.live()
+        )
+        event_callback = (
+            (
+                lambda event_type, payload: recorder.record_event(
+                    event_type, payload=payload
+                )
+            )
+            if recorder is not None
+            else None
+        )
+        route_runtime = self.route_runtime
+        routing_services = (
+            RoutingServices.fixture(
+                runtime_directory=route_runtime,
+                event_callback=event_callback,
+            )
+            if data_mode == "fixture"
+            else RoutingServices.live(
+                runtime_directory=route_runtime,
+                event_callback=event_callback,
+            )
         )
         if model_mode == "scripted":
             parser, evidence, composer = make_scripted_biodiversity_models()
@@ -114,11 +177,13 @@ class GraphRuntime:
                 evidence_model=evidence,
                 composer_model=composer,
                 dependencies=dependencies,
+                routing_services=routing_services,
                 checkpointer=self.checkpointer,
             )
         return build_biodiversity_graph(
             create_live_chat_model(),
             dependencies=dependencies,
+            routing_services=routing_services,
             checkpointer=self.checkpointer,
         )
 
@@ -141,6 +206,7 @@ class GraphRuntime:
         graph = self._build_graph(
             data_mode=profile.data_mode,
             model_mode=profile.model_mode,
+            recorder=recorder,
         )
         return BiodiversityRunManager(
             graph,
@@ -152,6 +218,10 @@ class GraphRuntime:
         manifest = self.reader().manifest(thread_id=thread_id)
         if manifest is None:
             raise ValueError("Legacy threads without a run manifest are not API-mutable")
+        if manifest.workflow_version != "phase-5.0":
+            raise ValueError(
+                "Phase 4 executions are read-only; create a new Phase 5 run."
+            )
         return _profile(
             manifest.data_mode,
             manifest.model_mode,
@@ -268,6 +338,33 @@ class OperationEngine:
                 ),
                 None,
             )
+            if interrupt_kind == "route_tradeoff":
+                recorder.record_event(
+                    "route_hitl_requested",
+                    payload={
+                        "status": "waiting_for_input",
+                        "checkpoint_id": checkpoint_id,
+                    },
+                )
+            walking_plan = dict(values.get("validated_walking_plan") or {})
+            if walking_plan:
+                recorder.record_event(
+                    "route_finalised",
+                    payload={
+                        "status": str(walking_plan.get("status") or "unknown"),
+                        "provider": walking_plan.get("provider") or "not_called",
+                        "cache_status": walking_plan.get("cache_status") or "bypassed",
+                        "route_id": next(
+                            (
+                                str(item.get("option_id"))
+                                for item in values.get("route_options") or []
+                                if item.get("site_id")
+                                == walking_plan.get("selected_site_id")
+                            ),
+                            "no-selected-route",
+                        ),
+                    },
+                )
             status = "waiting_for_input" if interrupt_kind else "completed"
             recorder.finish(
                 "completed",
@@ -441,7 +538,10 @@ class Phase4Application:
         self.settings = settings
         self.catalog = catalog
         self.broker = InMemoryAgentEventBroker()
-        self.runtime = GraphRuntime(checkpointer)
+        self.runtime = GraphRuntime(
+            checkpointer,
+            route_runtime=settings.route_runtime,
+        )
         self.views = SafeCheckpointViews(
             settings.osm_directory,
             expose_request_details=not settings.public_demo,
@@ -644,6 +744,39 @@ class Phase4Application:
             checkpoints=manager.history(thread_id=thread_id),
             branches=manager.branches(thread_id=thread_id),
             executions=manager.executions(thread_id=thread_id),
+        )
+
+    def route_options(
+        self,
+        *,
+        thread_id: str,
+        checkpoint_id: str,
+    ) -> RouteOptionsView:
+        return self.views.route_options(
+            self.runtime.reader(),
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+        )
+
+    def route_geometry(
+        self,
+        *,
+        thread_id: str,
+        checkpoint_id: str,
+        route_geometry_reference: str,
+    ) -> RouteGeometryView:
+        manager = self.runtime.reader()
+        if self.settings.public_demo:
+            manifest = manager.manifest(thread_id=thread_id)
+            if manifest is None or manifest.data_mode != "fixture":
+                raise PermissionError("public_route_geometry_requires_fixture")
+        return self.views.route_geometry(
+            manager,
+            FileRouteGeometryStore(self.settings.route_runtime / "geometries"),
+            thread_id=thread_id,
+            checkpoint_id=checkpoint_id,
+            route_geometry_reference=route_geometry_reference,
+            public_demo=self.settings.public_demo,
         )
 
     def compare(

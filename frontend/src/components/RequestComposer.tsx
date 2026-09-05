@@ -86,7 +86,7 @@ export function RequestComposer({ busy, allowedModes, defaultMode, onSubmit }: P
         </div>
       </form>
       <p className="microcopy">
-        Use a London postcode, named place or explicit coordinates for the start. Named places are verified before use. Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
+        Use a London postcode, named place or explicit coordinates for the start. Named places are verified before use. “Two-hour expedition” means a two-hour total outing including outbound and return travel. Historical records guide evidence-grounded candidates; they do not predict or guarantee a sighting.
       </p>
     </section>
   );

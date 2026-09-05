@@ -19,13 +19,49 @@ interface Props {
   onCompare: (checkpointA: string, checkpointB: string) => Promise<void>;
 }
 
+type ComparisonFieldName =
+  | "request_constraints"
+  | "selected_taxon"
+  | "evidence_outcome"
+  | "weather_status"
+  | "plan_status"
+  | "recommended_site_ids"
+  | "contextual_site_ids"
+  | "limitations"
+  | "provenance_sources"
+  | "applied_user_decisions"
+  | "route_status"
+  | "selected_route_site_id"
+  | "total_walking_distance_km"
+  | "remaining_field_time_minutes"
+  | "route_constraints";
+
+const COMPARISON_FIELDS: readonly ComparisonFieldName[] = [
+  "request_constraints",
+  "selected_taxon",
+  "evidence_outcome",
+  "weather_status",
+  "plan_status",
+  "recommended_site_ids",
+  "contextual_site_ids",
+  "limitations",
+  "provenance_sources",
+  "applied_user_decisions",
+  "route_status",
+  "selected_route_site_id",
+  "total_walking_distance_km",
+  "remaining_field_time_minutes",
+  "route_constraints",
+];
+
 const FIELDS = [
   ["search_radius_km", "Search radius (km)"],
   ["seasonal_window_radius_months", "Seasonal window (months)"],
   ["target_month_override", "Target month override"],
   ["target_local_date", "Target local date"],
   ["rain_preference", "Rain preference"],
-  ["duration_hours", "Duration (hours)"],
+  ["duration_hours", "Total outing duration (hours)"],
+  ["maximum_walking_distance_km", "Maximum round-trip walking (km)"],
   ["selected_related_taxon_key", "Validated related taxon key"],
 ] as const;
 
@@ -73,7 +109,7 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
   const fork = async (event: FormEvent) => {
     event.preventDefault();
     if (!selectedCheckpoint || !value) return;
-    const numericFields = new Set(["search_radius_km", "seasonal_window_radius_months", "target_month_override", "duration_hours", "selected_related_taxon_key"]);
+    const numericFields = new Set(["search_radius_km", "seasonal_window_radius_months", "target_month_override", "duration_hours", "maximum_walking_distance_km", "selected_related_taxon_key"]);
     const parsed: string | number = numericFields.has(field) ? Number(value) : value;
     await onFork({
       checkpoint_id: selectedCheckpoint.checkpoint_id,
@@ -84,18 +120,7 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
   };
 
   const comparisonFields = comparison
-    ? [
-        "request_constraints",
-        "selected_taxon",
-        "evidence_outcome",
-        "weather_status",
-        "plan_status",
-        "recommended_site_ids",
-        "contextual_site_ids",
-        "limitations",
-        "provenance_sources",
-        "applied_user_decisions",
-      ] as const
+    ? COMPARISON_FIELDS.filter((name) => comparison[name] != null)
     : [];
 
   return (
@@ -172,6 +197,7 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
         <div className="comparison-results" aria-live="polite">
           {!comparison ? <p className="empty-copy">Choose two checkpoints to view server-produced deterministic differences.</p> : comparisonFields.map((name) => {
             const compared = comparison[name];
+            if (!compared) return null;
             return (
               <article key={name} className={compared.changed ? "changed" : "unchanged"}>
                 <h4>{humanise(name)}<span>{compared.changed ? "Changed" : "Unchanged"}</span></h4>

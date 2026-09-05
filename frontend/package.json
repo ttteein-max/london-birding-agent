@@ -1,17 +1,17 @@
 {
   "name": "london-biodiversity-expedition-planner",
   "private": true,
-  "version": "4.0.0",
+  "version": "5.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite --host 127.0.0.1",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -b --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "api:types": "openapi-typescript ../docs/phase-4-openapi.json -o src/api/schema.d.ts"
+    "api:types": "openapi-typescript ../docs/phase-5-openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
     "maplibre-gl": "^6.6.0",

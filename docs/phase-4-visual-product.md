@@ -1,5 +1,7 @@
 # Phase 4 Visual Product
 
+This document records the Phase 4 baseline. Phase 5 now supplies the current basemap and walking-route behavior; see [Phase 5 geospatial and routing hardening](phase-5-geospatial-routing.md).
+
 Phase 4 turns the London Biodiversity Expedition Planner into a local, browser-based product while preserving the deterministic evidence and privacy boundaries established in Phases 1–3. Its core interaction is map + evidence + agent execution + human decisions + time travel. It is not a chat interface.
 
 ![Phase 4 architecture](diagrams/phase-4-visual-product.svg)
@@ -180,7 +182,7 @@ Configuration stays server-side unless prefixed `VITE_` below:
 | `BIODIVERSITY_SSE_HEARTBEAT_SECONDS` | `15` | Idle SSE heartbeat interval |
 | `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_BASE_URL` | unset | Opt-in live model runtime; never returned to the browser |
 | `VITE_API_BASE_URL` | same origin | Optional public API origin |
-| `VITE_MAP_STYLE_URL` | local empty style | Optional public MapLibre style URL; must not contain a secret token |
+| `BIODIVERSITY_BASEMAP_STYLE_URL` | OpenFreeMap Liberty | Phase 5 backend-validated, browser-visible MapLibre style; secret-bearing `VITE_*` map settings are not supported |
 
 FastAPI and Vite bind to `127.0.0.1` in the documented development flow. To use fixture/live or live/live, export `OPENAI_API_KEY` and `OPENAI_MODEL` (and optionally `OPENAI_BASE_URL`) before starting FastAPI, then choose that mode in the browser. Do not put paid map tokens or model credentials in any `VITE_` variable.
 

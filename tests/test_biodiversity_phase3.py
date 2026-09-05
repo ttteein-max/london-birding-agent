@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 import json
-from datetime import date
+from datetime import UTC, date, datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 from langgraph.types import Command
@@ -17,7 +18,7 @@ from app.biodiversity.graph import (
 )
 from app.biodiversity.observability import AgentRunRecorder
 from app.biodiversity.reporting import save_biodiversity_run_report
-from app.biodiversity.run_models import ForkRequest, RunProfile
+from app.biodiversity.run_models import ForkRequest, RunManifest, RunProfile
 from app.biodiversity.runs import BiodiversityRunManager
 from app.biodiversity.testing import (
     ScriptedRequestParserModel,
@@ -82,9 +83,10 @@ def test_sqlite_interrupt_survives_graph_rebuild_and_thread_isolation(
             if item["tool_name"] == "search_occurrences"
         ]
         assert len(occurrence_calls) == 1
-        assert json.loads(occurrence_calls[0]["canonical_arguments"])[
-            "accepted_taxon_key"
-        ] == 2489281
+        assert (
+            json.loads(occurrence_calls[0]["canonical_arguments"])["accepted_taxon_key"]
+            == 2489281
+        )
         completed = manager.resume(
             thread_id="one",
             resume={"option": "keep_constraints_accept_low_confidence"},
@@ -93,9 +95,10 @@ def test_sqlite_interrupt_survives_graph_rebuild_and_thread_isolation(
         assert completed["final_validated_plan"]["recommended_sites"] == []
         assert completed["final_validated_plan"]["evidence_gate_passed"] is False
         assert completed["final_validated_plan"]["low_confidence_accepted"] is True
-        assert "evidence gate did not pass" in completed["final_validated_plan"][
-            "low_confidence_notice"
-        ]
+        assert (
+            "evidence gate did not pass"
+            in completed["final_validated_plan"]["low_confidence_notice"]
+        )
 
 
 def test_saved_run_manifest_rejects_runtime_mode_switch_without_mutation(
@@ -124,6 +127,44 @@ def test_saved_run_manifest_rejects_runtime_mode_switch_without_mutation(
                 resume={"accepted_taxon_key": 2489281},
             )
         assert len(mismatched.history(thread_id="manifest")) == before
+
+
+def test_phase4_manifest_remains_readable_but_is_explicitly_read_only() -> None:
+    stored = RunManifest.model_validate(
+        {
+            "workflow_version": "phase-3.1",
+            "state_schema_version": 2,
+            "data_mode": "fixture",
+            "model_mode": "scripted",
+            "model_identifier": "scripted-biodiversity-v1",
+            "endpoint_fingerprint": "local-scripted",
+            "created_at": datetime.now(UTC),
+        }
+    )
+    assert stored.routing_provider is None
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    snapshot = SimpleNamespace(values={"run_manifest": stored.model_dump(mode="json")})
+    with pytest.raises(ValueError, match="read-only.*new Phase 5 run"):
+        manager._validate_run_profile(snapshot)
+
+
+def test_phase5_route_schema_one_remains_readable_but_cannot_resume() -> None:
+    stored = RunManifest.model_validate(
+        {
+            **RunProfile().model_dump(mode="json"),
+            "route_schema_version": 1,
+            "created_at": datetime.now(UTC),
+        }
+    )
+    graph, _ = _graph(create_biodiversity_checkpointer())
+    manager = BiodiversityRunManager(graph)
+    snapshot = SimpleNamespace(values={"run_manifest": stored.model_dump(mode="json")})
+    with pytest.raises(
+        ValueError,
+        match="Route-schema-1 execution is read-only.*new Phase 5 run",
+    ):
+        manager._validate_run_profile(snapshot)
 
 
 def test_ambiguous_payload_has_taxonomy_bounded_previews_and_no_private_data() -> None:
@@ -262,9 +303,7 @@ def test_related_taxon_requires_second_interrupt_and_rejects_forged_key() -> Non
     )
     payload = _interrupt(second)
     assert payload["kind"] == "related_taxon_selection"
-    assert {item["relation_level"] for item in payload["candidates"]} == {
-        "same_genus"
-    }
+    assert {item["relation_level"] for item in payload["candidates"]} == {"same_genus"}
     with pytest.raises(ValueError, match="not present"):
         manager.resume(
             thread_id="related",
@@ -358,14 +397,13 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
     assert fork.final_checkpoint_id != original_final
     original_snapshot = next(
         item
-        for item in graph.get_state_history(
-            {"configurable": {"thread_id": "travel"}}
-        )
+        for item in graph.get_state_history({"configurable": {"thread_id": "travel"}})
         if item.config["configurable"]["checkpoint_id"] == original_final
     )
-    assert original_snapshot.values["final_validated_plan"] == original[
-        "final_validated_plan"
-    ]
+    assert (
+        original_snapshot.values["final_validated_plan"]
+        == original["final_validated_plan"]
+    )
     comparison = manager.compare(
         thread_id="travel",
         checkpoint_a=original_final,
@@ -377,11 +415,8 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
 
     fork_snapshot = next(
         item
-        for item in graph.get_state_history(
-            {"configurable": {"thread_id": "travel"}}
-        )
-        if item.config["configurable"]["checkpoint_id"]
-        == fork.final_checkpoint_id
+        for item in graph.get_state_history({"configurable": {"thread_id": "travel"}})
+        if item.config["configurable"]["checkpoint_id"] == fork.final_checkpoint_id
     )
     audit_ids = [
         item["call_id"] for item in fork_snapshot.values["executed_tool_call_audit"]
@@ -398,9 +433,7 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
         for item in refreshed_history
         if item.execution_id == before_compose.execution_id
     ]
-    assert {item.final_checkpoint_id for item in original_summaries} == {
-        original_final
-    }
+    assert {item.final_checkpoint_id for item in original_summaries} == {original_final}
     public_contract = json.dumps(
         {
             "history": [item.model_dump(mode="json") for item in history],
@@ -512,9 +545,7 @@ def test_phase3_events_and_report_include_checkpoint_branch_metadata(
     assert metadata["execution_id"]
     assert {span.kind for span in recorder.spans} == {"node", "model", "tool"}
     checkpoint_events = [
-        item
-        for item in events["events"]
-        if item["event_type"] == "checkpoint_created"
+        item for item in events["events"] if item["event_type"] == "checkpoint_created"
     ]
     history = manager.history(thread_id="reported")
     assert len(checkpoint_events) == len(history)

@@ -84,12 +84,18 @@ def test_osm_and_boundary_snapshot_file_checksums_without_eternal_counts() -> No
                 provenance_path.name.replace(".provenance.json", ".geojson")
             )
             assert file_sha256(artifact) == provenance["checksum_sha256"]
-            assert provenance["snapshot_version"] == "2026-08-31"
+            assert artifact.stem.endswith(provenance["snapshot_version"])
     osm_provenance = json.loads(
-        next((PROJECT_ROOT / "data" / "osm").glob("*.provenance.json")).read_text()
+        (
+            PROJECT_ROOT
+            / "data/osm/london-green-space-candidates-2026-08-31.provenance.json"
+        ).read_text()
     )
     osm = json.loads(
-        next((PROJECT_ROOT / "data" / "osm").glob("*.geojson")).read_text()
+        (
+            PROJECT_ROOT
+            / "data/osm/london-green-space-candidates-2026-08-31.geojson"
+        ).read_text()
     )
     assert len(osm["features"]) == osm_provenance["feature_count"]
     assert osm_provenance["polygon_footprint_count"] > 0

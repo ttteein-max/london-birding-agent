@@ -75,12 +75,29 @@ def route_after_evidence_agent(
     return "deterministic_validation"
 
 
-def route_after_validation(state: BiodiversityAgentState) -> Literal["actionable_tradeoff_interrupt", "compose_expedition_plan", "terminal"]:
+def route_after_validation(state: BiodiversityAgentState) -> Literal["actionable_tradeoff_interrupt", "resolve_public_site_entrances", "terminal"]:
     if state.get("terminal_status"):
         return "terminal"
     if state.get("pending_hitl_kind") == "actionable_tradeoff":
         return "actionable_tradeoff_interrupt"
+    return "resolve_public_site_entrances"
+
+
+def route_after_route_ranking(
+    state: BiodiversityAgentState,
+) -> Literal["route_tradeoff_interrupt", "compose_expedition_plan"]:
+    if state.get("pending_hitl_kind") == "route_tradeoff":
+        return "route_tradeoff_interrupt"
     return "compose_expedition_plan"
+
+
+def route_after_route_choice(
+    state: BiodiversityAgentState,
+) -> Literal["request_walking_routes", "compose_expedition_plan"]:
+    route = state.get("route_decision_route")
+    if route not in {"request_walking_routes", "compose_expedition_plan"}:
+        raise ValueError("Validated route choice did not set a valid route")
+    return route
 
 
 def route_after_user_choice(state: BiodiversityAgentState) -> Literal[
@@ -103,6 +120,8 @@ def route_after_user_choice(state: BiodiversityAgentState) -> Literal[
 def route_after_grounding(state: BiodiversityAgentState) -> Literal["revise_expedition_plan", "deterministic_plan_fallback", "complete"]:
     if not state.get("grounding_errors"):
         return "complete"
+    if state.get("composer_failed"):
+        return "deterministic_plan_fallback"
     if state.get("plan_revision_count", 0) < 1:
         return "revise_expedition_plan"
     return "deterministic_plan_fallback"
