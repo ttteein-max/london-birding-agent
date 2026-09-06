@@ -190,6 +190,7 @@ class StateView(StrictModel):
 class RunBranch(StrictModel):
     thread_id: str = Field(min_length=1)
     branch_id: str = Field(min_length=1)
+    branch_label: str | None = Field(default=None, max_length=80)
     parent_branch_id: str | None = None
     head_checkpoint_id: str = Field(min_length=1)
     final_checkpoint_id: str | None = None

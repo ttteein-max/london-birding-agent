@@ -3955,6 +3955,18 @@
             "minLength": 1,
             "title": "Branch Id"
           },
+          "branch_label": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Branch Label"
+          },
           "parent_branch_id": {
             "anyOf": [
               {

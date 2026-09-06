@@ -6,7 +6,7 @@ import type {
   PlanComparison,
   StateView,
 } from "../api/contracts";
-import { compactDate, humanise, shortId } from "../utils";
+import { compactDate, compareCreatedAt, humanise, shortId } from "../utils";
 
 interface Props {
   history: HistoryView;
@@ -65,8 +65,52 @@ const FIELDS = [
   ["selected_related_taxon_key", "Validated related taxon key"],
 ] as const;
 
+type Branch = NonNullable<HistoryView["branches"]>[number];
+
+const FORK_COMPARISON_LABELS: Record<string, { label: string; unit?: string }> = {
+  search_radius_km: { label: "Search radius", unit: " km" },
+  seasonal_window_radius_months: { label: "Seasonal window", unit: " months" },
+  target_month_override: { label: "Target month" },
+  target_local_date: { label: "Target date" },
+  rain_preference: { label: "Rain preference" },
+  duration_hours: { label: "Outing duration", unit: " hours" },
+  maximum_walking_distance_km: { label: "Maximum walking distance", unit: " km" },
+  selected_related_taxon_key: { label: "Related taxon" },
+};
+
+function branchDisplayName(branch: Branch, branches: Branch[]): string {
+  if (!branch.parent_branch_id) return "Original branch";
+  const forkIndex = branches.filter((item) => item.parent_branch_id).findIndex((item) => item.branch_id === branch.branch_id);
+  return `Fork branch ${forkIndex + 1}`;
+}
+
+function branchComparisonName(branch: Branch, branches: Branch[]): string {
+  const type = branchDisplayName(branch, branches);
+  return branch.branch_label ? `${type} “${branch.branch_label}”` : type;
+}
+
+function compareBranches(left: Branch, right: Branch): number {
+  const originalOrder = Number(Boolean(left.parent_branch_id)) - Number(Boolean(right.parent_branch_id));
+  return originalOrder || compareCreatedAt(left, right);
+}
+
+function branchForkSummary(branch: Branch): string {
+  const entries = Object.entries(branch.fork_updates ?? {});
+  if (entries.length === 0) return "original constraints";
+  return entries.map(([key, value]) => {
+    const field = FORK_COMPARISON_LABELS[key];
+    return `${field?.label ?? humanise(key)} → ${String(value)}${field?.unit ?? ""}`;
+  }).join(" · ");
+}
+
+function checkpointOptionLabel(checkpoint: CheckpointSummary, branch?: Branch): string {
+  const finality = checkpoint.checkpoint_id === branch?.final_checkpoint_id ? "Final" : "Intermediate";
+  return `CP ${checkpoint.graph_step ?? "—"} · ${finality} · ${humanise(checkpoint.node_id)} · ${shortId(checkpoint.checkpoint_id, 12)}`;
+}
+
 export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadState, onReplay, onFork, onCompare }: Props) {
-  const checkpoints = history.checkpoints ?? [];
+  const checkpoints = useMemo(() => history.checkpoints ?? [], [history.checkpoints]);
+  const branches = useMemo(() => [...(history.branches ?? [])].sort(compareBranches), [history.branches]);
   const [selected, setSelected] = useState(checkpoints[0]?.checkpoint_id ?? "");
   const [field, setField] = useState<(typeof FIELDS)[number][0]>("search_radius_km");
   const [value, setValue] = useState("");
@@ -76,9 +120,28 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
   const [forkStates, setForkStates] = useState<Record<string, StateView | null>>({});
   const selectedCheckpoint = checkpoints.find((item) => item.checkpoint_id === selected) ?? checkpoints[0];
   const originalFinal = useMemo(
-    () => (history.branches ?? []).find((branch) => !branch.parent_branch_id)?.final_checkpoint_id,
-    [history.branches],
+    () => branches.find((branch) => !branch.parent_branch_id)?.final_checkpoint_id,
+    [branches],
   );
+  const latestForkFinal = useMemo(
+    () => [...branches].reverse().find((branch) => branch.parent_branch_id && branch.final_checkpoint_id)?.final_checkpoint_id,
+    [branches],
+  );
+  const availableCheckpointIds = useMemo(
+    () => new Set(checkpoints.map((checkpoint) => checkpoint.checkpoint_id)),
+    [checkpoints],
+  );
+  const comparisonGroups = useMemo(() => {
+    const groups = branches.map((branch) => ({
+      branch,
+      checkpoints: checkpoints.filter((checkpoint) => checkpoint.branch_id === branch.branch_id),
+    })).filter((group) => group.checkpoints.length > 0);
+    const branchIds = new Set(branches.map((branch) => branch.branch_id));
+    const ungrouped = checkpoints.filter((checkpoint) => !branchIds.has(checkpoint.branch_id));
+    return ungrouped.length > 0 ? [...groups, { branch: null, checkpoints: ungrouped }] : groups;
+  }, [branches, checkpoints]);
+  const resolvedCompareA = compareA && availableCheckpointIds.has(compareA) ? compareA : originalFinal ?? "";
+  const resolvedCompareB = compareB && availableCheckpointIds.has(compareB) ? compareB : latestForkFinal ?? "";
 
   useEffect(() => {
     if (!selectedCheckpoint) return;
@@ -121,7 +184,29 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
 
   const comparisonFields = comparison
     ? COMPARISON_FIELDS.filter((name) => comparison[name] != null)
+      .sort((left, right) => Number(comparison[right]?.changed ?? false) - Number(comparison[left]?.changed ?? false))
     : [];
+  const comparedCheckpointA = checkpoints.find((checkpoint) => checkpoint.checkpoint_id === comparison?.checkpoint_a);
+  const comparedCheckpointB = checkpoints.find((checkpoint) => checkpoint.checkpoint_id === comparison?.checkpoint_b);
+  const comparedBranchA = branches.find((branch) => branch.branch_id === comparedCheckpointA?.branch_id);
+  const comparedBranchB = branches.find((branch) => branch.branch_id === comparedCheckpointB?.branch_id);
+  const changedFieldCount = comparisonFields.filter((name) => comparison?.[name]?.changed).length;
+
+  const renderCheckpointOptions = () => comparisonGroups.map(({ branch, checkpoints: groupedCheckpoints }) => (
+    <optgroup
+      key={branch?.branch_id ?? "ungrouped"}
+      label={branch ? `${branchComparisonName(branch, branches)} · Branch ${shortId(branch.branch_id)} · ${branchForkSummary(branch)}` : "Other checkpoints"}
+    >
+      {groupedCheckpoints.map((checkpoint) => (
+        <option key={checkpoint.checkpoint_id} value={checkpoint.checkpoint_id}>{checkpointOptionLabel(checkpoint, branch ?? undefined)}</option>
+      ))}
+    </optgroup>
+  ));
+
+  const comparedIdentity = (checkpoint: CheckpointSummary | undefined, branch: Branch | undefined, checkpointId?: string) => {
+    if (!checkpoint) return `Checkpoint ${shortId(checkpointId, 12)}`;
+    return `${branch ? branchComparisonName(branch, branches) : "Unknown branch"} · ${checkpointOptionLabel(checkpoint, branch)}`;
+  };
 
   return (
     <section className="time-travel" aria-labelledby="time-travel-title">
@@ -134,16 +219,24 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
         <div className="checkpoint-column">
           <h3>Checkpoint drawer</h3>
           <ol className="checkpoint-list">
-            {checkpoints.map((checkpoint) => (
-              <li key={checkpoint.checkpoint_id} className={checkpoint.checkpoint_id === selectedCheckpoint?.checkpoint_id ? "selected" : ""}>
-                <button onClick={() => setSelected(checkpoint.checkpoint_id)}>
-                  <span className="checkpoint-step">{checkpoint.graph_step}</span>
-                  <span><strong>{humanise(checkpoint.node_id)}</strong><small>{compactDate(checkpoint.created_at)} · {shortId(checkpoint.checkpoint_id)}</small></span>
-                  {checkpoint.checkpoint_id === originalFinal && <em>Original final</em>}
-                  {checkpoint.interrupt_kind && <em className="waiting">HITL</em>}
-                </button>
-              </li>
-            ))}
+            {checkpoints.map((checkpoint) => {
+              const checkpointBranch = branches.find((branch) => branch.branch_id === checkpoint.branch_id);
+              const finalLabel = checkpoint.checkpoint_id === checkpointBranch?.final_checkpoint_id
+                ? checkpointBranch.parent_branch_id ? "Fork final" : "Original final"
+                : null;
+              return (
+                <li key={checkpoint.checkpoint_id} className={checkpoint.checkpoint_id === selectedCheckpoint?.checkpoint_id ? "selected" : ""}>
+                  <button onClick={() => setSelected(checkpoint.checkpoint_id)}>
+                    <span className="checkpoint-step">{checkpoint.graph_step}</span>
+                    <span><strong>{humanise(checkpoint.node_id)}</strong><small>{compactDate(checkpoint.created_at)} · {shortId(checkpoint.checkpoint_id, 12)}</small></span>
+                    <span className="checkpoint-badges">
+                      {finalLabel && <em>{finalLabel}</em>}
+                      {checkpoint.interrupt_kind && <em className="waiting">HITL</em>}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
           </ol>
         </div>
         <div className="travel-actions">
@@ -187,24 +280,39 @@ export function TimeTravelPanel({ history, comparison, busy, onInspect, onLoadSt
       <div className="compare-panel">
         <div className="compare-controls">
           <h3>Deterministic plan comparison</h3>
-          <label htmlFor="compare-a">Checkpoint A</label>
-          <select id="compare-a" value={compareA} onChange={(event) => setCompareA(event.target.value)}><option value="">Select…</option>{checkpoints.map((item) => <option key={item.checkpoint_id} value={item.checkpoint_id}>{item.node_id} · {shortId(item.checkpoint_id)}</option>)}</select>
-          <label htmlFor="compare-b">Checkpoint B</label>
-          <select id="compare-b" value={compareB} onChange={(event) => setCompareB(event.target.value)}><option value="">Select…</option>{checkpoints.map((item) => <option key={item.checkpoint_id} value={item.checkpoint_id}>{item.node_id} · {shortId(item.checkpoint_id)}</option>)}</select>
-          <button disabled={busy || !compareA || !compareB || compareA === compareB} onClick={() => onCompare(compareA, compareB)}>Compare plans</button>
+          <p className="comparison-help">Final checkpoints are selected by default. Choose intermediate checkpoints only when you intentionally want to compare an unfinished state.</p>
+          <label htmlFor="compare-a">Checkpoint A (left)</label>
+          <select id="compare-a" value={resolvedCompareA} onChange={(event) => setCompareA(event.target.value)}><option value="">Select…</option>{renderCheckpointOptions()}</select>
+          <label htmlFor="compare-b">Checkpoint B (right)</label>
+          <select id="compare-b" value={resolvedCompareB} onChange={(event) => setCompareB(event.target.value)}><option value="">Select…</option>{renderCheckpointOptions()}</select>
+          <button disabled={busy || !resolvedCompareA || !resolvedCompareB || resolvedCompareA === resolvedCompareB} onClick={() => onCompare(resolvedCompareA, resolvedCompareB)}>Compare plans</button>
           <p className="microcopy">The original final plan remains immutable when replaying or forking.</p>
         </div>
-        <div className="comparison-results" aria-live="polite">
-          {!comparison ? <p className="empty-copy">Choose two checkpoints to view server-produced deterministic differences.</p> : comparisonFields.map((name) => {
-            const compared = comparison[name];
-            if (!compared) return null;
-            return (
-              <article key={name} className={compared.changed ? "changed" : "unchanged"}>
-                <h4>{humanise(name)}<span>{compared.changed ? "Changed" : "Unchanged"}</span></h4>
-                <div><pre>{JSON.stringify(compared.checkpoint_a, null, 2)}</pre><pre>{JSON.stringify(compared.checkpoint_b, null, 2)}</pre></div>
-              </article>
-            );
-          })}
+        <div className="comparison-output" aria-live="polite">
+          {!comparison ? <p className="empty-copy">Choose two checkpoints to view server-produced deterministic differences.</p> : (
+            <>
+              <div className="comparison-key" aria-label="Compared checkpoint identities">
+                <div><span>A · left</span><strong>{comparedIdentity(comparedCheckpointA, comparedBranchA, comparison.checkpoint_a)}</strong></div>
+                <div><span>B · right</span><strong>{comparedIdentity(comparedCheckpointB, comparedBranchB, comparison.checkpoint_b)}</strong></div>
+              </div>
+              <p className="comparison-summary"><strong>{changedFieldCount} changed</strong> · {comparisonFields.length - changedFieldCount} unchanged. “Changed” means the stored values differ; it does not mean a check failed.</p>
+              <div className="comparison-results">
+                {comparisonFields.map((name) => {
+                  const compared = comparison[name];
+                  if (!compared) return null;
+                  return (
+                    <article key={name} className={compared.changed ? "changed" : "unchanged"}>
+                      <h4>{humanise(name)}<span>{compared.changed ? "Changed" : "Unchanged"}</span></h4>
+                      <div className="comparison-values">
+                        <div><span className="comparison-side">A</span><pre>{JSON.stringify(compared.checkpoint_a, null, 2)}</pre></div>
+                        <div><span className="comparison-side">B</span><pre>{JSON.stringify(compared.checkpoint_b, null, 2)}</pre></div>
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
       </div>
     </section>

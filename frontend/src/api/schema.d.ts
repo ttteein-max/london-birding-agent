@@ -1318,6 +1318,8 @@ export interface components {
             thread_id: string;
             /** Branch Id */
             branch_id: string;
+            /** Branch Label */
+            branch_label?: string | null;
             /** Parent Branch Id */
             parent_branch_id?: string | null;
             /** Head Checkpoint Id */

@@ -942,6 +942,7 @@ class BiodiversityRunManager:
             RunBranch(
                 thread_id=thread_id,
                 branch_id=branch_id,
+                branch_label=snapshot.values.get("branch_label"),
                 parent_branch_id=snapshot.values.get("parent_branch_id"),
                 head_checkpoint_id=_checkpoint_id(snapshot),
                 final_checkpoint_id=finals.get(branch_id),

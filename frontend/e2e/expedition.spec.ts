@@ -163,7 +163,12 @@ test("forked constraints compare without replacing the original final", async ({
   await forkValue.fill("8");
   await page.getByRole("button", { name: "Create fork" }).click();
   await expect(page.getByRole("button", { name: "Start expedition" })).toBeEnabled();
-  await expect(page.locator(".identity-list").first().locator("li")).toHaveCount(2);
+  const branchItems = page.locator(".branch-tree > .branch-tree-item");
+  await expect(branchItems).toHaveCount(2);
+  await expect(branchItems.nth(0)).toContainText("Original branch");
+  await expect(branchItems.nth(0)).toContainText("Execution 1");
+  await expect(branchItems.nth(1)).toContainText("Fork branch 1");
+  await expect(branchItems.nth(1)).toContainText("Execution 2");
 
   const historyResponse = await page.request.get(`/api/v1/runs/${threadId}/history`);
   expect(historyResponse.ok()).toBeTruthy();
@@ -173,8 +178,8 @@ test("forked constraints compare without replacing the original final", async ({
   expect(original?.final_checkpoint_id).toBeTruthy();
   expect(forked?.final_checkpoint_id).toBeTruthy();
 
-  await page.getByLabel("Checkpoint A", { exact: true }).selectOption(original.final_checkpoint_id);
-  await page.getByLabel("Checkpoint B", { exact: true }).selectOption(forked.final_checkpoint_id);
+  await page.getByLabel("Checkpoint A (left)", { exact: true }).selectOption(original.final_checkpoint_id);
+  await page.getByLabel("Checkpoint B (right)", { exact: true }).selectOption(forked.final_checkpoint_id);
   await page.getByRole("button", { name: "Compare plans" }).click();
   await expect(page.locator(".comparison-results article.changed")).not.toHaveCount(0);
   await expect(page.getByText("The original final plan remains immutable when replaying or forking.")).toBeVisible();
