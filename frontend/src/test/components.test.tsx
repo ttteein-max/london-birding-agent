@@ -11,7 +11,7 @@ import { RunSidebar } from "../components/RunSidebar";
 import { SelectedRunRequest } from "../components/SelectedRunRequest";
 import { StateInspector } from "../components/StateInspector";
 import { TimeTravelPanel } from "../components/TimeTravelPanel";
-import type { FinalPlanView, PendingDecisionView, RunDetail } from "../api/contracts";
+import type { FinalPlanView, HistoryView, PendingDecisionView, RunDetail } from "../api/contracts";
 import { comparisonFixture, evidenceFixture, historyFixture, planFixture, routePlanFixture, stateFixture, walkingPlanFixture, workflowTopologyFixture } from "./fixtures";
 
 describe("field notebook cards", () => {
@@ -447,6 +447,43 @@ describe("trace and time travel", () => {
     expect(screen.getAllByText("Changed").length).toBeGreaterThan(0);
     expect(screen.getByText(/original final plan remains immutable/i)).toBeInTheDocument();
   });
+
+  it("groups comparison checkpoints by branch and defaults to branch finals", () => {
+    const forkHistory: HistoryView = {
+      checkpoints: [
+        ...historyFixture.checkpoints,
+        {
+          ...historyFixture.checkpoints[0],
+          branch_id: "branch-fork",
+          execution_id: "execution-fork",
+          checkpoint_id: "checkpoint-fork-final",
+          node_id: "deterministic_plan_fallback",
+          graph_step: 25,
+          final_checkpoint_id: "checkpoint-fork-final",
+        },
+      ],
+      branches: [
+        ...(historyFixture.branches ?? []),
+        {
+          thread_id: "thread-one",
+          branch_id: "branch-fork",
+          parent_branch_id: "branch-original",
+          head_checkpoint_id: "checkpoint-fork-final",
+          final_checkpoint_id: "checkpoint-fork-final",
+          forked_from_checkpoint_id: "checkpoint-final",
+          fork_updates: { search_radius_km: 3 },
+          created_at: "2026-09-02T10:01:00Z",
+          terminal_status: "completed_with_deterministic_fallback",
+        },
+      ],
+      executions: historyFixture.executions,
+    };
+    render(<TimeTravelPanel history={forkHistory} comparison={null} busy={false} onInspect={vi.fn()} onLoadState={vi.fn().mockResolvedValue(stateFixture)} onReplay={vi.fn()} onFork={vi.fn()} onCompare={vi.fn()} />);
+    expect(screen.getByLabelText("Checkpoint A (left)")).toHaveValue("checkpoint-final");
+    expect(screen.getByLabelText("Checkpoint B (right)")).toHaveValue("checkpoint-fork-final");
+    expect(screen.getAllByRole("option", { name: /CP 25 · Final · Deterministic Plan Fallback/ })).toHaveLength(2);
+    expect(screen.getByText("Fork final")).toBeInTheDocument();
+  });
 });
 
 describe("loading, empty, error, and accessibility states", () => {
@@ -546,5 +583,78 @@ describe("loading, empty, error, and accessibility states", () => {
     />);
     expect(screen.getByText("live/live")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /expedition-live.*live\/live/i })).toBeInTheDocument();
+  });
+
+  it("renders branches as visible parents with their executions nested below", () => {
+    const run = {
+      thread_id: "expedition-lineage",
+      status: "completed",
+      data_mode: "live",
+      model_mode: "live",
+      created_at: "2026-09-03T04:15:31Z",
+      updated_at: "2026-09-03T04:16:41Z",
+    } as const;
+    const detail: RunDetail = {
+      run,
+      branches: [
+        {
+          thread_id: run.thread_id,
+          branch_id: "22912bc2d617459ca87159371d286779",
+          branch_label: "Radius 3 km",
+          parent_branch_id: "3b90f107363e4864aa4fab5957cf75cb",
+          head_checkpoint_id: "fork-final",
+          final_checkpoint_id: "fork-final",
+          fork_updates: { search_radius_km: 3 },
+          created_at: run.updated_at,
+          terminal_status: "completed_with_deterministic_fallback",
+        },
+        {
+          thread_id: run.thread_id,
+          branch_id: "3b90f107363e4864aa4fab5957cf75cb",
+          head_checkpoint_id: "original-final",
+          final_checkpoint_id: "original-final",
+          fork_updates: {},
+          created_at: run.created_at,
+          terminal_status: "completed",
+        },
+      ],
+      executions: [
+        {
+          thread_id: run.thread_id,
+          execution_id: "1f014a3b4f3c4a85a52799042ba3ef9c",
+          branch_id: "22912bc2d617459ca87159371d286779",
+          head_checkpoint_id: "fork-final",
+          final_checkpoint_id: "fork-final",
+          created_at: run.updated_at,
+          terminal_status: "completed_with_deterministic_fallback",
+        },
+        {
+          thread_id: run.thread_id,
+          execution_id: "af7b9e1d7d654ed59c4e8b4b9f2904b0",
+          branch_id: "3b90f107363e4864aa4fab5957cf75cb",
+          head_checkpoint_id: "original-final",
+          final_checkpoint_id: "original-final",
+          created_at: run.created_at,
+          terminal_status: "completed",
+        },
+      ],
+    };
+    render(<RunSidebar runs={[run]} selectedThread={run.thread_id} detail={detail} onSelect={vi.fn()} />);
+    const lineage = screen.getByLabelText("Selected run branch lineage");
+    expect(lineage).toHaveTextContent("Radius 3 km");
+    expect(lineage).toHaveTextContent("Branch 22912bc");
+    expect(lineage).toHaveTextContent("Branch 22912bc · Completed");
+    expect(lineage).not.toHaveTextContent("Completed With Deterministic Fallback");
+    expect(lineage).toHaveTextContent("Search radius → 3 km");
+    const originalBranch = screen.getByText("Original branch");
+    const forkBranch = screen.getByText("Radius 3 km");
+    expect(originalBranch.compareDocumentPosition(forkBranch) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByLabelText("Executions for Original branch")).toHaveTextContent("Execution 1");
+    expect(screen.getByLabelText("Executions for Original branch")).toHaveTextContent("Execution af7b9e1");
+    expect(screen.getByLabelText("Executions for Radius 3 km")).toHaveTextContent("Execution 2");
+    expect(screen.getByLabelText("Executions for Radius 3 km")).toHaveTextContent("Execution 1f014a3");
+    const recentRunsHeading = screen.getByRole("heading", { name: "Recent runs" });
+    const lineageHeading = screen.getByRole("heading", { name: "Branches & executions" });
+    expect(recentRunsHeading.compareDocumentPosition(lineageHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });

@@ -609,6 +609,9 @@ def test_replay_fork_compare_terminal_and_noop_guards(client: TestClient) -> Non
     assert fork.status_code == 202, fork.text
     forked = _wait(client, fork.json()["operation_id"])
     assert forked["branch_id"] != operation["branch_id"]
+    branches = client.get("/api/v1/runs/travel-api/history").json()["branches"]
+    fork_branch = next(item for item in branches if item["branch_id"] == forked["branch_id"])
+    assert fork_branch["branch_label"] == "Wider context"
     comparison = client.get(
         "/api/v1/runs/travel-api/compare",
         params={

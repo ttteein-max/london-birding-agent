@@ -23,3 +23,13 @@ export function compactDate(value: string): string {
     minute: "2-digit",
   }).format(new Date(value));
 }
+
+export function compareCreatedAt(
+  left: { created_at: string },
+  right: { created_at: string },
+): number {
+  const difference = Date.parse(left.created_at) - Date.parse(right.created_at);
+  return Number.isFinite(difference) && difference !== 0
+    ? difference
+    : left.created_at.localeCompare(right.created_at);
+}

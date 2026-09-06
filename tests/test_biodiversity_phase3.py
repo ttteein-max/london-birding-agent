@@ -395,6 +395,12 @@ def test_history_replay_fork_and_comparison_preserve_original_plan() -> None:
     )
     assert fork.parent_branch_id
     assert fork.final_checkpoint_id != original_final
+    fork_branch = next(
+        item
+        for item in manager.branches(thread_id="travel")
+        if item.branch_id == fork.branch_id
+    )
+    assert fork_branch.branch_label == "wider local context"
     original_snapshot = next(
         item
         for item in graph.get_state_history({"configurable": {"thread_id": "travel"}})
