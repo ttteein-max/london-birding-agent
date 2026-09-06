@@ -1,232 +1,95 @@
 # London Biodiversity Expedition Planner
 
-An explainable, evidence-grounded planner for urban birdwatching expeditions in London.
+**A full-stack LangGraph case study in stateful orchestration, typed human-in-the-loop workflows, durable execution and agent observability.**
 
-The project is London-only, birds-first and English-only. It identifies areas with stronger historical occurrence evidence. It does not predict sightings, convert record counts into abundance or population estimates, guarantee access, or guarantee that a bird will be observed.
+It turns a natural-language London birdwatching request into an evidence-grounded, route-validated field plan—or stops safely when the available evidence or constraints cannot support one.
 
-Phase 5 adds audited public-site entrances, deterministic walking-route validation, private route-geometry views and a configurable real MapLibre basemap above the Phase 4 product. Earlier incident-investigation code remains a regression-protected reference and is not the biodiversity agent.
+London-only · birds-first · English-only · historical evidence, not a sighting prediction
 
-## Phase 5 geospatial routing quick start
+[See the demo](#demo) · [Engineering highlights](#engineering-highlights) · [Run it locally](#quick-start) · [Explore the architecture](#architecture-and-core-workflow)
 
-The shortest reproducible browser flow is entirely fixture/scripted and offline after dependency installation. Local development exposes a run-mode selector with all four data/model combinations; the selected mode is still validated by the server.
+## Demo
 
-1. Install Python dependencies.
+> 🎥 **Demo media placeholder** — a full YouTube walkthrough and a short preview GIF will be added here.
 
-   ```bash
-   python -m venv .venv
-   source .venv/bin/activate
-   python -m pip install --upgrade pip
-   python -m pip install -r requirements.txt
-   ```
+The walkthrough will follow one expedition from its original natural-language request through live graph execution, a typed human decision, the evidence map, the validated journey and checkpoint comparison.
 
-2. Install frontend dependencies.
+<!--
+DEMO PLACEHOLDER
 
-   ```bash
-   cd frontend
-   npm ci
-   cd ..
-   ```
+Recommended final form:
+[![Watch the London Biodiversity Expedition Planner demo](docs/assets/demo-preview.gif)](YOUTUBE_URL)
 
-3. Start FastAPI on localhost.
+Keep the preview to a few seconds and link it to the complete YouTube walkthrough.
+-->
 
-   ```bash
-   python -m uvicorn app.biodiversity.api.main:app --host 127.0.0.1 --port 8000
-   ```
+## Engineering highlights
 
-4. In another terminal, start Vite on localhost.
+| Capability | What this project implements |
+| --- | --- |
+| Stateful orchestration | A typed LangGraph state, explicit reducers, conditional routing and a bounded ToolNode evidence loop |
+| Typed human-in-the-loop | Seven interrupt paths for incomplete requests, ambiguous locations or taxa, evidence trade-offs and route decisions |
+| Durable execution | SQLite-backed checkpoints with exact thread, branch, execution and checkpoint identities |
+| Time travel | Resume, replay, fork, targeted downstream invalidation and deterministic plan comparison |
+| Observability | Reconnectable SSE events plus node, model, tool and routing-provider timing spans |
+| Reliability | Deterministic evidence and routing authority, grounded model revision and a complete safe fallback |
+| Full-stack delivery | FastAPI and Pydantic on the backend; React, TypeScript, generated OpenAPI types and MapLibre in the browser |
 
-   ```bash
-   cd frontend
-   npm run dev
-   ```
+The model is deliberately not the final authority. It may parse a request, choose from an allow-listed set of evidence tools and compose an explanation. Deterministic code owns the London boundary, taxonomy acceptance, evidence thresholds, site grounding, entrance eligibility, route constraints, route ranking, provenance and final safety checks.
 
-5. Open `http://127.0.0.1:5173`, select **Strong evidence**, then choose **Start expedition**. For the complete fixture/scripted browser demonstration, run `npm run test:e2e` from `frontend/`.
+## Does it actually work?
 
-The browser receives an operation immediately, streams node/model/tool/provider/checkpoint events, and reads only allow-listed state/evidence/map/route DTOs. A journey is calculated only after the evidence gate, directly-grounded site and mapped-entrance checks pass. Live mode asks the official TfL Journey Planner for the least-time public-transport-and-walking option; the walking-only fixture remains offline and reproducible. Every journey terminates at an audited public-site entrance—never an occurrence point, safe-cell centre, polygon centroid or arbitrary road point. A deterministic approach check rejects a route that crosses deeply into the selected polygon before reaching its claimed entrance. See [the Phase 5 geospatial and routing documentation](docs/phase-5-geospatial-routing.md), [routing ADR](docs/adr/0001-phase-5-routing-semantics.md) and [OpenAPI contract](docs/phase-5-openapi.json).
+### Reproducible end-to-end example
 
-Historical route-schema-1 executions remain immutable and may therefore still show their recorded walking-only ORS result. The safe read view labels that older policy, restores separately persisted outbound and return times when available, and explains that a new live run is required for the current TfL journey policy.
+The following result was reproduced in `fixture/scripted` mode, which uses versioned data and deterministic scripted model responses:
 
-The default basemap is the keyless OpenFreeMap Liberty MapLibre style. Configure or disable it with the backend-only `BIODIVERSITY_BASEMAP_STYLE_URL`; the URL is validated and returned as safe map configuration. For a custom style, list its additional HTTPS sprite, glyph and tile origins in `BIODIVERSITY_BASEMAP_RESOURCE_ORIGINS`; the style host itself is added to CSP automatically. Do not place secret-bearing styles or provider keys in `VITE_*`. If the style fails, the browser explicitly switches to the empty style while keeping evidence and route overlays available. Default unit and Playwright tests mock the style and never contact public tile servers.
+```text
+Request
+Plan a two-hour expedition from SW11 4NJ on 15 June 2026
+to look for Common woodpigeon.
 
-Selecting an item in **Recent runs** also opens a compact **Natural-language request** record above the workspace. The request is read from the durable checkpoint rather than copied into the run catalog. It is available in the local profile only; unauthenticated public-demo mode suppresses it so one visitor cannot read another visitor's submitted text.
-
-Named London places are supported as well as postcodes and explicit map points. The model only extracts wording such as `Kensal Road`; a bounded Nominatim search supplies real OpenStreetMap candidates, deterministic code rejects candidates outside Greater London, and the browser asks the user to choose when a road has several segments. Fixture mode replays a versioned, sanitized real Nominatim response for Kensal Road, so the default demonstration remains offline and reproducible.
-
-### Local live/live mode
-
-Set the model credentials in the shell that starts FastAPI, then select `live/live` in the browser. Do not prefix model settings with `VITE_`; they must remain server-side.
-
-```bash
-export OPENAI_API_KEY='your-key'
-export OPENAI_MODEL='your-model-id'
-# Optional walking-only adapter and explicit ORS live test:
-export ORS_API_KEY='your-openrouteservice-key'
-# Optional second walking-only provider:
-export GRAPHHOPPER_API_KEY='your-graphhopper-key'
-# Optional higher-quota key for the default TfL public-transport journey API:
-export TFL_API_KEY='your-tfl-key'
-# Optional for an OpenAI-compatible provider:
-export OPENAI_BASE_URL='https://provider.example/v1'
-
-python -m uvicorn app.biodiversity.api.main:app \
-  --host 127.0.0.1 \
-  --port 8000
+Result
+✓ London location and bird taxonomy resolved
+✓ Strong historical-evidence gate passed
+✓ 8 evidence-grounded candidate sites retained
+✓ Kensington Gardens selected via the mapped Palace Gate entrance
+✓ 7.85 km validated return walk · 105 minutes travel
+✓ 15 minutes of the two-hour outing remain for field observation
 ```
 
-On macOS, the ORS key can be kept in Keychain instead of shell history or a
-plaintext startup file. The trailing `-w` prompts securely for the Basic key:
+The result is not a claim that a bird will be seen. It demonstrates that the workflow can reach a complete plan only after its evidence, grounding, entrance and journey constraints pass.
+
+### Verified implementation
+
+The latest recorded offline verification covers the backend, browser and mobile layout:
+
+| Check | Recorded result |
+| --- | ---: |
+| Python offline test suite | 212 passed · 10 live tests deselected |
+| Frontend unit tests | 36 passed |
+| Playwright browser flows | 8 passed |
+| Python lint, byte compilation and TypeScript checks | Passed |
+| Production frontend build | Passed |
+
+The browser flows include basemap failure, route HITL, checkpoint forking and a 390 × 844 mobile viewport. These are engineering and reproducibility checks, not a scientific evaluation of sighting likelihood.
+
+## Quick Start
+
+The default demonstration needs no model or routing API key. After dependency installation it runs against versioned fixtures, without live biodiversity, geocoding, weather or routing requests.
+
+### Option A: single-container demo
 
 ```bash
-security add-generic-password \
-  -U \
-  -a "$USER" \
-  -s "london-biodiversity-ors" \
-  -l "London Biodiversity ORS API Key" \
-  -w
-
-# Run this in each shell that starts FastAPI or an opt-in live routing test.
-export ORS_API_KEY="$(security find-generic-password \
-  -a "$USER" \
-  -s "london-biodiversity-ors" \
-  -w)"
-```
-
-Do not print the value, paste it into chat, add it to `VITE_*`, or commit it.
-Keychain retrieval may ask for local approval. The application still receives
-the secret only as a backend environment variable.
-
-The four choices mean:
-
-- `fixture/scripted`: versioned offline data and deterministic scripted models;
-- `live/scripted`: current upstream data APIs and scripted models;
-- `fixture/live`: versioned offline data and the configured live model;
-- `live/live`: current upstream data APIs and the configured live model.
-
-### Single-container public demo
-
-The production image builds React and serves it from the same FastAPI origin. The checked-in Compose configuration deliberately enables public-demo policy, so only `fixture/scripted` is accepted and no model key is needed.
-
-```bash
+git clone https://github.com/ttteein-max/london-biodiversity-expedition.git
+cd london-biodiversity-expedition
 docker compose up --build
 ```
 
-Open `http://127.0.0.1:8080`. The public profile disables interactive API docs and enforces bounded concurrency, mutation rate, thread count, storage, and 24-hour stale-run cleanup. It serves only planned fixture origins; private-origin route geometry is available only in a local/private run. Local Docker data uses the named `biodiversity-demo-data` volume. See [the Phase 5 deployment section](docs/phase-5-geospatial-routing.md#operation-and-deployment) and [the Phase 4 public-demo foundation](docs/phase-4-public-demo.md).
+Open `http://127.0.0.1:8080`, select **Strong evidence**, then choose **Start expedition**.
 
-## Phase 1 quick start
+### Option B: local development
 
-Fixture mode is the default and requires no network or API key:
-
-```bash
-python -m pytest -m 'not live' -q
-
-python -m scripts.run_expedition_backend \
-  --postcode 'SW11 4NJ' \
-  --bird 'Common woodpigeon' \
-  --date 2026-06-15 \
-  --duration-hours 2 \
-  --max-walking-km 3 \
-  --compact
-```
-
-The output separates London/taxonomy/source status, historical evidence outcome, safe aggregate cell count, candidate-site count, exact-date weather availability and unresolved routing constraints. See [the Phase 1 backend documentation](docs/phase-1-biodiversity-backend.md) for contracts, architecture, privacy, live mode and reproduction commands.
-
-Phase 1.1 hardens site grounding: a candidate plan is ready only when strong evidence has approved safe-map cells and every returned public-site candidate is associated with one of those cells. Strong evidence with no safe cells, an empty grounded search radius, and site-source failure remain distinct typed outcomes.
-
-Phase 1.2 separates directly grounded recommendations from contextual green spaces. A recommendation now requires an OSM polygon or multipolygon footprint intersecting a safe cell; nearby and ordinary ungrounded sites remain explicitly non-recommended. The occurrence fixture was rebuilt end-to-end with the hardened pipeline, restoring same-snapshot safe cells for House sparrow and `Turdus iliacus`.
-
-## Repository milestones
-
-The standalone Git history preserves the implemented biodiversity phases as immutable tags:
-
-- `phase-0`: feasibility foundation;
-- `phase-0.1`: evidence-data hardening;
-- `phase-1`: typed deterministic backend;
-- `phase-1.1`: site-grounding gate hardening;
-- `phase-1.2`: contextual-site tiers and same-snapshot fixtures.
-
-The default `main` branch now contains the Phase 3 durable HITL and time-travel implementation above the tagged Phase 1.2 deterministic baseline.
-
-## Phase 3 LangGraph quick start
-
-Phase 3 uses the Phase 2 biodiversity LangGraph above the unchanged Phase 1.2 authority boundary and adds durable SQLite HITL recovery, runtime manifests and time travel. It parses natural English, uses a genuine ToolNode evidence loop, interrupts for validated human choices, composes a structured plan and applies deterministic grounding checks with one revision and a safe fallback. Fixture/scripted mode requires no API key:
-
-```bash
-python -m scripts.run_biodiversity_agent \
-  --request "Plan a two-hour expedition from SW11 4NJ on 15 June 2026 to look for Common woodpigeon." \
-  --data-mode fixture \
-  --model-mode scripted
-```
-
-The CLI saves every node, model, tool and persisted-checkpoint lifecycle event under `reports/runs/<timestamp>-<thread>-<run>` by default. Events are published immediately to an optional sequence-aware sink/broker and can be replayed after a reconnect. Completion events contain UTC start/end times and monotonic `duration_ms`; `timings.json` provides ready-to-render Phase 4 spans, while `events.json` preserves ordered lifecycle events. Use `--report-dir` to select an exact destination or `--no-save-report` to opt out.
-
-Use `--thread-id` to set the checkpoint thread, and `--auto-resume` for the documented taxonomy, context-only, uncertain-access and radius trade-off demonstrations. Live model mode uses `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL`; no model or endpoint is hardcoded. See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for the current topology, state reducers, HITL payloads, safety boundary and all CLI commands. The [Phase 2 document](docs/phase-2-biodiversity-langgraph.md) remains the implementation history for the original graph.
-
-## Phase 3 durable HITL and time travel
-
-Phase 3 is implemented. Biodiversity CLI runs now use a lifecycle-managed local SQLite checkpointer, while unit tests retain the in-memory saver. Ambiguous taxonomy includes bounded, coordinate-free evidence previews; low-evidence decisions support deterministic radius expansion, seasonal-window widening, GBIF-related taxa and explicit low-confidence acceptance. A strict `StateView` maps an exact node/step/checkpoint key to allow-listed frontend state without exposing raw LangGraph snapshots.
-
-Durable runs can be resumed after the original Python process exits and can be inspected, replayed, forked and compared without overwriting the original final checkpoint:
-
-```bash
-python -m scripts.manage_biodiversity_runs start \
-  --thread-id expedition-1 \
-  --request "Plan a two-hour expedition from SW11 4NJ on 15 July 2026 to look for Common swift."
-
-python -m scripts.manage_biodiversity_runs history --thread-id expedition-1
-```
-
-See [the Phase 3 documentation](docs/phase-3-hitl-time-travel.md) for resume schemas, SQLite lifecycle and security, thread/checkpoint/branch identity, replay versus fork, invalidation rules, privacy boundaries and all management commands.
-
-The checked-in [Phase 3 HITL/time-travel demonstration](reports/phase3-demos/fixture-scripted-hitl-time-travel/README.md) reproducibly exercises taxonomy selection, low-evidence resume, replay, fork, safe checkpoint views and deterministic comparison without network access.
-
-## What Phase 0.1 demonstrates
-
-`GBIFBirdNameResolver` accepts arbitrary user text rather than consulting a supported-species dictionary. It handles English common names, scientific names, case and whitespace differences, ambiguous names and unknown or misspelled input. Its typed outcomes are:
-
-- `resolved`
-- `human_selection_required`
-- `taxon_not_found`
-
-For example, the actual input `Common woodpigeon` is sent to GBIF and resolves to *Columba palumbus*. `robin` and `eagle` produce candidate lists generated from current GBIF search results; the system does not silently choose a London-likely species. The 12-input evaluation matrix is a regression sample, **not a species whitelist**. A live out-of-matrix check for `Blue tit` independently resolved *Cyanistes caeruleus* and completed the occurrence path.
-
-Occurrence outcomes are:
-
-- `strong_map_evidence`: at least 50 ranking-eligible records, five EPSG:27700 1 km cells and two datasets;
-- `limited_contextual_evidence`: at least five retained London records exist but the strong gate is not met;
-- `insufficient_evidence`: no retained evidence, or only one to four isolated records, exists in the bounded query;
-- `human_selection_required`: taxonomy is ambiguous;
-- `taxon_not_found`: no safe accepted bird match.
-
-Only records with known coordinate uncertainty of at most 1,000 metres may contribute to 1 km ranking. Records at 1,001–5,000 metres are broad-zone evidence; those above 5,000 metres are historical context only; missing uncertainty stays auditable but cannot affect ranking. Fatal geospatial issues are rejected. Thresholds are never relaxed to make a taxon pass.
-
-Sparse or rare evidence is a first-class state. One to four records remain insufficient evidence; they may be reported as isolated historical records but never as meaningful limited evidence, a hotspot, a reliable site recommendation or a sighting guarantee.
-
-## London geography and privacy
-
-The GBIF request uses a rectangular envelope only to bound remote work. Final inclusion uses deterministic point-in-polygon validation against the versioned OSM Greater London administrative boundary, relation `175342`.
-
-Ranking uses British National Grid `EPSG:27700`, whose units are metres, with 1,000 m × 1,000 m cells. Coordinates are processed only in memory. Committed fixtures contain no occurrence latitude or longitude and store only HMAC cell/zone references produced with a run-specific secret that is not persisted.
-
-The OSM public green-space candidate snapshot remains a one-off data-generation artifact. It excludes `access=private` and `access=no`; missing access is `unspecified`, not proof of public access. `© OpenStreetMap contributors`, ODbL 1.0.
-
-## Bounded retrieval policy
-
-For each resolved taxon, the default policy is:
-
-- latest five complete calendar years plus the current year;
-- target month ±1 month, including year-boundary month wrapping;
-- pages of at most 300 GBIF records;
-- at most three pages and three occurrence requests per taxon;
-- early stop after the strong evidence gate or server exhaustion;
-- deterministic first-record deduplication by GBIF key/occurrence ID, with a documented hashed fallback;
-- separate server, sampled, deduplicated, quality-tier, retained and rejected counts;
-- dataset, year and month distribution reporting.
-
-The workflow never downloads all matches. A large `server_match_count` is neither the sampled count nor evidence of abundance.
-
-## Set-up and offline validation
-
-Python 3.10 or newer is required. `pyproj` supplies the authoritative EPSG:27700 transformation.
+Python 3.10+ and Node.js 20+ are recommended.
 
 ```bash
 python -m venv .venv
@@ -234,84 +97,122 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
 
-python -m pytest -q
-python -m pytest -q tests/test_taxonomy_resolver.py
-python -m pytest -q tests/test_spatial_quality.py -k coordinate_quality
-python -m pytest -q tests/test_occurrence_behaviour.py
-python -m scripts.phase0_feasibility
+cd frontend
+npm ci
+cd ..
 ```
 
-These commands are offline and need no API key.
-
-The same offline suite and compile checks run on every GitHub push and pull request under the repository's **Actions** tab. The latest local verification summary and JUnit XML are kept under `reports/`.
-
-## Explicit live candidate and promotion workflow
-
-Ordinary live refresh never overwrites canonical fixtures:
+Start the API:
 
 ```bash
-python -m scripts.phase0_feasibility \
-  --live-refresh \
-  --output-dir /tmp/phase01-candidate
-
-python -m scripts.phase0_feasibility \
-  --live-check "Blue tit" \
-  --target-month 4
+python -m uvicorn app.biodiversity.api.main:app \
+  --host 127.0.0.1 \
+  --port 8000
 ```
 
-Review checksums, schema and counts, then explicitly promote if appropriate:
+In a second terminal, start the browser application:
 
 ```bash
-python -m scripts.phase0_feasibility \
-  --promote-candidate /tmp/phase01-candidate
+cd frontend
+npm run dev
 ```
 
-Opt-in live pytest checks are excluded by default:
+Open `http://127.0.0.1:5173`. The local application exposes four independently selectable run modes:
 
-```bash
-RUN_LIVE_BIODIVERSITY_AGENT=1 \
-python -m pytest -m live tests/test_phase2_live_langgraph.py -vv -s
+| Data | Model | Purpose |
+| --- | --- | --- |
+| fixture | scripted | Fully reproducible orchestration and UI demonstration |
+| live | scripted | Exercise current upstream data while holding model behaviour constant |
+| fixture | live | Exercise a configured live model against stable evidence |
+| live | live | Run the complete model and data integration |
+
+Live model mode reads `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL` from the backend process. Live routing uses the TfL Journey Planner by default; `TFL_API_KEY` is optional for its public allowance and recommended for deployed quota.
+
+## Why LangGraph for this problem?
+
+The workflow is not a linear prompt chain. A planning request can be incomplete, an everyday bird name can resolve to several accepted taxa, evidence can be too weak for spatial ranking, and a candidate site can fail only after its real entrance and return journey are checked.
+
+| Engineering problem | System mechanism |
+| --- | --- |
+| A request is incomplete or contradictory | Pause with a typed interrupt and resume the same durable thread after validated input |
+| A location or bird name is ambiguous | Present only bounded, safe candidates and require an exact offered choice |
+| Evidence collection depends on earlier results | Route through conditional edges and a bounded model-directed ToolNode loop |
+| External sources are unavailable or malformed | Preserve typed failure states, bounded retries and explicit safe terminal paths |
+| A user wants to explore a different constraint | Fork an immutable checkpoint, invalidate only affected downstream state and compare outcomes |
+| A model writes an unsupported claim | Apply deterministic grounding, allow one constrained revision and then use a safe fallback |
+| A long agent run needs debugging | Persist every graph step and expose ordered, reconnectable lifecycle events and timings |
+
+This is why the graph, checkpoint and HITL layers are part of the product behaviour rather than framework decoration.
+
+## Architecture and core workflow
+
+<!--
+FULL LANGGRAPH DIAGRAM PLACEHOLDER
+
+Replace the figure below, or add a clickable full-topology figure above it, when the
+updated Phase 5 diagram from the separate design work is available. The replacement
+must reflect the current phase-5.0 workflow, SQLite durability, typed HITL, routing
+nodes, replay/fork/compare and provider observability.
+-->
+
+[![Current Phase 5 evidence-to-route architecture](docs/diagrams/phase-5-geospatial-routing.svg)](docs/diagrams/phase-5-geospatial-routing.svg)
+
+*Current Phase 5 evidence-to-route authority boundary. A complete compiled-graph diagram will be added in this position.*
+
+One successful run moves through eight conceptual stages:
+
+1. **Request intake** — a structured-output model extracts the location, bird, date, duration and optional constraints.
+2. **London location** — deterministic postcode or named-place services validate a generalised planning origin inside Greater London.
+3. **Bird taxonomy** — GBIF taxonomy resolution accepts one Aves species or pauses for a safe human choice.
+4. **Evidence loop** — the model selects only registered tools; occurrence, weather and public-site results are typed, deduplicated and merged into graph state.
+5. **Deterministic validation** — code applies evidence-quality thresholds, privacy rules, site-to-cell grounding and request constraints.
+6. **Entrances and journeys** — only directly grounded sites with audited OSM entrances reach the route provider; outbound and return journeys are requested separately.
+7. **Plan composition** — the model receives a compact validated bundle and writes the user-facing plan without choosing or recalculating route facts.
+8. **Grounding and finalisation** — deterministic checks either accept the draft, request one bounded revision or emit a complete fallback plan.
+
+The browser obtains its topology from the compiled backend graph. It does not maintain a second handwritten version of the workflow.
+
+## Human-in-the-loop, durability and time travel
+
+HITL is used only when a person can resolve a real ambiguity or make an actionable trade-off. It is not inserted after every model response.
+
+### Typed decision points
+
+| Interrupt | Human decision |
+| --- | --- |
+| Request clarification | Supply a missing or contradictory request field |
+| Location correction | Select a verified London place candidate or provide a postcode |
+| Taxonomy selection or bird correction | Select one accepted taxon or correct the original bird name |
+| Evidence trade-off | Expand the search radius or seasonal window, consider a related taxon, or accept a limited outcome |
+| Route trade-off | Accept uncertain entrance evidence, raise a walking limit, or finish without a fabricated route |
+
+Every response is checked against the exact thread, checkpoint, branch, execution, interrupt kind and offered option before the graph resumes. Raw arbitrary state edits are not accepted from the browser.
+
+### Durable run model
+
+```text
+Thread      one expedition across its complete history
+└── Branch  one immutable constraint trajectory
+    └── Execution  one run or replay of that trajectory
+        └── Checkpoint  one persisted graph state after a step
 ```
 
-Confirm that pytest reports `collected 1 item` and `PASSED`; `deselected` or `skipped` means the live test did not run.
+- **Resume** continues the pending execution after a validated human decision.
+- **Replay** creates a new execution from a historical non-terminal checkpoint.
+- **Fork** creates a new branch with an allow-listed constraint update and recomputes invalidated evidence.
+- **Compare** produces server-calculated differences between two exact checkpoints.
 
-Boundary and OSM regeneration are also explicit:
+The original final checkpoint is never overwritten by replay or fork operations. Runtime manifests also prevent an old workflow or incompatible data/model/provider profile from being silently resumed under new semantics.
 
-```bash
-python -m scripts.generate_london_boundary --live-refresh
-python -m scripts.generate_osm_snapshot --live-refresh
-python -m scripts.generate_entrance_snapshot --live-refresh
-```
+## Observability
 
-All public API requests are sequential, carry a project-specific User-Agent, have timeouts, at most three transport attempts and bounded backoff. Live data changes; exact dated fixture counts are not permanent product expectations.
+The product exposes agent execution as a first-class interface, not as console output added after development.
 
-## Sources and product boundaries
+- Every node, model call, tool call, routing-provider attempt and saved checkpoint emits a sequence-numbered lifecycle event.
+- Server-Sent Events stream progress to the browser and replay missed events after reconnect without cancelling the underlying run.
+- The UI overlays live and persisted execution state on the actual compiled LangGraph topology.
+- Checkpoint inspection uses allow-listed views rather than serialising raw LangGraph state.
+- Timing reports separate node wall time from nested model, tool and provider spans, making the slowest stage visible.
+- Safe operation reports preserve tool audits, timings, plan facts and route decisions without API keys, raw provider requests, individual occurrence locations or private route geometry.
 
-- GBIF Species API: taxonomy.
-- GBIF Occurrence Search API: bounded historical evidence; record and media licences are audited separately.
-- Postcodes.io: London postcode feasibility.
-- Open-Meteo: weather feasibility, not bird prediction.
-- OpenStreetMap/Nominatim: versioned Greater London boundary.
-- OpenStreetMap/Nominatim Search API: submitted named-place lookup in live data mode; versioned sanitized Kensal Road candidates in fixture mode.
-- OpenStreetMap/Overpass: one-off green-space candidate snapshot, not a runtime query.
-- OpenStreetMap/Overpass: versioned public-green-space entrance snapshot with exact OSM boundary-member associations; entrance tags are not proof of legal access.
-- OpenFreeMap Liberty: default keyless MapLibre basemap style, with OpenFreeMap/OpenMapTiles/OpenStreetMap attribution.
-- Transport for London Journey Planner API: default live least-time public-transport-and-walking journey; a backend `TFL_API_KEY` is optional for the public allowance and recommended for deployed quota.
-- openrouteservice by HeiGIT: retained walking-only adapter and explicit live foot-walking test through the current `api.heigit.org` endpoint. The key stays on the backend.
-- GraphHopper: optional second live walking adapter; it is used only when configured and never as a fixture fallback.
-
-The public Nominatim service requires no API key for low-volume use, but it is not an unlimited or guaranteed hosting dependency. This application sends only explicit submitted searches, caps the response at three candidates, identifies itself with a project User-Agent, serializes requests to no more than one per second, and does not implement client-side autocomplete. OpenStreetMap attribution is retained. A larger public deployment should use a hosted geocoding plan or its own compliant instance.
-
-GiGL Spaces to Visit and the authenticated GBIF bulk Download API are not dependencies.
-
-- The application does not guarantee species sightings.
-- It does not expose precise sensitive-species locations.
-- It does not provide scientific population estimates.
-- It does not guarantee that a mapped site is currently open or accessible.
-- It does not execute bookings or field actions.
-
-See [the Phase 0.1 feasibility report](docs/phase-0-feasibility.md), [fixture schema](docs/fixture-schema.md) and [data sources and licences](docs/data-sources-and-licences.md).
-
-## Roadmap boundary
-
-Phase 0, Phase 0.1, the Phase 1 deterministic biodiversity backend, the Phase 2 biodiversity LangGraph agent, Phase 3 durable HITL/time travel, the Phase 4 visual product and Phase 5 geospatial/routing hardening are implemented. Phase 6 rarity, habitat/conservation designation and legal conclusions remain explicitly out of scope; Phase 7 MCP, authentication and production multi-tenant hosting also remain deferred.
+For the recorded Phase 5 fixture run, the timing report captured 98 events and 33 timed spans across nodes, models, tools and routing-provider calls. The slowest nested work was the public green-space lookup, while all four fixture provider attempts completed in 1.23 ms combined. These measurements are diagnostic samples, not performance guarantees.
