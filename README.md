@@ -10,18 +10,11 @@ London-only · birds-first · English-only · historical evidence, not a sightin
 
 ## Demo
 
-> 🎥 **Demo media placeholder** — a full YouTube walkthrough and a short preview GIF will be added here.
+[![Watch the London Biodiversity Expedition Planner demo](https://img.youtube.com/vi/yD1BQRdGDL4/maxresdefault.jpg)](https://youtu.be/yD1BQRdGDL4)
 
-The walkthrough will follow one expedition from its original natural-language request through live graph execution, a typed human decision, the evidence map, the validated journey and checkpoint comparison.
+**[▶ Watch the full walkthrough on YouTube](https://youtu.be/yD1BQRdGDL4)**
 
-<!--
-DEMO PLACEHOLDER
-
-Recommended final form:
-[![Watch the London Biodiversity Expedition Planner demo](docs/assets/demo-preview.gif)](YOUTUBE_URL)
-
-Keep the preview to a few seconds and link it to the complete YouTube walkthrough.
--->
+The walkthrough follows one expedition from its original natural-language request through live graph execution, a typed human decision, the evidence map, the validated journey and checkpoint comparison. It then demonstrates checkpoint replay, branching and deterministic comparison without overwriting the original result.
 
 ## Engineering highlights
 
