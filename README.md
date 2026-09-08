@@ -159,10 +159,6 @@ Then choose **fixture/live** to exercise the live model against stable evidence,
 | `fixture/live` | Versioned fixtures | Configured live model | Charged to the API project used by your backend |
 | `live/live` | Live upstream services | Configured live model | Charged to the API project used by your backend |
 
-Cloning or running this project locally does not use the author's API allowance. If someone hosts a live-model backend for other visitors, requests use that host's configured credentials and API project. OpenAI describes this credential and usage boundary in its [API authentication documentation](https://developers.openai.com/api/reference/overview#authentication). For a custom model endpoint, that provider's billing applies.
-
-The current live routing profile uses TfL Journey Planner. The backend supports an optional `TFL_API_KEY`; availability and quotas follow the provider's current policy. `ORS_API_KEY` and `GRAPHHOPPER_API_KEY` are for the separate walking-provider adapters, not prerequisites for the default demo or TfL profile. See [data sources and licences](docs/data-sources-and-licences.md) for provider details.
-
 ## Architecture and core workflow
 
 LangGraph fits this workflow because each new piece of evidence can change what happens next: an incomplete request needs clarification, ambiguous taxa need a human choice, weak evidence may require another tool call, and a proposed journey may fail its constraints. Typed state and reducers preserve what has been learned; conditional edges, bounded tool loops and interrupts make those decisions explicit.
