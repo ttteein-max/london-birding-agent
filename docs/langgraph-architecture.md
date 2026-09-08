@@ -1,14 +1,14 @@
 # LangGraph architecture
 
-[Back to the README overview](../README.md#architecture-and-core-workflow) · [Open full-size topology PNG](diagrams/langgraph-topology.png?raw=true) · [Topology SVG](diagrams/langgraph-topology.svg?raw=true)
+[Back to the README overview](../README.md#architecture-and-core-workflow) · [Open full-size topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) · [Topology SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)
 
 The README introduces the workflow as grouped stages. This diagram expands those stages into the current `phase-5.0` graph: **29 workflow nodes, START/END, 50 edges and seven typed HITL nodes**. Its node and edge set is exported from the same compiled graph used by the application; the layout is curated for a consistent top-to-bottom reading order.
 
 ## Complete compiled topology
 
-[![Complete LangGraph topology with all current request, evidence, HITL, journey and planning branches](diagrams/langgraph-topology.png)](diagrams/langgraph-topology.png?raw=true)
+[![Complete LangGraph topology with all current request, evidence, HITL, journey and planning branches](diagrams/langgraph-topology.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png)
 
-**Click the diagram or [Open full-size topology PNG](diagrams/langgraph-topology.png?raw=true) to view the original 3000 × 6060 image.** The link opens image content directly, outside GitHub's file viewer. If the browser initially fits the whole image into the window, click it to inspect it at its original size, then scroll. The SVG is available for vector viewing or download.
+**Click the diagram or [Open full-size topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) to view the original 3000 × 6060 image.** The link opens image content directly, outside GitHub's file viewer. If the browser initially fits the whole image into the window, click it to inspect it at its original size, then scroll. The SVG is available for vector viewing or download.
 
 ## How to read it
 
@@ -75,5 +75,5 @@ The exporter writes [langgraph-topology.json](diagrams/langgraph-topology.json).
 
 - [Python exporter](../scripts/export_workflow_diagrams.py)
 - [Diagram renderer](../scripts/diagrams/render.mjs)
-- [Overview PNG](diagrams/langgraph-overview.png?raw=true) and [SVG](diagrams/langgraph-overview.svg?raw=true)
-- [Complete topology PNG](diagrams/langgraph-topology.png?raw=true) and [SVG](diagrams/langgraph-topology.svg?raw=true)
+- [Overview PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png) and [SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.svg)
+- [Complete topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) and [SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)

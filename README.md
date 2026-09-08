@@ -139,9 +139,9 @@ This is why the graph, checkpoint and HITL layers are part of the product behavi
 
 ## Architecture and core workflow
 
-[![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](docs/diagrams/langgraph-overview.png?raw=true)
+[![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png)
 
-[View full-size overview](docs/diagrams/langgraph-overview.png?raw=true) · [Explore the complete LangGraph topology](docs/langgraph-architecture.md) · [Overview SVG](docs/diagrams/langgraph-overview.svg?raw=true)
+[View full-size overview](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png) · [Explore the complete LangGraph topology](docs/langgraph-architecture.md) · [Overview SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.svg)
 
 *The overview groups related steps for readability. The [complete topology](docs/langgraph-architecture.md) preserves all 29 workflow nodes, START/END and 50 compiled edges. Click either diagram to open its full-resolution image directly.*
 
