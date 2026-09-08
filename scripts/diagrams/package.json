@@ -1,0 +1,11 @@
+{
+  "name": "biodiversity-workflow-diagrams",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node render.mjs"
+  },
+  "dependencies": {
+    "sharp": "0.34.5"
+  }
+}

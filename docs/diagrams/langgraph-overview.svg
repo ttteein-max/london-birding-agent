@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="1320" viewBox="0 0 1200 1320" role="img" aria-labelledby="title description">
+<title id="title">LangGraph workflow overview</title><desc id="description">Grouped workflow stages with a bounded evidence tool loop, typed human decisions, deterministic journey validation, one model revision and fallback. SQLite checkpoints, time travel and observability support the entire workflow.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#78899B"/></marker><marker id="amber-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9D5B13"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172B42} .muted{fill:#536477} .mono{font-family:Menlo,Consolas,monospace} .edge{fill:none;stroke:#78899B;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}</style>
+<rect width="1200" height="1320" fill="white"/>
+<text x="50" y="48" font-size="15" letter-spacing="1.6" class="muted">LONDON BIODIVERSITY EXPEDITION PLANNER</text>
+<text x="50" y="96" font-size="35" font-weight="700">LangGraph workflow overview</text>
+<text x="50" y="130" font-size="19" class="muted">Grouped stages · seven typed interrupt paths · durable execution</text>
+<rect x="52" y="158" width="13" height="13" rx="2" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="75" y="170" font-size="15" >Model / ToolNode</text>
+<rect x="251" y="158" width="13" height="13" rx="2" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="274" y="170" font-size="15" >Deterministic code</text>
+<rect x="474" y="158" width="13" height="13" rx="2" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="497" y="170" font-size="15" >Human decision</text>
+<rect x="80" y="205" width="580" height="88" rx="9" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="100" y="236" font-size="21" font-weight="600">Parse request &amp; resolve context</text>
+<text x="100" y="261" font-size="17" class="muted">Typed constraints · London origin · accepted bird taxonomy</text>
+<text x="100" y="279" font-size="14" class="muted">Model parsing + deterministic location and taxonomy services</text>
+<rect x="802" y="205" width="348" height="88" rx="9" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="822" y="236" font-size="21" font-weight="600">Clarify request or identity</text>
+<text x="822" y="261" font-size="17" class="muted">Request · location · bird selection</text>
+<path class="edge" d="M660 231 H794" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<path class="edge" d="M802 269 H668" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<text x="730" y="223" font-size="14" text-anchor="middle" class="muted">pause</text>
+<text x="730" y="291" font-size="14" text-anchor="middle" class="muted">resume</text>
+<path class="edge" d="M370 293 V332" />
+<rect x="80" y="340" width="580" height="174" rx="9" fill="#F7F9FB" stroke="#CBD5DF"/>
+<text x="100" y="366" font-size="14" letter-spacing="1.2" class="muted">BOUNDED EVIDENCE LOOP</text>
+<rect x="100" y="384" width="234" height="79" rx="9" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="120" y="415" font-size="21" font-weight="600">Evidence Agent</text>
+<text x="120" y="440" font-size="17" class="muted">Select allowed tools</text>
+<rect x="394" y="384" width="246" height="79" rx="9" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="414" y="415" font-size="21" font-weight="600">ToolNode</text>
+<text x="414" y="440" font-size="17" class="muted">Occurrence · weather · sites</text>
+<path class="edge" d="M334 408 H386" />
+<path class="edge" d="M394 444 H342" />
+<text x="370" y="492" font-size="15" text-anchor="middle" class="muted">Validate, deduplicate and merge results · up to 6 rounds</text>
+<text x="802" y="389" font-size="18" >Model proposes the next tool call.</text>
+<text x="802" y="420" font-size="18" >Typed results update shared state.</text>
+<text x="802" y="451" font-size="18" class="muted">Failures and limits stay explicit.</text>
+<path class="edge" d="M370 514 V551" />
+<rect x="80" y="560" width="580" height="88" rx="9" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="100" y="591" font-size="21" font-weight="600">Validate evidence &amp; site grounding</text>
+<text x="100" y="616" font-size="17" class="muted">Evidence thresholds · eligible sites · request constraints</text>
+<rect x="802" y="560" width="348" height="88" rx="9" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="822" y="591" font-size="21" font-weight="600">Resolve evidence trade-offs</text>
+<text x="822" y="616" font-size="17" class="muted">Validated choice → affected evidence</text>
+<path class="edge" d="M660 586 H794" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<path class="edge" d="M802 624 H668" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<text x="730" y="578" font-size="14" text-anchor="middle" class="muted">pause</text>
+<text x="730" y="646" font-size="14" text-anchor="middle" class="muted">resume</text>
+<path class="edge" d="M370 648 V685" />
+<rect x="80" y="694" width="580" height="88" rx="9" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="100" y="725" font-size="21" font-weight="600">Validate &amp; rank journeys</text>
+<text x="100" y="750" font-size="17" class="muted">Audited entrances → outbound / return → constraints</text>
+<rect x="802" y="694" width="348" height="88" rx="9" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="822" y="725" font-size="21" font-weight="600">Resolve route trade-offs</text>
+<text x="822" y="750" font-size="17" class="muted">Entrance evidence · walking limit</text>
+<path class="edge" d="M660 720 H794" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<path class="edge" d="M802 758 H668" style="stroke:#9D5B13;marker-end:url(#amber-arrow)"/>
+<text x="730" y="712" font-size="14" text-anchor="middle" class="muted">pause</text>
+<text x="730" y="780" font-size="14" text-anchor="middle" class="muted">resume</text>
+<path class="edge" d="M370 782 V819" />
+<rect x="80" y="828" width="580" height="78" rx="9" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="100" y="859" font-size="21" font-weight="600">Compose expedition plan</text>
+<text x="100" y="884" font-size="17" class="muted">Model writes from the validated evidence and journey bundle</text>
+<path class="edge" d="M370 906 V941" />
+<rect x="80" y="950" width="580" height="78" rx="9" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="100" y="981" font-size="21" font-weight="600">Check grounding &amp; finalise</text>
+<text x="100" y="1006" font-size="17" class="muted">Verify claims, route facts and constraints</text>
+<rect x="802" y="828" width="348" height="78" rx="9" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="822" y="859" font-size="21" font-weight="600">Revise once</text>
+<text x="822" y="884" font-size="17" class="muted">Repair an unsupported draft</text>
+<path class="edge" d="M660 971 H744 V850 H794" stroke-dasharray="6 5"/>
+<path class="edge" d="M802 888 H769 V1005 H668" />
+<text x="686" y="939" font-size="14" class="muted">repair</text>
+<rect x="802" y="1046" width="348" height="78" rx="9" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="822" y="1077" font-size="21" font-weight="600">Deterministic fallback</text>
+<text x="822" y="1102" font-size="17" class="muted">Used if model composition fails</text>
+<path class="edge" d="M660 1017 H730 V1085 H794" stroke-dasharray="6 5"/>
+<text x="680" y="1043" font-size="14" class="muted">fallback</text>
+<path class="edge" d="M370 1028 V1073" />
+<rect x="80" y="1082" width="580" height="42" rx="9" fill="#F7F9FB" stroke="#CBD5DF"/>
+<text x="370" y="1109" font-size="18" text-anchor="middle" font-weight="600">Final plan or explicit limited / stopped outcome</text>
+<path class="edge" d="M802 1104 H668" />
+<text x="80" y="1149" font-size="14" class="muted">Early source failures and loop-limit exits are expanded in the full topology.</text>
+<path d="M50 1160 H1150" stroke="#CBD5DF"/>
+<text x="50" y="1189" font-size="14" letter-spacing="1.1" class="muted">RUNTIME SUPPORT · ACTIVE THROUGHOUT THE WORKFLOW</text>
+<text x="50" y="1230" font-size="21" font-weight="600">SQLite checkpoints</text>
+<text x="50" y="1257" font-size="16" class="muted">Persist state</text>
+<text x="50" y="1279" font-size="16" class="muted">validate resume identity</text>
+<text x="430" y="1230" font-size="21" font-weight="600">Replay / Fork / Compare</text>
+<text x="430" y="1257" font-size="16" class="muted">Preserve history</text>
+<text x="430" y="1279" font-size="16" class="muted">recompute affected state</text>
+<text x="810" y="1230" font-size="21" font-weight="600">Observability</text>
+<text x="810" y="1257" font-size="16" class="muted">SSE reconnect</text>
+<text x="810" y="1279" font-size="16" class="muted">node / model / tool / provider spans</text>
+</svg>

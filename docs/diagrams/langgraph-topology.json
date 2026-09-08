@@ -1,0 +1,555 @@
+{
+  "workflow_version": "phase-5.0",
+  "nodes": [
+    {
+      "node_id": "__start__",
+      "label": "Start",
+      "stage": "entry",
+      "kind": "start",
+      "summary": "Accept a new execution or resume command.",
+      "order": 0
+    },
+    {
+      "node_id": "parse_expedition_request",
+      "label": "Parse expedition request",
+      "stage": "intake",
+      "kind": "model",
+      "summary": "Turn the natural-language request into typed constraints.",
+      "order": 0
+    },
+    {
+      "node_id": "request_clarification_interrupt",
+      "label": "Request clarification",
+      "stage": "intake",
+      "kind": "hitl",
+      "summary": "Pause for missing or contradictory request fields.",
+      "order": 1
+    },
+    {
+      "node_id": "geocode_location_query",
+      "label": "Geocode location query",
+      "stage": "location",
+      "kind": "deterministic",
+      "summary": "Resolve a place description without exposing raw coordinates.",
+      "order": 0
+    },
+    {
+      "node_id": "resolve_location",
+      "label": "Resolve location",
+      "stage": "location",
+      "kind": "deterministic",
+      "summary": "Validate the generalised start inside Greater London.",
+      "order": 1
+    },
+    {
+      "node_id": "location_correction_interrupt",
+      "label": "Location correction",
+      "stage": "location",
+      "kind": "hitl",
+      "summary": "Pause when the intended London location is ambiguous.",
+      "order": 2
+    },
+    {
+      "node_id": "resolve_taxon",
+      "label": "Resolve taxon",
+      "stage": "taxonomy",
+      "kind": "deterministic",
+      "summary": "Match the requested bird to an accepted taxonomy.",
+      "order": 0
+    },
+    {
+      "node_id": "prepare_taxon_selection",
+      "label": "Prepare taxon selection",
+      "stage": "taxonomy",
+      "kind": "deterministic",
+      "summary": "Build a bounded list of safe taxonomy candidates.",
+      "order": 1
+    },
+    {
+      "node_id": "taxon_selection_interrupt",
+      "label": "Taxon selection",
+      "stage": "taxonomy",
+      "kind": "hitl",
+      "summary": "Pause for a human choice between plausible taxa.",
+      "order": 2
+    },
+    {
+      "node_id": "bird_input_correction_interrupt",
+      "label": "Bird input correction",
+      "stage": "taxonomy",
+      "kind": "hitl",
+      "summary": "Pause for a corrected bird name when resolution fails.",
+      "order": 3
+    },
+    {
+      "node_id": "evidence_agent",
+      "label": "Evidence agent",
+      "stage": "evidence",
+      "kind": "model",
+      "summary": "Choose the bounded evidence tools required by the request.",
+      "order": 0
+    },
+    {
+      "node_id": "evidence_tools",
+      "label": "Evidence tools",
+      "stage": "evidence",
+      "kind": "tool",
+      "summary": "Call taxonomy, occurrence, weather, and public-site sources.",
+      "order": 1
+    },
+    {
+      "node_id": "record_structured_evidence",
+      "label": "Record structured evidence",
+      "stage": "evidence",
+      "kind": "deterministic",
+      "summary": "Validate and merge tool outputs into the durable state.",
+      "order": 2
+    },
+    {
+      "node_id": "evidence_loop_limit",
+      "label": "Evidence loop limit",
+      "stage": "evidence",
+      "kind": "terminal",
+      "summary": "Stop safely if evidence collection exceeds its bounded loop.",
+      "order": 3
+    },
+    {
+      "node_id": "source_resolution_failure",
+      "label": "Source resolution failure",
+      "stage": "evidence",
+      "kind": "terminal",
+      "summary": "Stop with a safe source-failure outcome.",
+      "order": 4
+    },
+    {
+      "node_id": "deterministic_validation",
+      "label": "Deterministic validation",
+      "stage": "validation",
+      "kind": "deterministic",
+      "summary": "Apply evidence gates and expedition constraints.",
+      "order": 0
+    },
+    {
+      "node_id": "actionable_tradeoff_interrupt",
+      "label": "Actionable trade-off",
+      "stage": "validation",
+      "kind": "hitl",
+      "summary": "Pause for a human choice when constraints and evidence conflict.",
+      "order": 1
+    },
+    {
+      "node_id": "apply_validated_user_choice",
+      "label": "Apply validated choice",
+      "stage": "validation",
+      "kind": "deterministic",
+      "summary": "Apply only allow-listed human decision fields.",
+      "order": 2
+    },
+    {
+      "node_id": "related_taxon_selection_interrupt",
+      "label": "Related taxon selection",
+      "stage": "validation",
+      "kind": "hitl",
+      "summary": "Pause before substituting a related taxon.",
+      "order": 3
+    },
+    {
+      "node_id": "refresh_invalidated_evidence",
+      "label": "Refresh invalidated evidence",
+      "stage": "validation",
+      "kind": "deterministic",
+      "summary": "Recompute evidence invalidated by a changed constraint.",
+      "order": 4
+    },
+    {
+      "node_id": "resolve_public_site_entrances",
+      "label": "Resolve public entrances",
+      "stage": "routing",
+      "kind": "deterministic",
+      "summary": "Associate candidate sites with audited, eligible OSM entrance points.",
+      "order": 0
+    },
+    {
+      "node_id": "request_walking_routes",
+      "label": "Request journeys",
+      "stage": "routing",
+      "kind": "deterministic",
+      "summary": "Request bounded outbound and return journeys from the configured provider.",
+      "order": 1
+    },
+    {
+      "node_id": "validate_route_constraints",
+      "label": "Validate route constraints",
+      "stage": "routing",
+      "kind": "deterministic",
+      "summary": "Check walking distance, entrance approach and total travel time against the request.",
+      "order": 2
+    },
+    {
+      "node_id": "rank_route_options",
+      "label": "Rank route options",
+      "stage": "routing",
+      "kind": "deterministic",
+      "summary": "Select feasible routes with a stable, code-defined ordering.",
+      "order": 3
+    },
+    {
+      "node_id": "route_tradeoff_interrupt",
+      "label": "Route trade-off",
+      "stage": "routing",
+      "kind": "hitl",
+      "summary": "Pause only when an entrance or walking-limit choice can change the result.",
+      "order": 4
+    },
+    {
+      "node_id": "apply_route_tradeoff_choice",
+      "label": "Apply route choice",
+      "stage": "routing",
+      "kind": "deterministic",
+      "summary": "Apply an allow-listed route decision and invalidate stale route evidence.",
+      "order": 5
+    },
+    {
+      "node_id": "compose_expedition_plan",
+      "label": "Compose expedition plan",
+      "stage": "planning",
+      "kind": "model",
+      "summary": "Compose a plan from the validated evidence bundle.",
+      "order": 0
+    },
+    {
+      "node_id": "revise_expedition_plan",
+      "label": "Revise expedition plan",
+      "stage": "planning",
+      "kind": "model",
+      "summary": "Repair a draft that did not pass deterministic grounding.",
+      "order": 1
+    },
+    {
+      "node_id": "grounding_and_safety_checks",
+      "label": "Grounding and safety checks",
+      "stage": "planning",
+      "kind": "deterministic",
+      "summary": "Verify claims, provenance, constraints, and safe wording.",
+      "order": 2
+    },
+    {
+      "node_id": "deterministic_plan_fallback",
+      "label": "Deterministic plan fallback",
+      "stage": "planning",
+      "kind": "terminal",
+      "summary": "Produce a safe fallback after the bounded revision loop.",
+      "order": 3
+    },
+    {
+      "node_id": "__end__",
+      "label": "End",
+      "stage": "outcome",
+      "kind": "end",
+      "summary": "Persist the execution outcome and final checkpoint.",
+      "order": 0
+    }
+  ],
+  "edges": [
+    {
+      "source": "__start__",
+      "target": "parse_expedition_request",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "actionable_tradeoff_interrupt",
+      "target": "apply_validated_user_choice",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "apply_route_tradeoff_choice",
+      "target": "compose_expedition_plan",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "apply_route_tradeoff_choice",
+      "target": "request_walking_routes",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "apply_validated_user_choice",
+      "target": "deterministic_validation",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "apply_validated_user_choice",
+      "target": "evidence_agent",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "apply_validated_user_choice",
+      "target": "refresh_invalidated_evidence",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "apply_validated_user_choice",
+      "target": "related_taxon_selection_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "bird_input_correction_interrupt",
+      "target": "resolve_taxon",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "compose_expedition_plan",
+      "target": "grounding_and_safety_checks",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "deterministic_plan_fallback",
+      "target": "__end__",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "deterministic_validation",
+      "target": "__end__",
+      "conditional": true,
+      "route_label": "terminal"
+    },
+    {
+      "source": "deterministic_validation",
+      "target": "actionable_tradeoff_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "deterministic_validation",
+      "target": "resolve_public_site_entrances",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "evidence_agent",
+      "target": "deterministic_validation",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "evidence_agent",
+      "target": "evidence_loop_limit",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "evidence_agent",
+      "target": "evidence_tools",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "evidence_loop_limit",
+      "target": "__end__",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "evidence_tools",
+      "target": "record_structured_evidence",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "geocode_location_query",
+      "target": "location_correction_interrupt",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "grounding_and_safety_checks",
+      "target": "__end__",
+      "conditional": true,
+      "route_label": "complete"
+    },
+    {
+      "source": "grounding_and_safety_checks",
+      "target": "deterministic_plan_fallback",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "grounding_and_safety_checks",
+      "target": "revise_expedition_plan",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "location_correction_interrupt",
+      "target": "resolve_location",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "parse_expedition_request",
+      "target": "geocode_location_query",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "parse_expedition_request",
+      "target": "request_clarification_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "parse_expedition_request",
+      "target": "resolve_location",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "prepare_taxon_selection",
+      "target": "taxon_selection_interrupt",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "rank_route_options",
+      "target": "compose_expedition_plan",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "rank_route_options",
+      "target": "route_tradeoff_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "record_structured_evidence",
+      "target": "evidence_agent",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "refresh_invalidated_evidence",
+      "target": "deterministic_validation",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "related_taxon_selection_interrupt",
+      "target": "refresh_invalidated_evidence",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "request_clarification_interrupt",
+      "target": "geocode_location_query",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "request_clarification_interrupt",
+      "target": "resolve_location",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "request_walking_routes",
+      "target": "validate_route_constraints",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "resolve_location",
+      "target": "location_correction_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_location",
+      "target": "resolve_taxon",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_location",
+      "target": "source_resolution_failure",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_public_site_entrances",
+      "target": "request_walking_routes",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "resolve_taxon",
+      "target": "bird_input_correction_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_taxon",
+      "target": "evidence_agent",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_taxon",
+      "target": "prepare_taxon_selection",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_taxon",
+      "target": "source_resolution_failure",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "resolve_taxon",
+      "target": "taxon_selection_interrupt",
+      "conditional": true,
+      "route_label": null
+    },
+    {
+      "source": "revise_expedition_plan",
+      "target": "grounding_and_safety_checks",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "route_tradeoff_interrupt",
+      "target": "apply_route_tradeoff_choice",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "source_resolution_failure",
+      "target": "__end__",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "taxon_selection_interrupt",
+      "target": "evidence_agent",
+      "conditional": false,
+      "route_label": null
+    },
+    {
+      "source": "validate_route_constraints",
+      "target": "rank_route_options",
+      "conditional": false,
+      "route_label": null
+    }
+  ]
+}

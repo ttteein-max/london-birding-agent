@@ -139,18 +139,11 @@ This is why the graph, checkpoint and HITL layers are part of the product behavi
 
 ## Architecture and core workflow
 
-<!--
-FULL LANGGRAPH DIAGRAM PLACEHOLDER
+[![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](docs/diagrams/langgraph-overview.png?raw=true)
 
-Replace the figure below, or add a clickable full-topology figure above it, when the
-updated Phase 5 diagram from the separate design work is available. The replacement
-must reflect the current phase-5.0 workflow, SQLite durability, typed HITL, routing
-nodes, replay/fork/compare and provider observability.
--->
+[View full-size overview](docs/diagrams/langgraph-overview.png?raw=true) · [Explore the complete LangGraph topology](docs/langgraph-architecture.md) · [Overview SVG](docs/diagrams/langgraph-overview.svg?raw=true)
 
-[![Current Phase 5 evidence-to-route architecture](docs/diagrams/phase-5-geospatial-routing.svg)](docs/diagrams/phase-5-geospatial-routing.svg)
-
-*Current Phase 5 evidence-to-route authority boundary. A complete compiled-graph diagram will be added in this position.*
+*The overview groups related steps for readability. The [complete topology](docs/langgraph-architecture.md) preserves all 29 workflow nodes, START/END and 50 compiled edges. Click either diagram to open its full-resolution image directly.*
 
 One successful run moves through eight conceptual stages:
 

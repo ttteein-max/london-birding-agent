@@ -1,0 +1,405 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="3030" viewBox="0 0 1500 3030" role="img" aria-labelledby="title description">
+<title id="title">Compiled LangGraph topology</title><desc id="description">Every compiled node and edge for phase-5.0: 29 workflow nodes, START and END, and 50 edges. Solid lines are unconditional edges; dashed lines are conditional routes. Seven amber nodes interrupt for validated human input.</desc>
+<defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#78899B"/></marker><marker id="amber-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9D5B13"/></marker></defs>
+<style>text{font-family:Arial,Helvetica,sans-serif;fill:#172B42} .muted{fill:#536477} .mono{font-family:Menlo,Consolas,monospace} .edge{fill:none;stroke:#78899B;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}</style>
+<rect width="1500" height="3030" fill="white"/>
+<text x="50" y="46" font-size="15" letter-spacing="1.5" class="muted">LONDON BIODIVERSITY EXPEDITION PLANNER</text>
+<text x="50" y="91" font-size="36" font-weight="700">Compiled LangGraph topology</text>
+<text x="50" y="128" font-size="21" class="muted">phase-5.0 · 29 workflow nodes + START / END · 50 edges · 7 typed HITL nodes</text>
+<rect x="50" y="154" width="16" height="16" rx="2" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="78" y="168" font-size="17" >Model / ToolNode</text>
+<rect x="285" y="154" width="16" height="16" rx="2" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="313" y="168" font-size="17" >Deterministic code</text>
+<rect x="535" y="154" width="16" height="16" rx="2" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="563" y="168" font-size="17" >Human interrupt</text>
+<path class="edge" d="M788 163 H832" />
+<text x="847" y="168" font-size="17" >Edge</text>
+<path class="edge" d="M935 163 H979" stroke-dasharray="6 5"/>
+<text x="994" y="168" font-size="17" >Conditional</text>
+<text x="50" y="207" font-size="17" class="muted">Read node titles first; exact Python node identifiers appear underneath. All connections come from the compiled graph.</text>
+<g>
+<g data-source="__start__" data-target="parse_expedition_request" data-conditional="false"><title>__start__ → parse_expedition_request</title>
+<path d="M750 310 V350" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 310 V350" />
+</g>
+<g data-source="actionable_tradeoff_interrupt" data-target="apply_validated_user_choice" data-conditional="false"><title>actionable_tradeoff_interrupt → apply_validated_user_choice</title>
+<path d="M1230 1430 V1460" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 1430 V1460" />
+</g>
+<g data-source="apply_route_tradeoff_choice" data-target="compose_expedition_plan" data-conditional="true"><title>apply_route_tradeoff_choice → compose_expedition_plan</title>
+<path d="M1060 2335 H1000 V2390 H850 V2410" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 2335 H1000 V2390 H850 V2410" stroke-dasharray="7 5"/>
+</g>
+<g data-source="apply_route_tradeoff_choice" data-target="request_walking_routes" data-conditional="true"><title>apply_route_tradeoff_choice → request_walking_routes</title>
+<path d="M1060 2300 H970 V1930 H920" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 2300 H970 V1930 H920" stroke-dasharray="7 5"/>
+</g>
+<g data-source="apply_validated_user_choice" data-target="deterministic_validation" data-conditional="true"><title>apply_validated_user_choice → deterministic_validation</title>
+<path d="M1060 1510 H1000 V1405 H920" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 1510 H1000 V1405 H920" stroke-dasharray="7 5"/>
+</g>
+<g data-source="apply_validated_user_choice" data-target="evidence_agent" data-conditional="true"><title>apply_validated_user_choice → evidence_agent</title>
+<path d="M1060 1490 H970 V1170 H850 V1150" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 1490 H970 V1170 H850 V1150" stroke-dasharray="7 5"/>
+</g>
+<g data-source="apply_validated_user_choice" data-target="refresh_invalidated_evidence" data-conditional="true"><title>apply_validated_user_choice → refresh_invalidated_evidence</title>
+<path d="M1060 1540 H1020 V1720 H270 V1690" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 1540 H1020 V1720 H270 V1690" stroke-dasharray="7 5"/>
+</g>
+<g data-source="apply_validated_user_choice" data-target="related_taxon_selection_interrupt" data-conditional="true"><title>apply_validated_user_choice → related_taxon_selection_interrupt</title>
+<path d="M1230 1560 V1590" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 1560 V1590" stroke-dasharray="7 5"/>
+</g>
+<g data-source="bird_input_correction_interrupt" data-target="resolve_taxon" data-conditional="false"><title>bird_input_correction_interrupt → resolve_taxon</title>
+<path d="M440 915 H525 V840 H580" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M440 915 H525 V840 H580" />
+</g>
+<g data-source="compose_expedition_plan" data-target="grounding_and_safety_checks" data-conditional="false"><title>compose_expedition_plan → grounding_and_safety_checks</title>
+<path d="M750 2510 V2540" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 2510 V2540" />
+</g>
+<g data-source="deterministic_plan_fallback" data-target="__end__" data-conditional="false"><title>deterministic_plan_fallback → __end__</title>
+<path d="M1230 2770 V2890 H835" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 2770 V2890 H835" />
+</g>
+<g data-source="deterministic_validation" data-target="__end__" data-conditional="true"><title>deterministic_validation → __end__ (terminal)</title>
+<path d="M580 1360 H70 V2865 H665" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 1360 H70 V2865 H665" stroke-dasharray="7 5"/>
+</g>
+<g data-source="deterministic_validation" data-target="actionable_tradeoff_interrupt" data-conditional="true"><title>deterministic_validation → actionable_tradeoff_interrupt</title>
+<path d="M920 1380 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 1380 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="deterministic_validation" data-target="resolve_public_site_entrances" data-conditional="true"><title>deterministic_validation → resolve_public_site_entrances</title>
+<path d="M750 1430 V1750" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 1430 V1750" stroke-dasharray="7 5"/>
+</g>
+<g data-source="evidence_agent" data-target="deterministic_validation" data-conditional="true"><title>evidence_agent → deterministic_validation</title>
+<path d="M750 1150 V1330" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 1150 V1330" stroke-dasharray="7 5"/>
+</g>
+<g data-source="evidence_agent" data-target="evidence_loop_limit" data-conditional="true"><title>evidence_agent → evidence_loop_limit</title>
+<path d="M580 1100 H440" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 1100 H440" stroke-dasharray="7 5"/>
+</g>
+<g data-source="evidence_agent" data-target="evidence_tools" data-conditional="true"><title>evidence_agent → evidence_tools</title>
+<path d="M920 1100 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 1100 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="evidence_loop_limit" data-target="__end__" data-conditional="false"><title>evidence_loop_limit → __end__</title>
+<path d="M100 1100 H60 V2880 H665" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M100 1100 H60 V2880 H665" />
+</g>
+<g data-source="evidence_tools" data-target="record_structured_evidence" data-conditional="false"><title>evidence_tools → record_structured_evidence</title>
+<path d="M1230 1150 V1180" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 1150 V1180" />
+</g>
+<g data-source="geocode_location_query" data-target="location_correction_interrupt" data-conditional="false"><title>geocode_location_query → location_correction_interrupt</title>
+<path d="M440 530 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M440 530 H1060" />
+</g>
+<g data-source="grounding_and_safety_checks" data-target="__end__" data-conditional="true"><title>grounding_and_safety_checks → __end__ (complete)</title>
+<path d="M750 2640 V2860" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 2640 V2860" stroke-dasharray="7 5"/>
+</g>
+<g data-source="grounding_and_safety_checks" data-target="deterministic_plan_fallback" data-conditional="true"><title>grounding_and_safety_checks → deterministic_plan_fallback</title>
+<path d="M920 2610 H990 V2720 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 2610 H990 V2720 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="grounding_and_safety_checks" data-target="revise_expedition_plan" data-conditional="true"><title>grounding_and_safety_checks → revise_expedition_plan</title>
+<path d="M920 2570 H1010 V2460 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 2570 H1010 V2460 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="location_correction_interrupt" data-target="resolve_location" data-conditional="false"><title>location_correction_interrupt → resolve_location</title>
+<path d="M1230 580 V608 H870 V620" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 580 V608 H870 V620" />
+</g>
+<g data-source="parse_expedition_request" data-target="geocode_location_query" data-conditional="true"><title>parse_expedition_request → geocode_location_query</title>
+<path d="M580 400 H270 V480" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 400 H270 V480" stroke-dasharray="7 5"/>
+</g>
+<g data-source="parse_expedition_request" data-target="request_clarification_interrupt" data-conditional="true"><title>parse_expedition_request → request_clarification_interrupt</title>
+<path d="M920 400 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 400 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="parse_expedition_request" data-target="resolve_location" data-conditional="true"><title>parse_expedition_request → resolve_location</title>
+<path d="M750 450 V620" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 450 V620" stroke-dasharray="7 5"/>
+</g>
+<g data-source="prepare_taxon_selection" data-target="taxon_selection_interrupt" data-conditional="false"><title>prepare_taxon_selection → taxon_selection_interrupt</title>
+<path d="M1230 860 V890" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 860 V890" />
+</g>
+<g data-source="rank_route_options" data-target="compose_expedition_plan" data-conditional="true"><title>rank_route_options → compose_expedition_plan</title>
+<path d="M750 2240 V2410" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 2240 V2410" stroke-dasharray="7 5"/>
+</g>
+<g data-source="rank_route_options" data-target="route_tradeoff_interrupt" data-conditional="true"><title>rank_route_options → route_tradeoff_interrupt</title>
+<path d="M920 2190 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 2190 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="record_structured_evidence" data-target="evidence_agent" data-conditional="false"><title>record_structured_evidence → evidence_agent</title>
+<path d="M1060 1230 H990 V1130 H920" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 1230 H990 V1130 H920" />
+</g>
+<g data-source="refresh_invalidated_evidence" data-target="deterministic_validation" data-conditional="false"><title>refresh_invalidated_evidence → deterministic_validation</title>
+<path d="M440 1620 H500 V1400 H580" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M440 1620 H500 V1400 H580" />
+</g>
+<g data-source="related_taxon_selection_interrupt" data-target="refresh_invalidated_evidence" data-conditional="false"><title>related_taxon_selection_interrupt → refresh_invalidated_evidence</title>
+<path d="M1060 1640 H440" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 1640 H440" />
+</g>
+<g data-source="request_clarification_interrupt" data-target="geocode_location_query" data-conditional="true"><title>request_clarification_interrupt → geocode_location_query</title>
+<path d="M1230 450 V465 H270 V480" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 450 V465 H270 V480" stroke-dasharray="7 5"/>
+</g>
+<g data-source="request_clarification_interrupt" data-target="resolve_location" data-conditional="true"><title>request_clarification_interrupt → resolve_location</title>
+<path d="M1060 420 H1000 V600 H800 V620" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 420 H1000 V600 H800 V620" stroke-dasharray="7 5"/>
+</g>
+<g data-source="request_walking_routes" data-target="validate_route_constraints" data-conditional="false"><title>request_walking_routes → validate_route_constraints</title>
+<path d="M750 1980 V2010" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 1980 V2010" />
+</g>
+<g data-source="resolve_location" data-target="location_correction_interrupt" data-conditional="true"><title>resolve_location → location_correction_interrupt</title>
+<path d="M920 660 H1020 V550 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 660 H1020 V550 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_location" data-target="resolve_taxon" data-conditional="true"><title>resolve_location → resolve_taxon</title>
+<path d="M750 720 V760" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 720 V760" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_location" data-target="source_resolution_failure" data-conditional="true"><title>resolve_location → source_resolution_failure</title>
+<path d="M580 670 H270 V760" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 670 H270 V760" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_public_site_entrances" data-target="request_walking_routes" data-conditional="false"><title>resolve_public_site_entrances → request_walking_routes</title>
+<path d="M750 1850 V1880" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 1850 V1880" />
+</g>
+<g data-source="resolve_taxon" data-target="bird_input_correction_interrupt" data-conditional="true"><title>resolve_taxon → bird_input_correction_interrupt</title>
+<path d="M580 810 H500 V940 H440" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 810 H500 V940 H440" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_taxon" data-target="evidence_agent" data-conditional="true"><title>resolve_taxon → evidence_agent</title>
+<path d="M750 860 V1050" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 860 V1050" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_taxon" data-target="prepare_taxon_selection" data-conditional="true"><title>resolve_taxon → prepare_taxon_selection</title>
+<path d="M920 790 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 790 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_taxon" data-target="source_resolution_failure" data-conditional="true"><title>resolve_taxon → source_resolution_failure</title>
+<path d="M580 790 H440" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M580 790 H440" stroke-dasharray="7 5"/>
+</g>
+<g data-source="resolve_taxon" data-target="taxon_selection_interrupt" data-conditional="true"><title>resolve_taxon → taxon_selection_interrupt</title>
+<path d="M920 830 H1000 V940 H1060" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M920 830 H1000 V940 H1060" stroke-dasharray="7 5"/>
+</g>
+<g data-source="revise_expedition_plan" data-target="grounding_and_safety_checks" data-conditional="false"><title>revise_expedition_plan → grounding_and_safety_checks</title>
+<path d="M1230 2510 V2525 H850 V2540" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 2510 V2525 H850 V2540" />
+</g>
+<g data-source="route_tradeoff_interrupt" data-target="apply_route_tradeoff_choice" data-conditional="false"><title>route_tradeoff_interrupt → apply_route_tradeoff_choice</title>
+<path d="M1230 2240 V2270" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1230 2240 V2270" />
+</g>
+<g data-source="source_resolution_failure" data-target="__end__" data-conditional="false"><title>source_resolution_failure → __end__</title>
+<path d="M100 810 H30 V2900 H665" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M100 810 H30 V2900 H665" />
+</g>
+<g data-source="taxon_selection_interrupt" data-target="evidence_agent" data-conditional="false"><title>taxon_selection_interrupt → evidence_agent</title>
+<path d="M1060 970 H980 V1025 H850 V1050" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M1060 970 H980 V1025 H850 V1050" />
+</g>
+<g data-source="validate_route_constraints" data-target="rank_route_options" data-conditional="false"><title>validate_route_constraints → rank_route_options</title>
+<path d="M750 2110 V2140" fill="none" stroke="white" stroke-width="7"/>
+<path class="edge" d="M750 2110 V2140" />
+</g>
+<g data-node-id="__start__"><title>Accept a new execution or resume command.</title>
+<rect x="665" y="250" width="170" height="60" rx="25" fill="#F7F9FB" stroke="#CBD5DF"/>
+<text x="750" y="286" font-size="19" text-anchor="middle" font-weight="600">START</text>
+</g>
+<g data-node-id="parse_expedition_request"><title>Turn the natural-language request into typed constraints.</title>
+<rect x="580" y="350" width="340" height="100" rx="8" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="596" y="373" font-size="11" letter-spacing="0.9" class="muted">REQUEST / MODEL</text>
+<text x="596" y="399" font-size="19" font-weight="600">Parse expedition request</text>
+<text x="596" y="423" font-size="13" class="mono muted">parse_expedition_request</text>
+</g>
+<g data-node-id="request_clarification_interrupt"><title>Pause for missing or contradictory request fields.</title>
+<rect x="1060" y="350" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="373" font-size="11" letter-spacing="0.9" class="muted">REQUEST / HITL</text>
+<text x="1076" y="399" font-size="19" font-weight="600">Request clarification</text>
+<text x="1076" y="423" font-size="13" class="mono muted">request_clarification_interrupt</text>
+</g>
+<g data-node-id="geocode_location_query"><title>Resolve a place description without exposing raw coordinates.</title>
+<rect x="100" y="480" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="116" y="503" font-size="11" letter-spacing="0.9" class="muted">LOCATION / CODE</text>
+<text x="116" y="529" font-size="19" font-weight="600">Geocode location query</text>
+<text x="116" y="553" font-size="13" class="mono muted">geocode_location_query</text>
+</g>
+<g data-node-id="resolve_location"><title>Validate the generalised start inside Greater London.</title>
+<rect x="580" y="620" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="643" font-size="11" letter-spacing="0.9" class="muted">LOCATION / CODE</text>
+<text x="596" y="669" font-size="19" font-weight="600">Resolve location</text>
+<text x="596" y="693" font-size="13" class="mono muted">resolve_location</text>
+</g>
+<g data-node-id="location_correction_interrupt"><title>Pause when the intended London location is ambiguous.</title>
+<rect x="1060" y="480" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="503" font-size="11" letter-spacing="0.9" class="muted">LOCATION / HITL</text>
+<text x="1076" y="529" font-size="19" font-weight="600">Location correction</text>
+<text x="1076" y="553" font-size="13" class="mono muted">location_correction_interrupt</text>
+</g>
+<g data-node-id="resolve_taxon"><title>Match the requested bird to an accepted taxonomy.</title>
+<rect x="580" y="760" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="783" font-size="11" letter-spacing="0.9" class="muted">TAXONOMY / CODE</text>
+<text x="596" y="809" font-size="19" font-weight="600">Resolve taxon</text>
+<text x="596" y="833" font-size="13" class="mono muted">resolve_taxon</text>
+</g>
+<g data-node-id="prepare_taxon_selection"><title>Build a bounded list of safe taxonomy candidates.</title>
+<rect x="1060" y="760" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="1076" y="783" font-size="11" letter-spacing="0.9" class="muted">TAXONOMY / CODE</text>
+<text x="1076" y="809" font-size="19" font-weight="600">Prepare taxon selection</text>
+<text x="1076" y="833" font-size="13" class="mono muted">prepare_taxon_selection</text>
+</g>
+<g data-node-id="taxon_selection_interrupt"><title>Pause for a human choice between plausible taxa.</title>
+<rect x="1060" y="890" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="913" font-size="11" letter-spacing="0.9" class="muted">TAXONOMY / HITL</text>
+<text x="1076" y="939" font-size="19" font-weight="600">Taxon selection</text>
+<text x="1076" y="963" font-size="13" class="mono muted">taxon_selection_interrupt</text>
+</g>
+<g data-node-id="bird_input_correction_interrupt"><title>Pause for a corrected bird name when resolution fails.</title>
+<rect x="100" y="890" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="116" y="913" font-size="11" letter-spacing="0.9" class="muted">TAXONOMY / HITL</text>
+<text x="116" y="939" font-size="19" font-weight="600">Bird input correction</text>
+<text x="116" y="963" font-size="13" class="mono muted">bird_input_correction_interrupt</text>
+</g>
+<g data-node-id="evidence_agent"><title>Choose the bounded evidence tools required by the request.</title>
+<rect x="580" y="1050" width="340" height="100" rx="8" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="596" y="1073" font-size="11" letter-spacing="0.9" class="muted">EVIDENCE / MODEL</text>
+<text x="596" y="1099" font-size="19" font-weight="600">Evidence agent</text>
+<text x="596" y="1123" font-size="13" class="mono muted">evidence_agent</text>
+</g>
+<g data-node-id="evidence_tools"><title>Call taxonomy, occurrence, weather, and public-site sources.</title>
+<rect x="1060" y="1050" width="340" height="100" rx="8" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="1076" y="1073" font-size="11" letter-spacing="0.9" class="muted">EVIDENCE / TOOLNODE</text>
+<text x="1076" y="1099" font-size="19" font-weight="600">Evidence tools</text>
+<text x="1076" y="1123" font-size="13" class="mono muted">evidence_tools</text>
+</g>
+<g data-node-id="record_structured_evidence"><title>Validate and merge tool outputs into the durable state.</title>
+<rect x="1060" y="1180" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="1076" y="1203" font-size="11" letter-spacing="0.9" class="muted">EVIDENCE / CODE</text>
+<text x="1076" y="1229" font-size="19" font-weight="600">Record structured evidence</text>
+<text x="1076" y="1253" font-size="13" class="mono muted">record_structured_evidence</text>
+</g>
+<g data-node-id="evidence_loop_limit"><title>Stop safely if evidence collection exceeds its bounded loop.</title>
+<rect x="100" y="1050" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="116" y="1073" font-size="11" letter-spacing="0.9" class="muted">EVIDENCE / OUTCOME</text>
+<text x="116" y="1099" font-size="19" font-weight="600">Evidence loop limit</text>
+<text x="116" y="1123" font-size="13" class="mono muted">evidence_loop_limit</text>
+</g>
+<g data-node-id="source_resolution_failure"><title>Stop with a safe source-failure outcome.</title>
+<rect x="100" y="760" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="116" y="783" font-size="11" letter-spacing="0.9" class="muted">EVIDENCE / OUTCOME</text>
+<text x="116" y="809" font-size="19" font-weight="600">Source resolution failure</text>
+<text x="116" y="833" font-size="13" class="mono muted">source_resolution_failure</text>
+</g>
+<g data-node-id="deterministic_validation"><title>Apply evidence gates and expedition constraints.</title>
+<rect x="580" y="1330" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="1353" font-size="11" letter-spacing="0.9" class="muted">VALIDATION / CODE</text>
+<text x="596" y="1379" font-size="19" font-weight="600">Deterministic validation</text>
+<text x="596" y="1403" font-size="13" class="mono muted">deterministic_validation</text>
+</g>
+<g data-node-id="actionable_tradeoff_interrupt"><title>Pause for a human choice when constraints and evidence conflict.</title>
+<rect x="1060" y="1330" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="1353" font-size="11" letter-spacing="0.9" class="muted">VALIDATION / HITL</text>
+<text x="1076" y="1379" font-size="19" font-weight="600">Actionable trade-off</text>
+<text x="1076" y="1403" font-size="13" class="mono muted">actionable_tradeoff_interrupt</text>
+</g>
+<g data-node-id="apply_validated_user_choice"><title>Apply only allow-listed human decision fields.</title>
+<rect x="1060" y="1460" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="1076" y="1483" font-size="11" letter-spacing="0.9" class="muted">VALIDATION / CODE</text>
+<text x="1076" y="1509" font-size="19" font-weight="600">Apply validated choice</text>
+<text x="1076" y="1533" font-size="13" class="mono muted">apply_validated_user_choice</text>
+</g>
+<g data-node-id="related_taxon_selection_interrupt"><title>Pause before substituting a related taxon.</title>
+<rect x="1060" y="1590" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="1613" font-size="11" letter-spacing="0.9" class="muted">VALIDATION / HITL</text>
+<text x="1076" y="1639" font-size="19" font-weight="600">Related taxon selection</text>
+<text x="1076" y="1663" font-size="13" class="mono muted">related_taxon_selection_interrupt</text>
+</g>
+<g data-node-id="refresh_invalidated_evidence"><title>Recompute evidence invalidated by a changed constraint.</title>
+<rect x="100" y="1590" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="116" y="1613" font-size="11" letter-spacing="0.9" class="muted">VALIDATION / CODE</text>
+<text x="116" y="1639" font-size="19" font-weight="600">Refresh invalidated evidence</text>
+<text x="116" y="1663" font-size="13" class="mono muted">refresh_invalidated_evidence</text>
+</g>
+<g data-node-id="resolve_public_site_entrances"><title>Associate candidate sites with audited, eligible OSM entrance points.</title>
+<rect x="580" y="1750" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="1773" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / CODE</text>
+<text x="596" y="1799" font-size="19" font-weight="600">Resolve public entrances</text>
+<text x="596" y="1823" font-size="13" class="mono muted">resolve_public_site_entrances</text>
+</g>
+<g data-node-id="request_walking_routes"><title>Request bounded outbound and return journeys from the configured provider.</title>
+<rect x="580" y="1880" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="1903" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / CODE</text>
+<text x="596" y="1929" font-size="19" font-weight="600">Request journeys</text>
+<text x="596" y="1953" font-size="13" class="mono muted">request_walking_routes</text>
+</g>
+<g data-node-id="validate_route_constraints"><title>Check walking distance, entrance approach and total travel time against the request.</title>
+<rect x="580" y="2010" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="2033" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / CODE</text>
+<text x="596" y="2059" font-size="19" font-weight="600">Validate route constraints</text>
+<text x="596" y="2083" font-size="13" class="mono muted">validate_route_constraints</text>
+</g>
+<g data-node-id="rank_route_options"><title>Select feasible routes with a stable, code-defined ordering.</title>
+<rect x="580" y="2140" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="2163" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / CODE</text>
+<text x="596" y="2189" font-size="19" font-weight="600">Rank route options</text>
+<text x="596" y="2213" font-size="13" class="mono muted">rank_route_options</text>
+</g>
+<g data-node-id="route_tradeoff_interrupt"><title>Pause only when an entrance or walking-limit choice can change the result.</title>
+<rect x="1060" y="2140" width="340" height="100" rx="8" fill="#FFF7EB" stroke="#D6B083"/>
+<text x="1076" y="2163" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / HITL</text>
+<text x="1076" y="2189" font-size="19" font-weight="600">Route trade-off</text>
+<text x="1076" y="2213" font-size="13" class="mono muted">route_tradeoff_interrupt</text>
+</g>
+<g data-node-id="apply_route_tradeoff_choice"><title>Apply an allow-listed route decision and invalidate stale route evidence.</title>
+<rect x="1060" y="2270" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="1076" y="2293" font-size="11" letter-spacing="0.9" class="muted">JOURNEYS / CODE</text>
+<text x="1076" y="2319" font-size="19" font-weight="600">Apply route choice</text>
+<text x="1076" y="2343" font-size="13" class="mono muted">apply_route_tradeoff_choice</text>
+</g>
+<g data-node-id="compose_expedition_plan"><title>Compose a plan from the validated evidence bundle.</title>
+<rect x="580" y="2410" width="340" height="100" rx="8" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="596" y="2433" font-size="11" letter-spacing="0.9" class="muted">PLAN / MODEL</text>
+<text x="596" y="2459" font-size="19" font-weight="600">Compose expedition plan</text>
+<text x="596" y="2483" font-size="13" class="mono muted">compose_expedition_plan</text>
+</g>
+<g data-node-id="grounding_and_safety_checks"><title>Verify claims, provenance, constraints, and safe wording.</title>
+<rect x="580" y="2540" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="596" y="2563" font-size="11" letter-spacing="0.9" class="muted">PLAN / CODE</text>
+<text x="596" y="2589" font-size="19" font-weight="600">Grounding and safety checks</text>
+<text x="596" y="2613" font-size="13" class="mono muted">grounding_and_safety_checks</text>
+</g>
+<g data-node-id="revise_expedition_plan"><title>Repair a draft that did not pass deterministic grounding.</title>
+<rect x="1060" y="2410" width="340" height="100" rx="8" fill="#EFF5FC" stroke="#A8C0DD"/>
+<text x="1076" y="2433" font-size="11" letter-spacing="0.9" class="muted">PLAN / MODEL</text>
+<text x="1076" y="2459" font-size="19" font-weight="600">Revise expedition plan</text>
+<text x="1076" y="2483" font-size="13" class="mono muted">revise_expedition_plan</text>
+</g>
+<g data-node-id="deterministic_plan_fallback"><title>Produce a safe fallback after the bounded revision loop.</title>
+<rect x="1060" y="2670" width="340" height="100" rx="8" fill="#FFFFFF" stroke="#CBD5DF"/>
+<text x="1076" y="2693" font-size="11" letter-spacing="0.9" class="muted">PLAN / OUTCOME</text>
+<text x="1076" y="2719" font-size="19" font-weight="600">Deterministic plan fallback</text>
+<text x="1076" y="2743" font-size="13" class="mono muted">deterministic_plan_fallback</text>
+</g>
+<g data-node-id="__end__"><title>Persist the execution outcome and final checkpoint.</title>
+<rect x="665" y="2860" width="170" height="60" rx="25" fill="#F7F9FB" stroke="#CBD5DF"/>
+<text x="750" y="2896" font-size="19" text-anchor="middle" font-weight="600">END</text>
+</g>
+</g>
+<text x="50" y="3006" font-size="16" class="muted">Runtime services (SQLite, run management and SSE) support this graph; they are documented separately from its execution nodes.</text>
+</svg>
