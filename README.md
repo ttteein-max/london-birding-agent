@@ -14,7 +14,7 @@ London-only · birds-first · English-only · historical evidence, not a sightin
 
 **[▶ Watch the full walkthrough on YouTube](https://youtu.be/yD1BQRdGDL4)**
 
-The walkthrough follows one expedition from its original natural-language request through live graph execution, a typed human decision, the evidence map, the validated journey and checkpoint comparison. It then demonstrates checkpoint replay, branching and deterministic comparison without overwriting the original result.
+Recorded in `live/live` mode, the walkthrough uses a live model and live upstream API requests. It follows one expedition from its original natural-language request through graph execution, a typed human decision, the evidence map and the validated journey. It then demonstrates checkpoint replay, branching and deterministic comparison without overwriting the original result.
 
 ## Engineering highlights
 
@@ -28,9 +28,11 @@ The walkthrough follows one expedition from its original natural-language reques
 | Reliability | Deterministic evidence and routing authority, grounded model revision and a complete safe fallback |
 | Full-stack delivery | FastAPI and Pydantic on the backend; React, TypeScript, generated OpenAPI types and MapLibre in the browser |
 
-The model is deliberately not the final authority. It may parse a request, choose from an allow-listed set of evidence tools and compose an explanation. Deterministic code owns the London boundary, taxonomy acceptance, evidence thresholds, site grounding, entrance eligibility, route constraints, route ranking, provenance and final safety checks.
+The model may parse a request, choose from an allow-listed set of evidence tools and compose an explanation. Deterministic code owns the London boundary, taxonomy acceptance, evidence thresholds, site grounding, entrance eligibility, route constraints, route ranking, provenance and final safety checks.
 
 ## Does it actually work?
+
+The [video walkthrough](#demo) demonstrates `live/live` execution. For a stable result you can reproduce without model or routing API keys, use the `fixture/scripted` example below.
 
 ### Reproducible end-to-end example
 
@@ -52,21 +54,7 @@ Result
 
 The result is not a claim that a bird will be seen. It demonstrates that the workflow can reach a complete plan only after its evidence, grounding, entrance and journey constraints pass.
 
-### Verified implementation
-
-Verification covers backend behaviour, browser workflows and responsive layout:
-
-| Check | How to reproduce it |
-| --- | --- |
-| Python offline test suite | From the repository root: `python -m pytest -m "not live" -q` |
-| Frontend unit tests | From `frontend/`: `npm test` |
-| Frontend lint and TypeScript checks | From `frontend/`: `npm run lint` and `npm run typecheck` |
-| Production frontend build | From `frontend/`: `npm run build` |
-| Playwright browser flows | From `frontend/`: `npx playwright install chromium`, then `npm run test:e2e` with the Python virtual environment active |
-
-The [GitHub Actions workflow](.github/workflows/offline-tests.yml) runs Python lint, byte compilation, offline tests and feasibility validation on pushes and pull requests; frontend and browser checks are currently run locally. The [dated Phase 5 verification report](reports/phase5-verification.md) preserves a historical test and timing snapshot, whose counts may differ from later revisions.
-
-The browser flows include basemap failure, route HITL, checkpoint forking and a 390 × 844 mobile viewport. Playwright uses separate temporary databases and local test ports. These are engineering and reproducibility checks, not a scientific evaluation of sighting likelihood.
+Automated checks cover backend behaviour, HITL, checkpoint forking, basemap failure and mobile layout. See [verification commands and CI coverage](docs/verification.md).
 
 ## Quick Start
 
