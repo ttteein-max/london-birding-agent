@@ -6,7 +6,7 @@ import shutil
 import pytest
 
 from app.feasibility.core import FIXTURE_DIR, canonical_sha256, file_sha256
-from scripts.phase0_feasibility import (
+from scripts.validate_evidence_fixtures import (
     CANONICAL_FILENAMES,
     promote_candidate,
     promote_occurrence_candidate,

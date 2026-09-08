@@ -1,4 +1,4 @@
-# ADR 0002: Phase 5 basemap delivery
+# ADR 0002: Basemap delivery
 
 - Status: accepted
 - Date: 2026-09-05

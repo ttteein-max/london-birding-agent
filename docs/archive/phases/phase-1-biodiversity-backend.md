@@ -1,5 +1,7 @@
 # Phase 1: typed biodiversity backend and deterministic tools
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 ## Scope and architecture
 
 Phase 1 adds a frontend-independent backend under `app/biodiversity/`. It uses a fixed service order and no LLM or LangGraph runtime:

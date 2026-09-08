@@ -1,5 +1,7 @@
 # Phase 3 HITL persistence and time travel
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 Phase 3 makes the London biodiversity graph resumable across Python processes and adds application-owned checkpoint history, replay, fork and deterministic plan comparison. Phase 1 remains authoritative for taxonomy acceptance, historical-evidence classification, privacy, safe-map eligibility, public-site grounding, constraints and candidate-plan readiness.
 
 The workflow remains London-only, English-only and birds-first. Historical occurrence evidence is not a sighting probability, and record counts are not abundance or population estimates.
@@ -12,7 +14,7 @@ separate colours and line styles for graph nodes, HITL nodes, ToolNode internals
 state, reducers, checkpointing, streaming, cycles and the external time-travel
 management layer.
 
-![Phase 3 biodiversity LangGraph architecture](diagrams/phase-3-biodiversity-langgraph.svg)
+![Phase 3 biodiversity LangGraph architecture](../diagrams/phase-3-biodiversity-langgraph.svg)
 
 ## Durable checkpointer lifecycle
 

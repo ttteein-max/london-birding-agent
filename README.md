@@ -1,16 +1,16 @@
-# London Biodiversity Expedition Planner
+# London Birding Agent
 
 **A full-stack LangGraph case study in stateful orchestration, typed human-in-the-loop workflows, durable execution and agent observability.**
 
 It turns a natural-language London birdwatching request into an evidence-grounded, route-validated field plan—or stops safely when the available evidence or constraints cannot support one.
 
-London-only · birds-first · English-only · historical evidence, not a sighting prediction
+London-only · birdwatching · English-only · historical evidence, not a sighting prediction
 
-[See the demo](#demo) · [Engineering highlights](#engineering-highlights) · [Run it locally](#quick-start) · [Explore the architecture](#architecture-and-core-workflow)
+[See the demo](#demo) · [Engineering highlights](#engineering-highlights) · [Run it locally](#quick-start) · [Explore the architecture](#architecture-and-core-workflow) · [Documentation](docs/README.md)
 
 ## Demo
 
-[![Watch the London Biodiversity Expedition Planner demo](https://img.youtube.com/vi/yD1BQRdGDL4/maxresdefault.jpg)](https://youtu.be/yD1BQRdGDL4)
+[![Watch the London Birding Agent demo](https://img.youtube.com/vi/yD1BQRdGDL4/maxresdefault.jpg)](https://youtu.be/yD1BQRdGDL4)
 
 **[▶ Watch the full walkthrough on YouTube](https://youtu.be/yD1BQRdGDL4)**
 
@@ -65,8 +65,8 @@ Both options below start your own local backend and frontend. Downloads and the 
 ### Get the code
 
 ```bash
-git clone https://github.com/ttteein-max/london-biodiversity-expedition.git
-cd london-biodiversity-expedition
+git clone https://github.com/ttteein-max/london-birding-agent.git
+cd london-birding-agent
 ```
 
 You need repository read access while this repository is private. Alternatively, download and extract the ZIP, then open a terminal in the extracted directory containing `README.md`, `requirements.txt` and `frontend/`.
@@ -83,7 +83,7 @@ docker compose up --build
 
 Once startup completes, open [http://127.0.0.1:8080](http://127.0.0.1:8080), select **Strong evidence**, then choose **Start expedition**. Docker builds and serves the frontend and API together; you do not need Python or Node installed on the host.
 
-The supplied Compose configuration permits only `fixture/scripted`. It does not forward OpenAI keys from your shell or `.env` into the container. Use Option B for live models. See the [deployment guide](docs/phase-4-public-demo.md) for persistence, retention and public-demo limits.
+The supplied Compose configuration permits only `fixture/scripted`. It does not forward OpenAI keys from your shell or `.env` into the container. Use Option B for live models. See the [deployment guide](docs/deployment.md) for persistence, retention and public-demo limits.
 
 ### Option B: local development
 
@@ -153,7 +153,7 @@ LangGraph fits this workflow because each new piece of evidence can change what 
 
 SQLite checkpoints let the graph pause for a person and continue later, or restore a prior state for replay and comparison. The application adds branch and execution identities, validates human updates and exposes graph events to the frontend. These mechanisms support the workflow shown below.
 
-[![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png)
+[![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](https://github.com/ttteein-max/london-birding-agent/raw/refs/heads/main/docs/diagrams/langgraph-overview.png)
 
 [Explore the complete LangGraph topology](docs/langgraph-architecture.md)
 
@@ -215,4 +215,4 @@ The product exposes agent execution as a first-class interface, not as console o
 - Timing reports separate node wall time from nested model, tool and provider spans, making the slowest stage visible.
 - Safe operation reports preserve tool audits, timings, plan facts and route decisions without API keys, raw provider requests, individual occurrence locations or private route geometry.
 
-For the [recorded Phase 5 fixture run](reports/phase5-verification.md#offline-fixture-timing-sample), the timing report captured 98 events and 33 timed spans across nodes, models, tools and routing-provider calls. The slowest nested work was the public green-space lookup, while all four fixture provider attempts completed in 1.23 ms combined. These measurements are diagnostic samples, not performance guarantees.
+For the [recorded fixture run](reports/archive/2026-09-05/verification.md#offline-fixture-timing-sample), the timing report captured 98 events and 33 timed spans across nodes, models, tools and routing-provider calls. The slowest nested work was the public green-space lookup, while all four fixture provider attempts completed in 1.23 ms combined. These measurements are diagnostic samples, not performance guarantees.

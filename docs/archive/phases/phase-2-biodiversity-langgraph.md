@@ -1,5 +1,7 @@
 # Phase 2 biodiversity LangGraph
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 Phase 2 adds a checkpointed, natural-English LangGraph agent above the deterministic Phase 1.2 London biodiversity backend. Phase 1.2 remains authoritative for taxonomy, London scope, occurrence quality, privacy, safe-map eligibility, site grounding, access certainty, weather truth, constraints, suggested actions and `candidate_plan_ready`.
 
 The language model can parse a request, choose which evidence tool to call next and explain a validated result. It cannot replace any scientific, spatial, privacy or safety decision.

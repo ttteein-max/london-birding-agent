@@ -35,5 +35,10 @@ jobs:
       - name: Run offline tests
         run: python -m pytest -m "not live" -q
 
-      - name: Run Phase 0.1 feasibility validation
-        run: python -m scripts.phase0_feasibility
+      - name: Validate evidence fixtures
+        run: python -m scripts.validate_evidence_fixtures
+
+      - name: Verify generated API and workflow contracts
+        run: |
+          python -m scripts.export_openapi --check
+          python -m scripts.export_workflow_diagrams --check

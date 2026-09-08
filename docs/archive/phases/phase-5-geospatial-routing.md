@@ -1,18 +1,20 @@
 # Phase 5: geospatial and routing hardening
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 Phase 5 extends the existing `BiodiversityExpeditionPlan`; it does not create a competing top-level plan. A plan may now contain an optional `walking_plan: ValidatedWalkingPlan`. Phase 4 plans without that field remain readable. The product remains London-only, English-only and birds-first, uses historical evidence without producing a species-occurrence probability, and never guarantees a sighting.
 
-![Phase 5 route authority and privacy boundaries](diagrams/phase-5-geospatial-routing.svg)
+![Phase 5 route authority and privacy boundaries](../../diagrams/routing.svg)
 
-The diagram is also checked in as [Mermaid source](diagrams/phase-5-geospatial-routing.mmd) and a PNG for review.
+The diagram is also checked in as [Mermaid source](../../diagrams/routing.mmd) and a PNG for review.
 
 The normative decisions are split into reviewable records:
 
-- [walking-distance and route-authority semantics](adr/0001-phase-5-routing-semantics.md);
-- [basemap delivery and CSP](adr/0002-phase-5-basemap.md);
-- [routing provider and failover](adr/0003-phase-5-routing-provider-failover.md);
-- [route privacy and safe views](adr/0004-phase-5-route-privacy.md);
-- [workflow-version compatibility](adr/0005-phase-5-workflow-version-compatibility.md).
+- [walking-distance and route-authority semantics](../../adr/0001-routing-semantics.md);
+- [basemap delivery and CSP](../../adr/0002-basemap.md);
+- [routing provider and failover](../../adr/0003-routing-provider-failover.md);
+- [route privacy and safe views](../../adr/0004-route-privacy.md);
+- [workflow-version compatibility](../../adr/0005-workflow-version-compatibility.md).
 
 ## Route authority boundary
 
@@ -73,7 +75,7 @@ Outbound and return are requested separately and summed; the code never assumes 
 
 ## Walking and duration semantics
 
-The normative decision record is [ADR 0001](adr/0001-phase-5-routing-semantics.md). In brief:
+The normative decision record is [ADR 0001](../../adr/0001-routing-semantics.md). In brief:
 
 - `search_radius_km` is the straight-line/projected candidate-site retrieval radius and is not a walking-distance promise.
 - `maximum_walking_distance_km` is the whole excursion's outbound-plus-return route distance.
@@ -88,7 +90,7 @@ The strict domain models are `RouteStatus`, `PublicEntranceCandidate`, `WalkingR
 
 FastAPI exposes route summaries and options separately from geometry. `/api/v1/runs/{thread_id}/checkpoints/{checkpoint_id}/route-geometry/{reference}` accepts only a reference present in that exact checkpoint. Local/private runs may receive their own geometry. Public read-only mode serves geometry only for the planned, non-private fixture origin. Route geometry is absent from generic state, SSE, logs, reports and public checkpoint views. Occurrence coordinates and IDs remain absent from every API.
 
-The checked-in [Phase 5 OpenAPI document](phase-5-openapi.json) generates `frontend/src/api/schema.d.ts`; hand-written TypeScript contracts alias the generated DTOs.
+The checked-in [Phase 5 OpenAPI document](../api/phase-5-openapi.json) generates `frontend/src/api/schema.d.ts`; hand-written TypeScript contracts alias the generated DTOs.
 
 ## Basemap and attribution
 

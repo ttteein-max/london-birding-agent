@@ -1,12 +1,12 @@
 # LangGraph architecture
 
-[Back to the README overview](../README.md#architecture-and-core-workflow) · [Open full-size topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) · [Topology SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)
+[Back to the README overview](../README.md#architecture-and-core-workflow) · [Open full-size topology PNG](https://github.com/ttteein-max/london-birding-agent/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) · [Topology SVG](https://github.com/ttteein-max/london-birding-agent/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)
 
-The README introduces the workflow as grouped stages. This diagram expands those stages into the current `phase-5.0` graph: **29 workflow nodes, START/END, 50 edges and seven typed HITL nodes**.
+The README introduces the workflow as grouped stages. This diagram expands those stages into the current compiled graph: **29 workflow nodes, START/END, 50 edges and seven typed HITL nodes**.
 
 ## Complete compiled topology
 
-[![Complete LangGraph topology with all current request, evidence, HITL, journey and planning branches](diagrams/langgraph-topology.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png)
+[![Complete LangGraph topology with all current request, evidence, HITL, journey and planning branches](diagrams/langgraph-topology.png)](https://github.com/ttteein-max/london-birding-agent/raw/refs/heads/main/docs/diagrams/langgraph-topology.png)
 
 ## What the overview groups together
 
@@ -44,4 +44,4 @@ These services support the workflow throughout execution. They are shown beneath
 | Resume, replay, fork and compare | [Run management](../app/biodiversity/runs.py) validates identity and compatibility, preserves recorded history and applies targeted invalidation |
 | Observability | [Lifecycle events and timing spans](../app/biodiversity/observability.py) cover nodes, models, tools, providers and checkpoints; the API streams ordered events and replays missed events on reconnect |
 
-The browser also reads its topology from [the compiled-graph presentation service](../app/biodiversity/api/services/topology.py). For more detail, see [durable HITL and time travel](phase-3-hitl-time-travel.md) and [geospatial routing](phase-5-geospatial-routing.md).
+The browser also reads its topology from [the compiled-graph presentation service](../app/biodiversity/api/services/topology.py). For more detail, see [durable HITL and time travel](hitl-and-time-travel.md) and [geospatial routing](routing.md).

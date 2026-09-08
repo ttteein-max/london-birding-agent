@@ -104,7 +104,7 @@ def _start_waiting(client: TestClient, thread_id: str = "swift") -> tuple[dict, 
 def test_app_lifespan_health_and_create_run_return_202(client: TestClient) -> None:
     health = client.get("/api/v1/health")
     assert health.status_code == 200
-    assert health.json()["product"] == "London Biodiversity Expedition Planner"
+    assert health.json()["product"] == "London Birding Agent"
     assert health.json()["allowed_run_modes"] == [
         {"data_mode": "fixture", "model_mode": "scripted"},
         {"data_mode": "live", "model_mode": "scripted"},

@@ -1,4 +1,4 @@
-# ADR 0001: Phase 5 route distance, duration and authority semantics
+# ADR 0001: Route distance, duration and authority semantics
 
 - Status: accepted
 - Date: 2026-09-05
@@ -6,13 +6,13 @@
 
 ## Context
 
-Earlier phases selected public-green-space candidates with a straight-line/projected search radius and deliberately left walking distance unresolved. Treating that distance as a route, routing to a polygon centroid, doubling one leg, or allowing an LLM to select a destination would make the itinerary unsafe and unauditable.
+The earlier evidence-only backend selected public-green-space candidates with a straight-line/projected search radius and left walking distance unresolved. Treating that distance as a route, routing to a polygon centroid, doubling one leg, or allowing an LLM to select a destination would make the itinerary unsafe and unauditable.
 
 ## Decision
 
 `search_radius_km` continues to mean only the projected/straight-line radius used to retrieve candidate-site polygons. It is not a walking distance.
 
-`maximum_walking_distance_km`, when supplied, means the full excursion route distance: provider-computed outbound plus separately provider-computed return. A provider that cannot submit a round trip in one call is called for both directions. The system never substitutes straight-line distance and never assumes `return = outbound × 2`.
+`maximum_walking_distance_km`, when supplied, means the full excursion's walking distance: provider-computed outbound walking plus separately provider-computed return walking. Public-transport distance is not counted as walking. A provider that cannot submit a round trip in one call is called for both directions. The system never substitutes straight-line distance and never assumes `return = outbound × 2`.
 
 `duration_hours` is the total outing budget: outbound travel, field time and return travel. The route passes duration only when provider total travel time is strictly less than that budget. `remaining_field_time_minutes` is the subtraction result and is a time budget only; it says nothing about the probability of observing a bird. The UI labels this explicitly. A park inside the search radius may therefore fail on walking distance or duration.
 
@@ -32,4 +32,4 @@ Exact origin and geometry stay in a gitignored private runtime store. Generic ev
 
 ## Consequences
 
-The plan may safely report that no route is feasible even when a candidate site exists. Two calls per site can increase latency and quota use, so routing is capped at three ordered candidates and cached. Missing/uncertain entrances are common because the audited snapshot is intentionally conservative. Provider and map failures remain visible rather than being hidden by fixture substitution. Phase 4 executions remain readable but cannot be mutated under a different Phase 5 provider/graph profile.
+The plan may safely report that no route is feasible even when a candidate site exists. Two calls per site can increase latency and quota use, so routing is capped at three ordered candidates and cached. Missing/uncertain entrances are common because the audited snapshot is intentionally conservative. Provider and map failures remain visible rather than being hidden by fixture substitution. Legacy executions remain readable where supported but cannot be mutated under an incompatible provider/graph profile.

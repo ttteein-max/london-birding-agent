@@ -7,7 +7,7 @@ import json
 import pytest
 
 from app.feasibility.core import PROJECT_ROOT
-from scripts.phase0_feasibility import build_live_candidate, live_arbitrary_check
+from scripts.validate_evidence_fixtures import build_live_candidate, live_arbitrary_check
 
 pytestmark = pytest.mark.live
 

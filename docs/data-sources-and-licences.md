@@ -1,6 +1,6 @@
 # Data sources, attribution and licences
 
-This page describes the sources used by the London Biodiversity Expedition Planner. Source availability and a data licence do not establish site access, opening, species presence or legal advice.
+This page describes the sources used by the London Birding Agent. Source availability and a data licence do not establish site access, opening, species presence or legal advice.
 
 | Source | Use | Licence / attribution | Runtime mode and limitations |
 | --- | --- | --- | --- |

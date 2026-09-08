@@ -1,5 +1,7 @@
 # Phase 3 fixture/scripted HITL + Time Travel demo
 
+> Historical result from an earlier revision. It is retained for traceability, not presented as current verification. See the [report index](../../README.md).
+
 This offline, reproducible demonstration complements the live/live API-integration
 sample. It uses fixture data and scripted models so the Phase 3 control flow can be
 reviewed without credentials, network access, or upstream variability.

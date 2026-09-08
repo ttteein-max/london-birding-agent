@@ -1,4 +1,4 @@
-# ADR 0004: Phase 5 route privacy and safe views
+# ADR 0004: Route privacy and safe views
 
 - Status: accepted
 - Date: 2026-09-05

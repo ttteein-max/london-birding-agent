@@ -6,7 +6,7 @@ import argparse
 import json
 from pathlib import Path
 
-from scripts.phase0_feasibility import build_live_candidate
+from scripts.validate_evidence_fixtures import build_live_candidate
 
 
 def main() -> None:
@@ -23,7 +23,7 @@ def main() -> None:
                 "candidate": str(output),
                 "refresh_scope": "full_same_snapshot_fixture_set",
                 "occurrence_promotion_command": (
-                    "python -m scripts.phase0_feasibility "
+                    "python -m scripts.validate_evidence_fixtures "
                     f"--promote-occurrence-candidate {output}"
                 ),
                 "safe_cell_counts": {

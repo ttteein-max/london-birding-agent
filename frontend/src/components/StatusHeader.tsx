@@ -18,7 +18,7 @@ export function StatusHeader({ health, run, evidence, connection, operationStatu
         <div className="brand-mark" aria-hidden="true">LB</div>
         <div>
           <p className="eyebrow">Cartographic field notebook</p>
-          <h1>London Biodiversity Expedition Planner</h1>
+          <h1>London Birding Agent</h1>
         </div>
       </div>
       <div className="status-cluster" aria-label="Run status overview">

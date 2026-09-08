@@ -1,4 +1,4 @@
-"""Validate Phase 0.1 fixtures, generate live candidates, or promote explicitly."""
+"""Validate evidence fixtures, generate live candidates, or promote explicitly."""
 
 from __future__ import annotations
 
@@ -246,7 +246,7 @@ def build_live_candidate(output_dir: Path, matrix_path: Path = MATRIX_PATH) -> P
             filename: file_sha256(output_dir / filename)
             for filename in CANONICAL_FILENAMES
         },
-        "promotion_command": f"python -m scripts.phase0_feasibility --promote-candidate {output_dir}",
+        "promotion_command": f"python -m scripts.validate_evidence_fixtures --promote-candidate {output_dir}",
     }
     _write_json(output_dir / "candidate-manifest.json", manifest)
     return output_dir

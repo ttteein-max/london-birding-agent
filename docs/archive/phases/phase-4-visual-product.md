@@ -1,12 +1,14 @@
 # Phase 4 Visual Product
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 This document records the Phase 4 baseline. Phase 5 now supplies the current basemap and walking-route behavior; see [Phase 5 geospatial and routing hardening](phase-5-geospatial-routing.md).
 
 Phase 4 turns the London Biodiversity Expedition Planner into a local, browser-based product while preserving the deterministic evidence and privacy boundaries established in Phases 1–3. Its core interaction is map + evidence + agent execution + human decisions + time travel. It is not a chat interface.
 
-![Phase 4 architecture](diagrams/phase-4-visual-product.svg)
+![Phase 4 architecture](../diagrams/phase-4-visual-product.svg)
 
-The diagram is maintained as [Mermaid source](diagrams/phase-4-visual-product.mmd), an SVG, and a PNG rendered at 2× scale.
+The diagram is maintained as [Mermaid source](../diagrams/phase-4-visual-product.mmd), an SVG, and a PNG rendered at 2× scale.
 
 ## Product boundary
 
@@ -67,7 +69,7 @@ Errors have one shape:
 
 The API uses 404 for missing runs/checkpoints/operations, 409 for identity or mutation conflicts, 422 for invalid updates or decisions, 503 for unavailable configured runtimes, and a sanitized 500 fallback. Validation errors report field paths, never rejected values or raw exception text.
 
-The OpenAPI source of truth is [phase-4-openapi.json](phase-4-openapi.json). Regenerate it and the TypeScript projection with:
+The OpenAPI source of truth is [phase-4-openapi.json](../api/phase-4-openapi.json). Regenerate it and the TypeScript projection with:
 
 ```bash
 python -m scripts.export_phase4_openapi

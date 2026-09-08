@@ -1,11 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1500" height="3030" viewBox="0 0 1500 3030" role="img" aria-labelledby="title description">
-<title id="title">Compiled LangGraph topology</title><desc id="description">Every compiled node and edge for phase-5.0: 29 workflow nodes, START and END, and 50 edges. Solid lines are unconditional edges; dashed lines are conditional routes. Seven amber nodes interrupt for validated human input.</desc>
+<title id="title">Compiled LangGraph topology</title><desc id="description">Every current compiled node and edge: 29 workflow nodes, START and END, and 50 edges. Solid lines are unconditional edges; dashed lines are conditional routes. Seven amber nodes interrupt for validated human input.</desc>
 <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#78899B"/></marker><marker id="amber-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9D5B13"/></marker></defs>
 <style>text{font-family:Arial,Helvetica,sans-serif;fill:#172B42} .muted{fill:#536477} .mono{font-family:Menlo,Consolas,monospace} .edge{fill:none;stroke:#78899B;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}</style>
 <rect width="1500" height="3030" fill="white"/>
-<text x="50" y="46" font-size="15" letter-spacing="1.5" class="muted">LONDON BIODIVERSITY EXPEDITION PLANNER</text>
+<text x="50" y="46" font-size="15" letter-spacing="1.5" class="muted">LONDON BIRDING AGENT</text>
 <text x="50" y="91" font-size="36" font-weight="700">Compiled LangGraph topology</text>
-<text x="50" y="128" font-size="21" class="muted">phase-5.0 · 29 workflow nodes + START / END · 50 edges · 7 typed HITL nodes</text>
+<text x="50" y="128" font-size="21" class="muted">29 workflow nodes + START / END · 50 edges · 7 typed HITL nodes</text>
 <rect x="50" y="154" width="16" height="16" rx="2" fill="#EFF5FC" stroke="#A8C0DD"/>
 <text x="78" y="168" font-size="17" >Model / ToolNode</text>
 <rect x="285" y="154" width="16" height="16" rx="2" fill="#FFFFFF" stroke="#CBD5DF"/>

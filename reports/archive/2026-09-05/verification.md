@@ -1,5 +1,7 @@
 # Phase 5 verification report
 
+> Historical result from an earlier revision. It is retained for traceability, not presented as current verification. See the [report index](../../README.md).
+
 Verified locally on 2026-09-05 (Asia/Shanghai) from `phase-5-geospatial-routing` before commit. All default checks were credential-free and offline; Playwright fulfilled the OpenFreeMap style request locally and blocked all other public tile requests.
 
 ## Results

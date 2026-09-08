@@ -720,10 +720,10 @@ export interface components {
             status: "ok";
             /**
              * Product
-             * @default London Biodiversity Expedition Planner
+             * @default London Birding Agent
              * @constant
              */
-            product: "London Biodiversity Expedition Planner";
+            product: "London Birding Agent";
             /**
              * Api Version
              * @default v1

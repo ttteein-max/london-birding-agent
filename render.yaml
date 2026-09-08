@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: london-biodiversity-expedition-planner
+    name: london-birding-agent
     runtime: docker
     plan: free
     dockerfilePath: ./Dockerfile

@@ -1,5 +1,7 @@
 # Standalone repository verification report
 
+> Historical result from an earlier revision. It is retained for traceability, not presented as current verification. See the [report index](../../README.md).
+
 Generated: 2026-08-31 (Asia/Shanghai)
 
 Scope: Phase 0 through Phase 1.2 biodiversity code plus standalone repository metadata. Live public-API checks are intentionally excluded from the default offline run.

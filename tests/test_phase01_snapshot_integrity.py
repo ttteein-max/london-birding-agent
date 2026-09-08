@@ -152,7 +152,7 @@ def test_osm_access_policy_is_behavioural_not_snapshot_count_based() -> None:
 
 
 def test_default_validation_has_no_api_key_or_environment_dependency() -> None:
-    source = (PROJECT_ROOT / "scripts" / "phase0_feasibility.py").read_text(
+    source = (PROJECT_ROOT / "scripts" / "validate_evidence_fixtures.py").read_text(
         encoding="utf-8"
     )
     tree = ast.parse(source)

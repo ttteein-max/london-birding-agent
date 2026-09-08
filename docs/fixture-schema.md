@@ -1,4 +1,4 @@
-# Phase 0.1 fixture and provenance schema
+# Fixture and provenance schema
 
 ## Snapshot model
 
@@ -46,7 +46,7 @@ Server matches are never assumed to have been downloaded. Context-only and unkno
 
 `--promote-candidate` is a distinct explicit action. It requires all canonical filenames, occurrence schema version 2 and internally consistent counts before copying. Offline validation then rechecks schema, provenance and payload checksums.
 
-## Phase 5 entrance and route fixtures
+## Entrance and route fixtures
 
 `london-public-green-space-entrances-2026-09-04.geojson` is a point-feature snapshot with an OSM identity, source tags, access certainty and one or more exact green-space OSM boundary-member associations. Its provenance sidecar records the saved Overpass query hash and the GeoJSON SHA-256. Missing `access` remains uncertain; excluded access/foot/service tags never become runtime candidates. The fixture never synthesises a centroid or nearest-road entrance.
 

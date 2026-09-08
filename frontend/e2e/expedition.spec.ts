@@ -25,7 +25,7 @@ test.beforeEach(async ({ page }) => {
 
 async function startExample(page: Page, label: string): Promise<string> {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "London Biodiversity Expedition Planner" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "London Birding Agent" })).toBeVisible();
   await page.waitForTimeout(250);
   await page.getByRole("button", { name: label }).click();
   const acceptedResponse = page.waitForResponse((response) =>

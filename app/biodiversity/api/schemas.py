@@ -72,9 +72,7 @@ class ErrorResponse(StrictModel):
 
 class HealthView(StrictModel):
     status: Literal["ok"] = "ok"
-    product: Literal["London Biodiversity Expedition Planner"] = (
-        "London Biodiversity Expedition Planner"
-    )
+    product: Literal["London Birding Agent"] = "London Birding Agent"
     api_version: Literal["v1"] = "v1"
     workflow_version: NonEmptyText
     default_data_mode: Literal["fixture", "live"]

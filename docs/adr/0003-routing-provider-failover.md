@@ -1,4 +1,4 @@
-# ADR 0003: Phase 5 routing provider and failover
+# ADR 0003: Routing provider and failover
 
 - Status: accepted
 - Date: 2026-09-05

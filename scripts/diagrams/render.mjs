@@ -53,7 +53,7 @@ function hitl(svg, y, title, detail) {
 
 function overview() {
   const svg = canvas(1200, 1320, 'LangGraph workflow overview', 'Grouped workflow stages with a bounded evidence tool loop, typed human decisions, deterministic journey validation, one model revision and fallback. SQLite checkpoints, time travel and observability support the entire workflow.');
-  text(svg, 50, 48, 'LONDON BIODIVERSITY EXPEDITION PLANNER', 15, 'letter-spacing="1.6" class="muted"');
+  text(svg, 50, 48, 'LONDON BIRDING AGENT', 15, 'letter-spacing="1.6" class="muted"');
   text(svg, 50, 96, 'LangGraph workflow overview', 35, 'font-weight="700"');
   text(svg, 50, 130, 'Grouped stages · seven typed interrupt paths · durable execution', 19, 'class="muted"');
   rect(svg, 52, 158, 13, 13, colours.modelFill, '#A8C0DD', 2);
@@ -235,10 +235,10 @@ async function fullTopology() {
   }
   const width = 1500;
   const height = 3030;
-  const svg = canvas(width, height, 'Compiled LangGraph topology', `Every compiled node and edge for ${topology.workflow_version}: ${topology.nodes.length - 2} workflow nodes, START and END, and ${topology.edges.length} edges. Solid lines are unconditional edges; dashed lines are conditional routes. Seven amber nodes interrupt for validated human input.`);
-  text(svg, 50, 46, 'LONDON BIODIVERSITY EXPEDITION PLANNER', 15, 'letter-spacing="1.5" class="muted"');
+  const svg = canvas(width, height, 'Compiled LangGraph topology', `Every current compiled node and edge: ${topology.nodes.length - 2} workflow nodes, START and END, and ${topology.edges.length} edges. Solid lines are unconditional edges; dashed lines are conditional routes. Seven amber nodes interrupt for validated human input.`);
+  text(svg, 50, 46, 'LONDON BIRDING AGENT', 15, 'letter-spacing="1.5" class="muted"');
   text(svg, 50, 91, 'Compiled LangGraph topology', 36, 'font-weight="700"');
-  text(svg, 50, 128, `${topology.workflow_version} · ${topology.nodes.length - 2} workflow nodes + START / END · ${topology.edges.length} edges · 7 typed HITL nodes`, 21, 'class="muted"');
+  text(svg, 50, 128, `${topology.nodes.length - 2} workflow nodes + START / END · ${topology.edges.length} edges · 7 typed HITL nodes`, 21, 'class="muted"');
   const legends = [[50, colours.modelFill, '#A8C0DD', 'Model / ToolNode'], [285, colours.white, colours.border, 'Deterministic code'], [535, colours.hitlFill, '#D6B083', 'Human interrupt']];
   for (const [x, fill, border, label] of legends) {
     rect(svg, x, 154, 16, 16, fill, border, 2);

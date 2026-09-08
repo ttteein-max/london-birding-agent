@@ -1,5 +1,5 @@
 {
-  "name": "london-biodiversity-expedition-planner",
+  "name": "london-birding-agent",
   "private": true,
   "version": "5.0.0",
   "type": "module",
@@ -11,7 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "api:types": "openapi-typescript ../docs/phase-5-openapi.json -o src/api/schema.d.ts"
+    "api:types": "openapi-typescript ../docs/api/openapi.json -o src/api/schema.d.ts"
   },
   "dependencies": {
     "maplibre-gl": "^6.6.0",

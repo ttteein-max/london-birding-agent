@@ -3,7 +3,7 @@
 <defs><marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#78899B"/></marker><marker id="amber-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#9D5B13"/></marker></defs>
 <style>text{font-family:Arial,Helvetica,sans-serif;fill:#172B42} .muted{fill:#536477} .mono{font-family:Menlo,Consolas,monospace} .edge{fill:none;stroke:#78899B;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;marker-end:url(#arrow)}</style>
 <rect width="1200" height="1320" fill="white"/>
-<text x="50" y="48" font-size="15" letter-spacing="1.6" class="muted">LONDON BIODIVERSITY EXPEDITION PLANNER</text>
+<text x="50" y="48" font-size="15" letter-spacing="1.6" class="muted">LONDON BIRDING AGENT</text>
 <text x="50" y="96" font-size="35" font-weight="700">LangGraph workflow overview</text>
 <text x="50" y="130" font-size="19" class="muted">Grouped stages · seven typed interrupt paths · durable execution</text>
 <rect x="52" y="158" width="13" height="13" rx="2" fill="#EFF5FC" stroke="#A8C0DD"/>

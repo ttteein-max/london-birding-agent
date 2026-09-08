@@ -1,4 +1,4 @@
-"""FastAPI entry point for the London Biodiversity Expedition Planner."""
+"""FastAPI entry point for the London Birding Agent."""
 
 from __future__ import annotations
 
@@ -49,7 +49,7 @@ def create_app(settings: APISettings | None = None) -> FastAPI:
                 catalog.close()
 
     app = FastAPI(
-        title="London Biodiversity Expedition Planner API",
+        title="London Birding Agent API",
         version="5.0.0",
         description=(
             "A privacy-bounded API for London bird-expedition evidence, "

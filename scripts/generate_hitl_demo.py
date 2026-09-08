@@ -1,4 +1,4 @@
-"""Generate a safe, offline Phase 3 HITL and time-travel demonstration."""
+"""Generate a safe, offline HITL and time-travel demonstration."""
 
 from __future__ import annotations
 
@@ -26,7 +26,7 @@ from app.biodiversity.testing import (
 PROJECT_ROOT = Path(__file__).parents[1]
 DEFAULT_OUTPUT = (
     PROJECT_ROOT
-    / "reports/phase3-demos/fixture-scripted-hitl-time-travel"
+    / "reports/runs/fixture-scripted-hitl-time-travel"
 )
 THREAD_ID = "phase3-fixture-scripted-demo"
 REQUEST = (

@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.generate_phase3_demo import generate
+from scripts.generate_hitl_demo import generate
 
 
 def test_phase3_demo_covers_hitl_fork_replay_compare_and_safe_views(

@@ -1,5 +1,7 @@
 # Phase 0.1 data-hardening report
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 ## Decision and scope
 
 Phase 0.1 passes. The evidence layer now supports arbitrary English common-name and scientific-name bird input, dynamic ambiguity/not-found outcomes, bounded representative retrieval, explicit coordinate-quality use tiers, a real London polygon, EPSG:27700 cells and internally consistent schema-v2 provenance.

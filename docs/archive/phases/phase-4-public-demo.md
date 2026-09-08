@@ -1,5 +1,7 @@
 # Phase 4 public demo and Docker deployment
 
+> Historical development record. Some behaviour and commands are superseded. See the [current documentation](../../README.md) and [archive index](../README.md).
+
 This is the Phase 4 deployment foundation. The current Phase 5 image also mounts a private, gitignored route runtime and publishes the backend-validated OpenFreeMap basemap configuration; public mode remains fixture/scripted and can expose route geometry only for the planned public fixture origin.
 
 This document packages the London Biodiversity Expedition Planner as one public web service while keeping live data and live model access local and explicit.
