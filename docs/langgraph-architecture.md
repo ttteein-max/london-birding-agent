@@ -2,23 +2,11 @@
 
 [Back to the README overview](../README.md#architecture-and-core-workflow) · [Open full-size topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) · [Topology SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)
 
-The README introduces the workflow as grouped stages. This diagram expands those stages into the current `phase-5.0` graph: **29 workflow nodes, START/END, 50 edges and seven typed HITL nodes**. Its node and edge set is exported from the same compiled graph used by the application; the layout is curated for a consistent top-to-bottom reading order.
+The README introduces the workflow as grouped stages. This diagram expands those stages into the current `phase-5.0` graph: **29 workflow nodes, START/END, 50 edges and seven typed HITL nodes**.
 
 ## Complete compiled topology
 
 [![Complete LangGraph topology with all current request, evidence, HITL, journey and planning branches](diagrams/langgraph-topology.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png)
-
-**Click the diagram or [Open full-size topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) to view the original 3000 × 6060 image.** The link opens image content directly, outside GitHub's file viewer. If the browser initially fits the whole image into the window, click it to inspect it at its original size, then scroll. The SVG is available for vector viewing or download.
-
-## How to read it
-
-- Follow the central column from request parsing through context resolution, evidence validation, journeys, plan composition and final checks.
-- Blue nodes contain model calls or the evidence `ToolNode`. White nodes contain deterministic code or explicit outcomes. Amber nodes pause for human input.
-- Solid arrows are unconditional graph edges; dashed arrows are conditional routes. Crossing lines do not create a junction or an extra graph node.
-- Read the short English title first. The exact Python node identifier appears below it and matches the [workflow definition](../app/biodiversity/graph/workflow.py).
-- Follow side branches for corrections, evidence trade-offs, route choices and model revision. Source failure, evidence-loop limits and deterministic validation can also end the run early.
-
-The routes are declared by the compiled graph; their guards live in [the routing functions](../app/biodiversity/graph/routing.py). The JSON export preserves conditional status and any explicit route labels. In particular, dashed edges to `END` from validation and final checks are the `terminal` and `complete` routes respectively.
 
 ## What the overview groups together
 
@@ -57,23 +45,3 @@ These services support the workflow throughout execution. They are shown beneath
 | Observability | [Lifecycle events and timing spans](../app/biodiversity/observability.py) cover nodes, models, tools, providers and checkpoints; the API streams ordered events and replays missed events on reconnect |
 
 The browser also reads its topology from [the compiled-graph presentation service](../app/biodiversity/api/services/topology.py). For more detail, see [durable HITL and time travel](phase-3-hitl-time-travel.md) and [geospatial routing](phase-5-geospatial-routing.md).
-
-## Reproduce the diagrams
-
-From the repository root, with the Python environment installed and activated:
-
-```bash
-python -m scripts.export_workflow_diagrams
-npm ci --prefix scripts/diagrams
-npm run build --prefix scripts/diagrams
-python -m scripts.export_workflow_diagrams --check
-```
-
-Exporting compiles fixture/scripted dependencies without executing an expedition, creating a checkpoint database or calling external services. Installing the diagram-only Node dependencies requires package access; rendering then runs locally. These dependencies are separate from the application frontend.
-
-The exporter writes [langgraph-topology.json](diagrams/langgraph-topology.json). The renderer produces an SVG and a high-resolution PNG for each diagram. It verifies that every compiled node and edge has a layout entry and rejects stale or missing entries; changes to graph structure therefore require an explicit layout update.
-
-- [Python exporter](../scripts/export_workflow_diagrams.py)
-- [Diagram renderer](../scripts/diagrams/render.mjs)
-- [Overview PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png) and [SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.svg)
-- [Complete topology PNG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.png) and [SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-topology.svg)

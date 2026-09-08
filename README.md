@@ -171,7 +171,7 @@ SQLite checkpoints let the graph pause for a person and continue later, or resto
 
 [![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png)
 
-[View full-size overview](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png) · [Explore the complete LangGraph topology](docs/langgraph-architecture.md) · [Overview SVG](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.svg)
+[Explore the complete LangGraph topology](docs/langgraph-architecture.md)
 
 *The overview groups related steps for readability. The [complete topology](docs/langgraph-architecture.md) preserves all 29 workflow nodes, START/END and 50 compiled edges. Click either diagram to open its full-resolution image directly.*
 
@@ -219,10 +219,6 @@ Thread      one expedition across its complete history
 - **Replay** creates a new execution on the same branch, restoring a historical non-terminal checkpoint and continuing its downstream work.
 - **Fork** creates a new branch with an allow-listed constraint update and recomputes invalidated evidence.
 - **Compare** produces server-calculated differences in selected plan and constraint fields between two exact checkpoints.
-
-For example, replaying CP17 resumes from the state saved there; the first newly saved checkpoint can be CP18. The original and replay executions share CP17 and can each have their own CP18 with different checkpoint IDs. Step numbers are not unique checkpoint identities. To compare completed outcomes, select each execution's final checkpoint. `Unchanged` means the compared fields match; execution metadata and intermediate model drafts are outside this comparison, so it is not a full-state equality check.
-
-The original final checkpoint is never overwritten by replay or fork operations. Runtime manifests also prevent an old workflow or incompatible data/model/provider profile from being silently resumed under new semantics.
 
 ## Observability
 
