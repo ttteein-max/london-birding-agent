@@ -54,38 +54,55 @@ The result is not a claim that a bird will be seen. It demonstrates that the wor
 
 ### Verified implementation
 
-The latest recorded offline verification covers the backend, browser and mobile layout:
+Verification covers backend behaviour, browser workflows and responsive layout:
 
-| Check | Recorded result |
-| --- | ---: |
-| Python offline test suite | 212 passed · 10 live tests deselected |
-| Frontend unit tests | 36 passed |
-| Playwright browser flows | 8 passed |
-| Python lint, byte compilation and TypeScript checks | Passed |
-| Production frontend build | Passed |
+| Check | How to reproduce it |
+| --- | --- |
+| Python offline test suite | From the repository root: `python -m pytest -m "not live" -q` |
+| Frontend unit tests | From `frontend/`: `npm test` |
+| Frontend lint and TypeScript checks | From `frontend/`: `npm run lint` and `npm run typecheck` |
+| Production frontend build | From `frontend/`: `npm run build` |
+| Playwright browser flows | From `frontend/`: `npx playwright install chromium`, then `npm run test:e2e` with the Python virtual environment active |
 
-The browser flows include basemap failure, route HITL, checkpoint forking and a 390 × 844 mobile viewport. These are engineering and reproducibility checks, not a scientific evaluation of sighting likelihood.
+The [GitHub Actions workflow](.github/workflows/offline-tests.yml) runs Python lint, byte compilation, offline tests and feasibility validation on pushes and pull requests; frontend and browser checks are currently run locally. The [dated Phase 5 verification report](reports/phase5-verification.md) preserves a historical test and timing snapshot, whose counts may differ from later revisions.
+
+The browser flows include basemap failure, route HITL, checkpoint forking and a 390 × 844 mobile viewport. Playwright uses separate temporary databases and local test ports. These are engineering and reproducibility checks, not a scientific evaluation of sighting likelihood.
 
 ## Quick Start
 
-The default demonstration needs no model or routing API key. After dependency installation it runs against versioned fixtures, without live biodiversity, geocoding, weather or routing requests.
+The default `fixture/scripted` demonstration needs **no OpenAI or routing API key**. It runs the graph, HITL, checkpoint history and UI using versioned data and scripted model responses. Live model calls are opt-in.
 
-### Option A: single-container demo
+Both options below start your own local backend and frontend. Downloads and the default OpenFreeMap basemap need internet access; the fixture workflow makes no live biodiversity, geocoding, weather, routing or model requests. Set `BIODIVERSITY_BASEMAP_STYLE_URL=disabled` in the backend environment to use the overlay-only map.
+
+### Get the code
 
 ```bash
 git clone https://github.com/ttteein-max/london-biodiversity-expedition.git
 cd london-biodiversity-expedition
+```
+
+You need repository read access while this repository is private. Alternatively, download and extract the ZIP, then open a terminal in the extracted directory containing `README.md`, `requirements.txt` and `frontend/`.
+
+Choose **one** of the following options.
+
+### Option A: single-container demo
+
+Install and start Docker with Docker Compose support. From the repository root:
+
+```bash
 docker compose up --build
 ```
 
-Open `http://127.0.0.1:8080`, select **Strong evidence**, then choose **Start expedition**.
+Once startup completes, open [http://127.0.0.1:8080](http://127.0.0.1:8080), select **Strong evidence**, then choose **Start expedition**. Docker builds and serves the frontend and API together; you do not need Python or Node installed on the host.
+
+The supplied Compose configuration permits only `fixture/scripted`. It does not forward OpenAI keys from your shell or `.env` into the container. Use Option B for live models. See the [deployment guide](docs/phase-4-public-demo.md) for persistence, retention and public-demo limits.
 
 ### Option B: local development
 
-Python 3.10+ and Node.js 20+ are recommended.
+Use **Python 3.12 or 3.13** and **Node.js 22.13+**. Python 3.11 is the current minimum; Python 3.10 cannot run the current code and dependencies. If using Node 20, use 20.19 or later. The commands below use macOS/Linux shell syntax and start from the repository root.
 
 ```bash
-python -m venv .venv
+python3 -m venv .venv
 source .venv/bin/activate
 python -m pip install --upgrade pip
 python -m pip install -r requirements.txt
@@ -95,49 +112,62 @@ npm ci
 cd ..
 ```
 
-Start the API:
+On Windows PowerShell, use `py -3.13 -m venv .venv` and `.venv\Scripts\Activate.ps1` for the first two commands; the remaining commands are the same. Confirm the selected Python version before installing dependencies.
+
+In **terminal 1**, with the virtual environment active and the working directory at the repository root, start the API and leave it running:
 
 ```bash
-python -m uvicorn app.biodiversity.api.main:app \
-  --host 127.0.0.1 \
-  --port 8000
+python -m uvicorn app.biodiversity.api.main:app --host 127.0.0.1 --port 8000
 ```
 
-In a second terminal, start the browser application:
+In **terminal 2**, open the same repository root, then start the frontend and leave it running:
 
 ```bash
 cd frontend
 npm run dev
 ```
 
-Open `http://127.0.0.1:5173`. The local application exposes four independently selectable run modes:
+Open [http://127.0.0.1:5173](http://127.0.0.1:5173), keep **Run mode → fixture/scripted**, select **Strong evidence**, then choose **Start expedition**. The Vite development server forwards `/api` requests to your local API on port 8000.
 
-| Data | Model | Purpose |
-| --- | --- | --- |
-| fixture | scripted | Fully reproducible orchestration and UI demonstration |
-| live | scripted | Exercise current upstream data while holding model behaviour constant |
-| fixture | live | Exercise a configured live model against stable evidence |
-| live | live | Run the complete model and data integration |
+If the page opens but cannot load or start a run, check [the API health endpoint](http://127.0.0.1:8000/api/v1/health) and terminal 1. Both processes must remain running. If Vite reports a different port because 5173 is occupied, free port 5173 or explicitly update the backend CORS configuration.
 
-Live model mode reads `OPENAI_API_KEY`, `OPENAI_MODEL` and optional `OPENAI_BASE_URL` from the backend process. Live routing uses the TfL Journey Planner by default; `TFL_API_KEY` is optional for its public allowance and recommended for deployed quota.
+### Optional: use your own OpenAI API key
 
-## Why LangGraph for this problem?
+Skip this section for the default demo. In Option B, stop the API, create a local `.env` by copying [.env.example](.env.example), and edit these values in that file. Use your own API key and a model available to your API project that supports tool calling and structured output; the repository does not supply a model ID or a shared key.
 
-The workflow is not a linear prompt chain. A planning request can be incomplete, an everyday bird name can resolve to several accepted taxa, evidence can be too weak for spatial ranking, and a candidate site can fail only after its real entrance and return journey are checked.
+```dotenv
+OPENAI_API_KEY=replace-with-your-own-api-key
+OPENAI_MODEL=replace-with-your-accessible-model-id
+```
 
-| Engineering problem | System mechanism |
-| --- | --- |
-| A request is incomplete or contradictory | Pause with a typed interrupt and resume the same durable thread after validated input |
-| A location or bird name is ambiguous | Present only bounded, safe candidates and require an exact offered choice |
-| Evidence collection depends on earlier results | Route through conditional edges and a bounded model-directed ToolNode loop |
-| External sources are unavailable or malformed | Preserve typed failure states, bounded retries and explicit safe terminal paths |
-| A user wants to explore a different constraint | Fork an immutable checkpoint, invalidate only affected downstream state and compare outcomes |
-| A model writes an unsupported claim | Apply deterministic grounding, allow one constrained revision and then use a safe fallback |
-| A long agent run needs debugging | Persist every graph step and expose ordered, reconnectable lifecycle events and timings |
+For OpenAI directly, leave `OPENAI_BASE_URL` unset; the backend defaults to `https://api.openai.com/v1`. A custom endpoint is optional and must support the model interfaces this application uses.
 
-This is why the graph, checkpoint and HITL layers are part of the product behaviour rather than framework decoration.
+Restart the API from the repository root, with the virtual environment active, using:
+
+```bash
+python -m uvicorn app.biodiversity.api.main:app --env-file .env --host 127.0.0.1 --port 8000
+```
+
+**A `.env` file alone is not loaded automatically.** The explicit `--env-file` flag loads it for the backend; exported shell variables are also supported and take precedence. Keep credentials in the backend: `.env` is gitignored and excluded from Docker builds. Never put keys in frontend code or a `VITE_` variable.
+
+Then choose **fixture/live** to exercise the live model against stable evidence, or **live/live** for current upstream data as well. Without valid live-model configuration, selecting either mode fails; there is no fallback to the author's credentials.
+
+| Run mode | Data and routing | Model | OpenAI API usage |
+| --- | --- | --- | --- |
+| `fixture/scripted` | Versioned fixtures | Scripted responses | None |
+| `live/scripted` | Live upstream services | Scripted responses | None |
+| `fixture/live` | Versioned fixtures | Configured live model | Charged to the API project used by your backend |
+| `live/live` | Live upstream services | Configured live model | Charged to the API project used by your backend |
+
+Cloning or running this project locally does not use the author's API allowance. If someone hosts a live-model backend for other visitors, requests use that host's configured credentials and API project. OpenAI describes this credential and usage boundary in its [API authentication documentation](https://developers.openai.com/api/reference/overview#authentication). For a custom model endpoint, that provider's billing applies.
+
+The current live routing profile uses TfL Journey Planner. The backend supports an optional `TFL_API_KEY`; availability and quotas follow the provider's current policy. `ORS_API_KEY` and `GRAPHHOPPER_API_KEY` are for the separate walking-provider adapters, not prerequisites for the default demo or TfL profile. See [data sources and licences](docs/data-sources-and-licences.md) for provider details.
 
 ## Architecture and core workflow
+
+LangGraph fits this workflow because each new piece of evidence can change what happens next: an incomplete request needs clarification, ambiguous taxa need a human choice, weak evidence may require another tool call, and a proposed journey may fail its constraints. Typed state and reducers preserve what has been learned; conditional edges, bounded tool loops and interrupts make those decisions explicit.
+
+SQLite checkpoints let the graph pause for a person and continue later, or restore a prior state for replay and comparison. The application adds branch and execution identities, validates human updates and exposes graph events to the frontend. These mechanisms support the workflow shown below.
 
 [![LangGraph workflow overview: evidence loop, typed human decisions, journey validation, checkpoints and observability](docs/diagrams/langgraph-overview.png)](https://github.com/ttteein-max/london-biodiversity-expedition/raw/refs/heads/main/docs/diagrams/langgraph-overview.png)
 
@@ -168,8 +198,10 @@ HITL is used only when a person can resolve a real ambiguity or make an actionab
 | --- | --- |
 | Request clarification | Supply a missing or contradictory request field |
 | Location correction | Select a verified London place candidate or provide a postcode |
-| Taxonomy selection or bird correction | Select one accepted taxon or correct the original bird name |
+| Taxonomy selection | Select one accepted taxon from the offered candidates |
+| Bird input correction | Correct the original bird name when taxonomy resolution fails |
 | Evidence trade-off | Expand the search radius or seasonal window, consider a related taxon, or accept a limited outcome |
+| Related taxon selection | Confirm a validated related taxon before evidence is recomputed |
 | Route trade-off | Accept uncertain entrance evidence, raise a walking limit, or finish without a fabricated route |
 
 Every response is checked against the exact thread, checkpoint, branch, execution, interrupt kind and offered option before the graph resumes. Raw arbitrary state edits are not accepted from the browser.
@@ -178,15 +210,17 @@ Every response is checked against the exact thread, checkpoint, branch, executio
 
 ```text
 Thread      one expedition across its complete history
-└── Branch  one immutable constraint trajectory
+└── Branch  one constraint trajectory
     └── Execution  one run or replay of that trajectory
         └── Checkpoint  one persisted graph state after a step
 ```
 
 - **Resume** continues the pending execution after a validated human decision.
-- **Replay** creates a new execution from a historical non-terminal checkpoint.
+- **Replay** creates a new execution on the same branch, restoring a historical non-terminal checkpoint and continuing its downstream work.
 - **Fork** creates a new branch with an allow-listed constraint update and recomputes invalidated evidence.
-- **Compare** produces server-calculated differences between two exact checkpoints.
+- **Compare** produces server-calculated differences in selected plan and constraint fields between two exact checkpoints.
+
+For example, replaying CP17 resumes from the state saved there; the first newly saved checkpoint can be CP18. The original and replay executions share CP17 and can each have their own CP18 with different checkpoint IDs. Step numbers are not unique checkpoint identities. To compare completed outcomes, select each execution's final checkpoint. `Unchanged` means the compared fields match; execution metadata and intermediate model drafts are outside this comparison, so it is not a full-state equality check.
 
 The original final checkpoint is never overwritten by replay or fork operations. Runtime manifests also prevent an old workflow or incompatible data/model/provider profile from being silently resumed under new semantics.
 
@@ -201,4 +235,4 @@ The product exposes agent execution as a first-class interface, not as console o
 - Timing reports separate node wall time from nested model, tool and provider spans, making the slowest stage visible.
 - Safe operation reports preserve tool audits, timings, plan facts and route decisions without API keys, raw provider requests, individual occurrence locations or private route geometry.
 
-For the recorded Phase 5 fixture run, the timing report captured 98 events and 33 timed spans across nodes, models, tools and routing-provider calls. The slowest nested work was the public green-space lookup, while all four fixture provider attempts completed in 1.23 ms combined. These measurements are diagnostic samples, not performance guarantees.
+For the [recorded Phase 5 fixture run](reports/phase5-verification.md#offline-fixture-timing-sample), the timing report captured 98 events and 33 timed spans across nodes, models, tools and routing-provider calls. The slowest nested work was the public green-space lookup, while all four fixture provider attempts completed in 1.23 ms combined. These measurements are diagnostic samples, not performance guarantees.
